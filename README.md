@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ayasofia Sweet — Ordering, Inventory & POS Platform
 
-## Getting Started
+Internal operations system for **Ayasofia Sweet** (Qalqilya) — Taiwanese bubble tea and Japanese/Korean desserts. Covers point-of-sale, Drive-Thru, customer self-ordering, inventory, and reporting.
 
-First, run the development server:
+Full specification: [`docs/technical-spec.md`](./docs/technical-spec.md) — read it before touching the code. Everything below assumes that document as context.
+
+## Stack
+Next.js 15 (App Router) · TypeScript · PostgreSQL via Supabase · Drizzle ORM · Tailwind CSS + shadcn/ui
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in real Supabase values, never commit this file
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx drizzle-kit generate   # create a migration from db/schema.ts
+npx drizzle-kit migrate    # apply migrations to the database
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Schema source of truth: [`db/schema.ts`](./db/schema.ts), generated from spec §9.
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/            Next.js routes: /pos, /kitchen, /drive-thru, /order/[qrId], /admin
+components/     Shared UI (components/ui = shadcn/ui)
+db/             Drizzle schema + migrations
+docs/           Specification, Phase 0 data workbooks, brand assets
+lib/            Utilities, Supabase client, auth helpers
+public/         Static assets (icons, images)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Before going live
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Do not use this codebase for real sales until:
+1. `docs/phase0-data-template.xlsx` has been filled with the **real** menu and loaded (not the demo seed data).
+2. The Phase 5 hardening checklist in the spec (offline testing, backups, security pass) is complete.
+3. A one-week parallel run alongside the manual process has finished — spec §13, non-negotiable.
