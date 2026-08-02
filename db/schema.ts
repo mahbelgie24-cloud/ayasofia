@@ -65,12 +65,17 @@ export const branches = pgTable("branches", {
 });
 
 // ---------- Staff (4-digit PIN login, §8.1) ----------
+// The PIN login flow: client signs in anonymously → server action
+// verifyStaffPin checks the PIN hash, sets app_metadata on the anon
+// user, and persists the auth.user.id linkage here. No foreign key
+// to auth.users — that table lives in Supabase's managed schema.
 export const staff = pgTable("staff", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   role: staffRoleEnum("role").notNull().default("cashier"),
   pinHash: text("pin_hash").notNull(), // never store the raw PIN
   active: boolean("active").notNull().default(true),
+  authUserId: uuid("auth_user_id"), // linked after first successful PIN login
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
