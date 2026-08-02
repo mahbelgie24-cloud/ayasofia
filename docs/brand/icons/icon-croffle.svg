@@ -1,0 +1,11 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="96" fill="#FAF6F3"/>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#E8DEDB" stroke-width="2"/>
+  <!-- croffle ring (croissant waffle spiral) -->
+  <circle cx="95" cy="115" r="48" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="6"/>
+  <path d="M 95 115 m -34 0 a 34 34 0 1 1 68 0 a 34 34 0 1 1 -68 0" fill="none" stroke="#DC0000" stroke-width="4" stroke-dasharray="10 8"/>
+  <path d="M 95 115 m -20 0 a 20 20 0 1 1 40 0 a 20 20 0 1 1 -40 0" fill="none" stroke="#DC0000" stroke-width="4" stroke-dasharray="8 6"/>
+  <!-- ice cream scoop -->
+  <circle cx="135" cy="65" r="26" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="6"/>
+  <path d="M 135 91 L 128 108 L 142 108 Z" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="5" stroke-linejoin="round"/>
+</svg>

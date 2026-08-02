@@ -1,0 +1,16 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="96" fill="#FAF6F3"/>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#E8DEDB" stroke-width="2"/>
+  <!-- straw -->
+  <path d="M 108 40 L 108 78" stroke="#DC0000" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <path d="M 108 78 L 100 150" stroke="#DC0000" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- cup lid -->
+  <rect x="58" y="76" width="84" height="14" rx="7" fill="#2B1D1D"/>
+  <!-- cup body -->
+  <path d="M 64 90 L 136 90 L 126 160 Q 124 168 116 168 L 84 168 Q 76 168 74 160 Z" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="6"/>
+  <!-- liquid fill -->
+  <path d="M 72 118 L 128 118 L 122 158 Q 120 164 114 164 L 86 164 Q 80 164 78 158 Z" fill="#DC0000" opacity="0.85"/>
+  <!-- orange slice on rim -->
+  <circle cx="140" cy="72" r="22" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="5"/>
+  <path d="M 140 54 L 140 90 M 122 72 L 158 72 M 127 59 L 153 85 M 153 59 L 127 85" stroke="#DC0000" stroke-width="4" stroke-linecap="round"/>
+</svg>
