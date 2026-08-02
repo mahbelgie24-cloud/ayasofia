@@ -1,0 +1,14 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="96" fill="#FAF6F3"/>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#E8DEDB" stroke-width="2"/>
+  <!-- straw -->
+  <path d="M 108 30 L 108 60" stroke="#DC0000" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <path d="M 108 60 L 100 152" stroke="#DC0000" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- foam cloud on top -->
+  <ellipse cx="75" cy="66" rx="16" ry="13" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="5"/>
+  <ellipse cx="95" cy="58" rx="20" ry="16" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="5"/>
+  <ellipse cx="120" cy="64" rx="18" ry="14" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="5"/>
+  <!-- cup body -->
+  <path d="M 62 84 L 138 84 L 127 160 Q 125 168 117 168 L 83 168 Q 75 168 73 160 Z" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="6"/>
+  <path d="M 70 108 L 130 108 L 122 158 Q 120 164 114 164 L 86 164 Q 80 164 78 158 Z" fill="#DC0000" opacity="0.85"/>
+</svg>

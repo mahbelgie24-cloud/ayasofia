@@ -1,0 +1,12 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="96" fill="#FAF6F3"/>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#E8DEDB" stroke-width="2"/>
+  <!-- bowl -->
+  <path d="M 50 120 Q 50 165 100 165 Q 150 165 150 120 Z" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="6"/>
+  <ellipse cx="100" cy="120" rx="50" ry="14" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="6"/>
+  <!-- shaved ice peak -->
+  <path d="M 100 55 L 118 95 L 108 92 L 122 118 L 78 118 L 92 92 L 82 95 Z" fill="#FFFFFF" stroke="#2B1D1D" stroke-width="5" stroke-linejoin="round"/>
+  <!-- cherry on top -->
+  <circle cx="100" cy="50" r="10" fill="#DC0000"/>
+  <path d="M 100 40 Q 105 28 115 26" stroke="#2B1D1D" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>
