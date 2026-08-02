@@ -1,4 +1,14 @@
 @import "tailwindcss";
+
+@theme {
+  --color-brand-red: #DC0000;
+  --color-brand-cream: #FAF6F3;
+  --color-brand-ink: #2B1D1D;
+  --color-status-success: #16A34A;
+  --color-status-warning: #F59E0B;
+  --color-status-error: #9F1239;
+}
+
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
