@@ -5,7 +5,7 @@ Internal operations system for **Ayasofia Sweet** (Qalqilya) — Taiwanese bubbl
 Full specification: [`docs/technical-spec.md`](./docs/technical-spec.md) — read it before touching the code. Everything below assumes that document as context.
 
 ## Stack
-Next.js 15 (App Router) · TypeScript · PostgreSQL via Supabase · Drizzle ORM · Tailwind CSS + shadcn/ui
+Next.js 16 (App Router) · TypeScript · PostgreSQL via Supabase · Drizzle ORM · Tailwind CSS v4 + shadcn/ui · Arabic RTL first-class
 
 ## Getting started
 
