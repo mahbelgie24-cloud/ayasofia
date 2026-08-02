@@ -8,6 +8,13 @@
       "when": 1785692438279,
       "tag": "0000_cool_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785694682646,
+      "tag": "0001_enable_rls",
+      "breakpoints": true
     }
   ]
 }
