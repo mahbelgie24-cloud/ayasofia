@@ -42,3 +42,7 @@ export function verifyPin(pin: string, stored: string): boolean {
     return false;
   }
 }
+
+// TODO(cleanup): failed/superseded anonymous sessions accumulate in
+// auth.users indefinitely — needs a scheduled cleanup job before real
+// launch, see docs/technical-spec.md §15.

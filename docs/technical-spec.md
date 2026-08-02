@@ -344,6 +344,7 @@ I'm not a lawyer or accountant — the following must be confirmed locally befor
 - **Currency:** this spec defaults to ₪ (ILS) as the working assumption for a Qalqilya-based business, but confirm with the owner — the settings table supports changing this without a schema change.
 - **Digital payment gateways:** if the owner wants in-app digital payment beyond cash/card-terminal, that requires separate research into locally available, compliant providers at implementation time — not assumed here.
 - **Drive-Thru hardware:** whether staff will use a handheld tablet at the car window or a fixed terminal affects `/drive-thru` UI sizing — confirm before building that screen.
+- **Anonymous user accumulation:** every failed or superseded PIN login creates a persistent anon user in `auth.users`. A scheduled cleanup job must be in place before Phase 5 hardening to purge these — otherwise the auth table grows without bound.
 
 ---
 
