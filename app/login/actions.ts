@@ -13,6 +13,11 @@ export type PinResult =
  *
  * Runs with the service-role key — never callable from the browser
  * directly because the key itself never leaves the server.
+ *
+ * This is the **only** Server Action that does NOT call
+ * `requireStaffSession()` — it is the auth gate that establishes the
+ * session in the first place.  Every other Server Action that touches
+ * orders, inventory, margins, or staff data must start with it.
  */
 export async function verifyStaffPin(
   pin: string,
