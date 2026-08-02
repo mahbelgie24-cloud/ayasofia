@@ -7,6 +7,7 @@
 import {
   pgTable,
   pgEnum,
+  pgPolicy,
   uuid,
   text,
   varchar,
@@ -17,6 +18,8 @@ import {
   jsonb,
   primaryKey,
 } from "drizzle-orm/pg-core";
+import { authenticatedRole } from "drizzle-orm/supabase";
+import { sql } from "drizzle-orm";
 
 // ---------- Enums ----------
 export const staffRoleEnum = pgEnum("staff_role", [
@@ -62,7 +65,7 @@ export const branches = pgTable("branches", {
   name: text("name").notNull(),
   address: text("address"),
   phone: text("phone"),
-});
+}).enableRLS();
 
 // ---------- Staff (4-digit PIN login, §8.1) ----------
 // The PIN login flow: client signs in anonymously → server action
@@ -77,7 +80,7 @@ export const staff = pgTable("staff", {
   active: boolean("active").notNull().default(true),
   authUserId: uuid("auth_user_id"), // linked after first successful PIN login
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}).enableRLS();
 
 // ---------- Menu ----------
 export const categories = pgTable("categories", {
@@ -85,7 +88,7 @@ export const categories = pgTable("categories", {
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+}).enableRLS();
 
 export const products = pgTable("products", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -98,7 +101,7 @@ export const products = pgTable("products", {
   imageUrl: text("image_url"), // placeholder icons live in /public/icons for now
   isAvailable: boolean("is_available").notNull().default(true),
   trackInventory: boolean("track_inventory").notNull().default(true),
-});
+}).enableRLS();
 
 // Modifier groups are per-product, not global — §10: a dessert doesn't
 // need a sugar-level group, a bubble tea does. Don't force a shared schema.
@@ -110,7 +113,7 @@ export const modifierGroups = pgTable("modifier_groups", {
   name: text("name").notNull(), // e.g. "Sugar Level", "Toppings"
   type: modifierTypeEnum("type").notNull().default("single"),
   isRequired: boolean("is_required").notNull().default(false),
-});
+}).enableRLS();
 
 export const modifiers = pgTable("modifiers", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -121,7 +124,7 @@ export const modifiers = pgTable("modifiers", {
   priceDelta: numeric("price_delta", { precision: 10, scale: 2 })
     .notNull()
     .default("0"),
-});
+}).enableRLS();
 
 // ---------- Inventory ----------
 export const ingredients = pgTable("ingredients", {
@@ -137,7 +140,7 @@ export const ingredients = pgTable("ingredients", {
   costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 })
     .notNull()
     .default("0"),
-});
+}).enableRLS();
 
 // Bill of Materials — one sale = automatic, auditable deduction (§9, §12)
 export const recipes = pgTable(
@@ -154,7 +157,7 @@ export const recipes = pgTable(
   (t) => ({
     pk: primaryKey({ columns: [t.productId, t.ingredientId] }),
   })
-);
+).enableRLS();
 
 // ---------- Orders ----------
 export const orders = pgTable("orders", {
@@ -174,7 +177,13 @@ export const orders = pgTable("orders", {
   // sync from creating the same sale twice.
   idempotencyKey: text("idempotency_key").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, () => [
+  pgPolicy("staff can read live orders", {
+    for: "select",
+    to: authenticatedRole,
+    using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
+  }),
+]).enableRLS();
 
 export const orderItems = pgTable("order_items", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -187,7 +196,13 @@ export const orderItems = pgTable("order_items", {
   selectedModifiers: jsonb("selected_modifiers").notNull().default([]),
   quantity: integer("quantity").notNull().default(1),
   unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
-});
+}, () => [
+  pgPolicy("staff can read order items", {
+    for: "select",
+    to: authenticatedRole,
+    using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
+  }),
+]).enableRLS();
 
 // Every stock change is logged with a reason and (where relevant) the
 // order that caused it — this is what makes the system auditable, §9.
@@ -201,14 +216,14 @@ export const inventoryMoves = pgTable("inventory_moves", {
   refOrderId: uuid("ref_order_id").references(() => orders.id),
   createdBy: uuid("created_by").references(() => staff.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}).enableRLS();
 
 export const suppliers = pgTable("suppliers", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   phone: text("phone"),
   notes: text("notes"),
-});
+}).enableRLS();
 
 export const purchases = pgTable("purchases", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -216,7 +231,7 @@ export const purchases = pgTable("purchases", {
   totalCost: numeric("total_cost", { precision: 10, scale: 2 }).notNull(),
   status: purchaseStatusEnum("status").notNull().default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}).enableRLS();
 
 export const shifts = pgTable("shifts", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -230,10 +245,10 @@ export const shifts = pgTable("shifts", {
     .default("0"),
   closingCash: numeric("closing_cash", { precision: 10, scale: 2 }),
   totalSales: numeric("total_sales", { precision: 10, scale: 2 }),
-});
+}).enableRLS();
 
 // Key/value config — currency, tax rate, receipt footer, etc. (§8.6)
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
-});
+}).enableRLS();
