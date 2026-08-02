@@ -50,10 +50,17 @@ sequence — it is the only mechanism that gates access to `/pos`, `/kitchen`,
    `staff_id` claim and therefore sees zero rows. No PIN = no kitchen queue.
 
 5. **Session cleanup** (`lib/auth/session.ts`). At shift close
-   (`shifts.closedAt` — Phase 4), call `endStaffSession()` to sign out the
-   anonymous session so the next staff member on this device starts fresh.
-   Never let sessions persist across shift changes — that would leak the
-   previous staff member's JWT claims and RBAC grants.
+    (`shifts.closedAt` — Phase 4), call `endStaffSession()` to sign out the
+    anonymous session so the next staff member on this device starts fresh.
+    Never let sessions persist across shift changes — that would leak the
+    previous staff member's JWT claims and RBAC grants.
+
+6. **PIN uniqueness.** Every active staff member must have a unique PIN.
+    When the staff-management admin screen is built (future phase), the
+    save handler must verify the new/changed PIN against every other
+    active staff member's hash using the same `verifyPin` function
+    (`lib/auth.ts`), and reject on any match. This check does not yet
+    exist in code — this note is the guardrail so it is not forgotten.
 
 **Files involved:**
 ```

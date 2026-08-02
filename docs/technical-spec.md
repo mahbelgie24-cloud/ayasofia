@@ -131,6 +131,8 @@ Drive-Thru is not a cosmetic label — it changes two real things: the POS flow 
 ### 8.1 Point of Sale (POS)
 Category-first menu browsing, product customization (see §10), running cart with live totals, tax/discount calculation, multiple payment methods, WhatsApp receipt sharing, **4-digit PIN staff login** — the real-world POS standard (Square, Toast) for fast shift changes, not a slow email/password flow.
 
+**PIN uniqueness requirement:** PIN codes must be unique among active staff. Before saving a new or changed PIN in the future staff-management admin screen, verify it against every other active staff member's hash using the same `verifyPin` function used at login, and reject the save on any match. This is not yet enforced in code because the staff-management screen doesn't exist yet — this note is the guardrail so it isn't forgotten when it's built.
+
 ### 8.2 Kitchen/Prep Display (KDS)
 Live queue across dine-in, takeaway, drive-thru, and online orders; status states (Received → Preparing → Ready); audible alert on new order; channel tag per ticket (e.g., "🚘 Drive-Thru", "🥤 Table 4").
 
