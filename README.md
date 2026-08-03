@@ -5,6 +5,7 @@ Internal operations system for **Ayasofia Sweet** (Qalqilya) — Taiwanese bubbl
 Full specification: [`docs/technical-spec.md`](./docs/technical-spec.md) — read it before touching the code. Everything below assumes that document as context.
 
 ## Stack
+
 Next.js 16 (App Router) · TypeScript · PostgreSQL via Supabase · Drizzle ORM · Tailwind CSS v4 + shadcn/ui · Arabic RTL first-class
 
 ## Getting started
@@ -38,6 +39,21 @@ public/         Static assets (icons, images)
 ## Before going live
 
 Do not use this codebase for real sales until:
+
 1. `docs/phase0-data-template.xlsx` has been filled with the **real** menu and loaded (not the demo seed data).
 2. The Phase 5 hardening checklist in the spec (offline testing, backups, security pass) is complete.
 3. A one-week parallel run alongside the manual process has finished — spec §13, non-negotiable.
+
+### Playwright E2E tests
+
+```bash
+npx playwright test
+```
+
+E2E tests require a live Supabase project (they create real orders,
+inventory moves, and stock changes against the database). Run them
+**manually** against the staging database before each deploy until
+Phase 5 sets up a proper CI-integrated staging environment. They are
+**not** configured in CI yet — adding them to the merge gate would
+require Supabase credentials as CI secrets, which should be set up
+carefully, not rushed.

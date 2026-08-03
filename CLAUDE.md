@@ -30,14 +30,21 @@ const { staffId, role } = await requireStaffSession(/* minRole? */);
 ```
 
 `proxy.ts` handles UX-level redirects for convenience only — it is **not**
-the security boundary.  The authorization enforcement lives in
+the security boundary. The authorization enforcement lives in
 `requireStaffSession` (in `lib/auth.ts`), which verifies the Supabase JWT
 session carries `app_metadata.staff_id` and optionally checks
 `ROLE_RANK[role]` against a minimum.
 
-The **only** exception is `verifyStaffPin` in `app/login/actions.ts` — it
-is the auth gate that establishes the session in the first place, so it
-cannot require one beforehand.
+The **only** exceptions are:
+
+- `verifyStaffPin` in `app/login/actions.ts` — it is the auth gate that
+  establishes the session in the first place, so it cannot require one
+  beforehand.
+- `placeCustomerOrder` in `app/order/actions.ts` — this is a deliberately
+  public customer-facing endpoint (no staff involved, `staffId` is null
+  on the resulting order). It still enforces server-side recomputation,
+  atomic transaction, and idempotency — all the same correctness rules as
+  `checkout()`, just without the staff-session requirement.
 
 ## Key files (quick reference)
 

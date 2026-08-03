@@ -1,0 +1,40 @@
+# CODEOWNERS — Ayasofia Sweet
+#
+# Rules:
+# - Last matching pattern wins
+# - @mention the team/people responsible
+#
+# This file enforces mandatory review for critical paths.
+
+# ── Architecture & Security ──
+# Any change to auth, pricing, or checkout MUST be reviewed by security owner
+/lib/auth.ts
+/lib/auth/
+/lib/checkout-core.ts
+/lib/pricing.ts
+/lib/pricing-server.ts
+/lib/supabase/service.ts
+
+# ── Database ──
+# Schema changes are irreversible without planning — mandatory review
+/db/schema.ts
+/db/migrations/
+
+# ── Environment & Config ──
+# Secrets and deployment config must be reviewed
+/.env.example
+/next.config.ts
+/drizzle.config.ts
+
+# ── Core Business Logic ──
+/app/(pos)/pos/actions.ts
+/app/order/actions.ts
+/app/login/actions.ts
+/app/(admin)/admin/inventory/actions.ts
+
+# ── AI-EOS Governance ──
+# The engineering system itself must be reviewed
+/.ai-eos/
+
+# ── GitHub Actions ──
+/.github/workflows/

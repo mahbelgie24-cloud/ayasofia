@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "bradlc.vscode-tailwindcss",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "github.vscode-github-actions",
+    "ms-vscode-remote.remote-containers",
+    "editorconfig.editorconfig",
+    "expo.vscode-expo-tools",
+    "unifiedjs.vscode-mdx",
+    "github.copilot",
+    "github.copilot-chat"
+  ]
+}

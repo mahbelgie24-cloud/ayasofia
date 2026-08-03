@@ -1,0 +1,70 @@
+name: Feature Request
+description: اقترح ميزة جديدة أو تحسين
+title: "feat: "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        شكرًا لاقتراحك. يُرجى وصف الميزة بوضوح.
+  - type: input
+    id: summary
+    attributes:
+      label: ملخص الميزة
+      description: صف الميزة في جملة واحدة
+      placeholder: "إضافة إمكانية تصدير تقرير المبيعات كـ PDF"
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: الأولوية المقترحة
+      options:
+        - عاجلة — تؤثر على العمليات اليومية
+        - عالية — قيمة كبيرة للمستخدمين
+        - متوسطة — تحسين مفيد
+        - منخفضة — Nice to have
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: المنطقة
+      options:
+        - POS / نقطة البيع
+        - Drive-Thru / مسار السيارات
+        - KDS / شاشة المطبخ
+        - Customer Order / طلب العميل
+        - Admin / الإدارة والتقارير
+        - Inventory / المخزون
+        - Auth / المصادقة
+        - API / Server Actions
+        - بنية تحتية / DevOps
+        - أخرى
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: المشكلة التي تحلها
+      description: ما المشكلة الحالية؟ لماذا هذه الميزة ضرورية؟
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: الحل المقترح
+      description: صف كيف يجب أن تعمل الميزة
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: بدائل مدروسة
+      description: هل فكرت في حلول بديلة؟
+  - type: textarea
+    id: context
+    attributes:
+      label: سياق إضافي
+      description: أي شيء آخر يساعد في فهم الطلب (لقطات، رسوم، مراجع)

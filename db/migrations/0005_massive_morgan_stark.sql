@@ -1,0 +1,1 @@
+ALTER TABLE "modifiers" ADD COLUMN "name_ar" text NOT NULL DEFAULT '';

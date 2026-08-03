@@ -1,0 +1,36 @@
+# Auto-detect text files, ensure LF line endings
+*       text=auto eol=lf
+
+# Source files
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.js     text eol=lf
+*.mjs    text eol=lf
+*.mts    text eol=lf
+*.json   text eol=lf
+*.css    text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+*.sql    text eol=lf
+*.env*   text eol=lf
+*.nvmrc  text eol=lf
+
+# Binary files
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.svg    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+
+# Lock files — generated, don't diff
+package-lock.json  -diff linguist-generated=true
+
+# Build output
+.next/    export-ignore

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ayasofia Sweet Documentation
+    url: https://github.com/anomalyco/ayasofia/blob/main/docs/technical-spec.md
+    about: اقرأ المواصفة التقنية أولاً قبل فتح issue جديد
+  - name: AI-EOS Engineering System
+    url: https://github.com/anomalyco/ayasofia/blob/main/.ai-eos/README.md
+    about: نظام التشغيل الهندسي — دليل المطورين ووكلاء AI

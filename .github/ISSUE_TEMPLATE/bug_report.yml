@@ -1,0 +1,80 @@
+name: Bug Report
+description: File a bug report to help us improve
+title: "bug: "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        شكرًا للإبلاغ عن خطأ. يُرجى ملء الحقول أدناه بدقة.
+  - type: input
+    id: summary
+    attributes:
+      label: ملخص الخطأ
+      description: صف المشكلة في جملة واحدة
+      placeholder: "Z-report لا يتطابق مع العد النقدي اليدوي"
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: شدة الخطأ
+      options:
+        - حرجة — النظام لا يعمل
+        - عالية — تعطل جزئي مع تأثير كبير
+        - متوسطة — تعطل بسيط أو غير متكرر
+        - منخفضة — مشكلة تجميلية
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: فئة الخطأ
+      options:
+        - مال / حسابات (pricing, totals, tax)
+        - مخزون (stock, recipes, deduction)
+        - أمان (auth, RBAC, RLS)
+        - واجهة المستخدم (UI/UX)
+        - قاعدة بيانات (schema, migrations)
+        - أداء (performance, speed)
+        - أخرى
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: خطوات إعادة إنتاج الخطأ
+      description: اكتب الخطوات بالتفصيل
+      placeholder: |
+        1. افتح /pos
+        2. سجل الدخول بـ PIN 1111
+        3. أضف Classic Milk Tea
+        4. اختر Large + 100% Sugar
+        5. اضغط دفع
+        6. لاحظ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: السلوك المتوقع
+      description: ماذا كنت تتوقع أن يحدث؟
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: السلوك الفعلي
+      description: ماذا حدث بالفعل؟
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: سياق إضافي
+      description: المتصفح، الجهاز، لقطات شاشة، سجلات الأخطاء
+      placeholder: |
+        - المتصفح: Chrome 127
+        - الجهاز: iPad Air
+        - أي أخطاء في الـ console؟

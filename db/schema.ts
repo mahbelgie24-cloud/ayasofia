@@ -18,16 +18,12 @@ import {
   jsonb,
   primaryKey,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { authenticatedRole } from "drizzle-orm/supabase";
 import { sql } from "drizzle-orm";
 
 // ---------- Enums ----------
-export const staffRoleEnum = pgEnum("staff_role", [
-  "owner",
-  "manager",
-  "cashier",
-  "barista",
-]);
+export const staffRoleEnum = pgEnum("staff_role", ["owner", "manager", "cashier", "barista"]);
 
 export const orderChannelEnum = pgEnum("order_channel", [
   "dine_in",
@@ -53,11 +49,7 @@ export const inventoryReasonEnum = pgEnum("inventory_reason", [
   "adjustment",
 ]);
 
-export const purchaseStatusEnum = pgEnum("purchase_status", [
-  "pending",
-  "received",
-  "cancelled",
-]);
+export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "received", "cancelled"]);
 
 // ---------- Branches (single row today — future-proofing only, §9) ----------
 export const branches = pgTable("branches", {
@@ -120,10 +112,9 @@ export const modifiers = pgTable("modifiers", {
   groupId: uuid("group_id")
     .notNull()
     .references(() => modifierGroups.id, { onDelete: "cascade" }),
+  nameAr: text("name_ar").notNull(), // e.g. "كبير", "٥٠٪"
   name: text("name").notNull(), // e.g. "50%", "Large", "Tapioca Pearls"
-  priceDelta: numeric("price_delta", { precision: 10, scale: 2 })
-    .notNull()
-    .default("0"),
+  priceDelta: numeric("price_delta", { precision: 10, scale: 2 }).notNull().default("0"),
 }).enableRLS();
 
 // ---------- Inventory ----------
@@ -131,15 +122,11 @@ export const ingredients = pgTable("ingredients", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   unit: text("unit").notNull(), // 'g' | 'ml' | 'piece'
-  currentStock: numeric("current_stock", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
+  currentStock: numeric("current_stock", { precision: 12, scale: 2 }).notNull().default("0"),
   reorderThreshold: numeric("reorder_threshold", { precision: 12, scale: 2 })
     .notNull()
     .default("0"),
-  costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 })
-    .notNull()
-    .default("0"),
+  costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull().default("0"),
 }).enableRLS();
 
 // Bill of Materials — one sale = automatic, auditable deduction (§9, §12)
@@ -156,53 +143,61 @@ export const recipes = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.productId, t.ingredientId] }),
-  })
+  }),
 ).enableRLS();
 
 // ---------- Orders ----------
-export const orders = pgTable("orders", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  orderNumber: varchar("order_number", { length: 20 }).notNull().unique(),
-  channel: orderChannelEnum("channel").notNull(),
-  status: orderStatusEnum("status").notNull().default("received"),
-  customerName: text("customer_name"), // /order (QR) only — see §12 data privacy
-  customerPhone: text("customer_phone"),
-  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
-  tax: numeric("tax", { precision: 10, scale: 2 }).notNull().default("0"),
-  discount: numeric("discount", { precision: 10, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: text("payment_method"),
-  staffId: uuid("staff_id").references(() => staff.id),
-  // Required for the offline-sync queue in §12 — prevents a retried
-  // sync from creating the same sale twice.
-  idempotencyKey: text("idempotency_key").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, () => [
-  pgPolicy("staff can read live orders", {
-    for: "select",
-    to: authenticatedRole,
-    using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
-  }),
-]).enableRLS();
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderNumber: varchar("order_number", { length: 20 }).notNull().unique(),
+    channel: orderChannelEnum("channel").notNull(),
+    status: orderStatusEnum("status").notNull().default("received"),
+    customerName: text("customer_name"), // /order (QR) only — see §12 data privacy
+    customerPhone: text("customer_phone"),
+    subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+    tax: numeric("tax", { precision: 10, scale: 2 }).notNull().default("0"),
+    discount: numeric("discount", { precision: 10, scale: 2 }).notNull().default("0"),
+    total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+    paymentMethod: text("payment_method"),
+    staffId: uuid("staff_id").references(() => staff.id),
+    // Required for the offline-sync queue in §12 — prevents a retried
+    // sync from creating the same sale twice.
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  () => [
+    pgPolicy("staff can read live orders", {
+      for: "select",
+      to: authenticatedRole,
+      using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
+    }),
+  ],
+).enableRLS();
 
-export const orderItems = pgTable("order_items", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  orderId: uuid("order_id")
-    .notNull()
-    .references(() => orders.id, { onDelete: "cascade" }),
-  productId: uuid("product_id")
-    .notNull()
-    .references(() => products.id),
-  selectedModifiers: jsonb("selected_modifiers").notNull().default([]),
-  quantity: integer("quantity").notNull().default(1),
-  unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
-}, () => [
-  pgPolicy("staff can read order items", {
-    for: "select",
-    to: authenticatedRole,
-    using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
-  }),
-]).enableRLS();
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id),
+    selectedModifiers: jsonb("selected_modifiers").notNull().default([]),
+    quantity: integer("quantity").notNull().default(1),
+    unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
+  },
+  () => [
+    pgPolicy("staff can read order items", {
+      for: "select",
+      to: authenticatedRole,
+      using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
+    }),
+  ],
+).enableRLS();
 
 // Every stock change is logged with a reason and (where relevant) the
 // order that caused it — this is what makes the system auditable, §9.
@@ -240,9 +235,7 @@ export const shifts = pgTable("shifts", {
     .references(() => staff.id),
   openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
   closedAt: timestamp("closed_at", { withTimezone: true }),
-  openingCash: numeric("opening_cash", { precision: 10, scale: 2 })
-    .notNull()
-    .default("0"),
+  openingCash: numeric("opening_cash", { precision: 10, scale: 2 }).notNull().default("0"),
   closingCash: numeric("closing_cash", { precision: 10, scale: 2 }),
   totalSales: numeric("total_sales", { precision: 10, scale: 2 }),
 }).enableRLS();
@@ -252,3 +245,32 @@ export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 }).enableRLS();
+
+// ---------- Drizzle Relations (for query API) ----------
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  products: many(products),
+}));
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [products.categoryId],
+    references: [categories.id],
+  }),
+  modifierGroups: many(modifierGroups),
+}));
+
+export const modifierGroupsRelations = relations(modifierGroups, ({ one, many }) => ({
+  product: one(products, {
+    fields: [modifierGroups.productId],
+    references: [products.id],
+  }),
+  modifiers: many(modifiers),
+}));
+
+export const modifiersRelations = relations(modifiers, ({ one }) => ({
+  group: one(modifierGroups, {
+    fields: [modifiers.groupId],
+    references: [modifierGroups.id],
+  }),
+}));
