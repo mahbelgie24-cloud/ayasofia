@@ -82,6 +82,49 @@ describe("placeCustomerOrder", () => {
     });
     expect(r.success).toBe(true);
   });
+
+  it("duplicate idempotencyKey returns the existing order, not a new one", async () => {
+    // First call — mockTx creates order "o1"
+    const r1 = await placeCustomerOrder({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 1 }],
+      customerName: "Ali",
+      idempotencyKey: "dup-customer-key",
+    });
+    expect(r1.success).toBe(true);
+
+    // Second call: the idempotency check in executeCheckout does
+    //   .select(...).from(orders).where(eq(...)).limit(1)
+    // and the existing helper q() returns Promise.resolve(rows) with .limit().
+    // Override mockTx for the second call so the idempotency check
+    // returns [existing] rather than [].
+    mockTx.mockImplementationOnce(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        // where() returns q(...) which has .limit() → Promise.resolve(existing)
+        select: () => ({
+          from: () => ({
+            where: () => q([{ id: "o1", orderNumber: "POS-EXISTING", total: "15.00" }]),
+          }),
+        }),
+        insert: () => ({
+          values: () => ({ returning: () => Promise.resolve([{ id: "o2" }]) }),
+        }),
+        update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
+        rollback: () => {},
+      };
+      return fn(tx);
+    });
+
+    const r2 = await placeCustomerOrder({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 1 }],
+      customerName: "Ali",
+      idempotencyKey: "dup-customer-key",
+    });
+    expect(r2.success).toBe(true);
+    if (r2.success) {
+      expect(r2.orderNumber).toBe("POS-EXISTING");
+      expect(r2.total).toBe("15.00");
+    }
+  });
 });
 
 describe("updateOrderStatus", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { POSCategory } from "@/lib/db/queries";
 import {
@@ -36,6 +36,16 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
   const [addedAnim, setAddedAnim] = useState<string | null>(null);
+  const idempotencyKeyRef = useRef<string>("");
+
+  useEffect(() => {
+    if (cart.length > 0 && !idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = crypto.randomUUID();
+    }
+    if (cart.length === 0) {
+      idempotencyKeyRef.current = "";
+    }
+  }, [cart.length]);
 
   const selectedCat = menu.find((c) => c.id === selectedCatId) ?? menu[0];
 
@@ -174,7 +184,7 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
         })),
         customerName: customerName.trim(),
         customerPhone: customerPhone || undefined,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: idempotencyKeyRef.current,
       });
       if (result.success) {
         router.push(`/order/status/${result.orderId}`);
