@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
-import { orders, orderItems, ingredients, recipes, inventoryMoves } from "@/db/schema";
+import { orders, orderItems, ingredients, recipes, inventoryMoves, settings } from "@/db/schema";
 import { recalculateCartServerSide, type CartItemForServer } from "@/lib/pricing-server";
 import { toMinorUnits } from "@/lib/pricing";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -72,7 +72,19 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           20,
         );
       const subtotalStr = (subtotal / 100).toFixed(2);
-      const totalStr = subtotalStr;
+
+      // Read tax rate from settings — default to 0 if absent
+      const [taxRow] = await tx
+        .select({ value: settings.value })
+        .from(settings)
+        .where(eq(settings.key, "tax_rate"))
+        .limit(1);
+      const taxRateMinor = taxRow ? toMinorUnits(taxRow.value) : 0;
+      // taxRateMinor eg. 1700 = 17.00% → tax = subtotal * 1700 / 10000
+      const taxAgorot = Math.round((subtotal * taxRateMinor) / 10000);
+      const totalAgorot = subtotal + taxAgorot;
+      const taxStr = (taxAgorot / 100).toFixed(2);
+      const totalStr = (totalAgorot / 100).toFixed(2);
 
       const [order] = await tx
         .insert(orders)
@@ -81,7 +93,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           channel,
           status: "received",
           subtotal: subtotalStr,
-          tax: "0.00",
+          tax: taxStr,
           discount: "0.00",
           total: totalStr,
           paymentMethod,
