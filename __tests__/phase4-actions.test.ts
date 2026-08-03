@@ -41,25 +41,7 @@ import {
   getZReport,
 } from "@/app/(admin)/admin/reports/actions";
 import { createStaffMember, updateStaffMember } from "@/app/(admin)/admin/staff/actions";
-import { createProduct, updateProduct, deleteCategory } from "@/app/(admin)/admin/menu/actions";
-
-function q(rows: unknown[]) {
-  return Object.assign(Promise.resolve(rows), { limit: () => Promise.resolve(rows) });
-}
-
-function chainable(returnValue: unknown) {
-  const c: Record<string, unknown> = {
-    values: () => chainable(returnValue),
-    set: () => chainable(returnValue),
-    where: () => chainable(returnValue),
-    returning: () => Promise.resolve(returnValue),
-    orderBy: () => chainable(returnValue),
-    from: () => chainable(returnValue),
-    limit: () => Promise.resolve(returnValue),
-    leftJoin: () => chainable(returnValue),
-  };
-  return c;
-}
+import { createProduct, deleteCategory } from "@/app/(admin)/admin/menu/actions";
 
 beforeEach(() => {
   vi.clearAllMocks();

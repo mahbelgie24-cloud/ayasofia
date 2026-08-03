@@ -455,8 +455,10 @@ function ProductEditForm({
 }
 
 function ProductCreateForm({
-  categories: _categories,
-  defaultCategoryId: _defaultCategoryId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  categories,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  defaultCategoryId,
   onSave,
   onCancel,
 }: {
