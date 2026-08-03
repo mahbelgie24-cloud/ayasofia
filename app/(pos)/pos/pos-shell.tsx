@@ -1,28 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState } from "react";
 import type { POSCategory } from "@/lib/db/queries";
-import {
-  calculateLineTotal,
-  calculateCartTotal,
-  formatPrice,
-  toMinorUnits,
-  type SelectedModifier as PricingModifier,
-} from "@/lib/pricing";
+import { formatPrice, toMinorUnits } from "@/lib/pricing";
+import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "./actions";
 import { closeShift } from "@/lib/shifts";
 import { endStaffSession } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
-
-interface CartItem {
-  productId: string;
-  productNameAr: string;
-  productNameEn: string;
-  basePrice: string;
-  selectedModifiers: { id: string; nameAr: string; name: string; priceDelta: string }[];
-  quantity: number;
-  lineTotal: number;
-}
 
 interface POSShellProps {
   menu: POSCategory[];
@@ -31,16 +16,7 @@ interface POSShellProps {
 export function POSShell({ menu }: POSShellProps) {
   const router = useRouter();
   const [selectedCatId, setSelectedCatId] = useState(menu[0]?.id ?? "");
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [modifierTarget, setModifierTarget] = useState<{
-    productId: string;
-    productNameAr: string;
-    productNameEn: string;
-    basePrice: string;
-    groups: POSCategory["products"][number]["modifierGroups"];
-  } | null>(null);
-  const [modifierSelections, setModifierSelections] = useState<Record<string, string[]>>({});
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [customerPhone, setCustomerPhone] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
@@ -51,18 +27,22 @@ export function POSShell({ menu }: POSShellProps) {
     discrepancy: string;
   } | null>(null);
   const [closingShift, setClosingShift] = useState(false);
-  const idempotencyKeyRef = useRef<string>("");
 
-  // Generate a fresh idempotency key when the cart transitions from empty
-  // to non-empty.  Reuse the same key across retries of the same cart.
-  useEffect(() => {
-    if (cart.length > 0 && !idempotencyKeyRef.current) {
-      idempotencyKeyRef.current = crypto.randomUUID();
-    }
-    if (cart.length === 0) {
-      idempotencyKeyRef.current = "";
-    }
-  }, [cart.length]);
+  const {
+    cart,
+    cartTotal,
+    modifierTarget,
+    modifierSelections,
+    idempotencyKeyRef,
+    openModifiers,
+    toggleSingle,
+    toggleMulti,
+    updateQuantity,
+    removeItem,
+    confirmModifiers,
+    setModifierTarget,
+    clearCart,
+  } = usePOSCart();
 
   const handleCheckout = async () => {
     if (cart.length === 0 || checkingOut) return;
@@ -81,7 +61,7 @@ export function POSShell({ menu }: POSShellProps) {
         customerPhone: customerPhone || undefined,
       });
       if (result.success) {
-        setCart([]);
+        clearCart();
         setCartOpen(false);
         router.push(`/pos/receipt/${result.orderId}`);
       } else {
@@ -100,10 +80,7 @@ export function POSShell({ menu }: POSShellProps) {
     try {
       const result = await closeShift(isNaN(cash) ? 0 : cash);
       if (result.success) {
-        setShiftResult({
-          totalSales: result.totalSales,
-          discrepancy: result.discrepancy,
-        });
+        setShiftResult({ totalSales: result.totalSales, discrepancy: result.discrepancy });
       } else {
         alert(result.error);
       }
@@ -120,157 +97,6 @@ export function POSShell({ menu }: POSShellProps) {
   };
 
   const selectedCat = menu.find((c) => c.id === selectedCatId) ?? menu[0];
-
-  const addToCart = (
-    product: {
-      id: string;
-      nameAr: string;
-      nameEn: string;
-      basePrice: string;
-      modifierGroups: POSCategory["products"][number]["modifierGroups"];
-    },
-    selectedModifiers: { id: string; nameAr: string; name: string; priceDelta: string }[],
-  ) => {
-    const pricingMods: PricingModifier[] = selectedModifiers.map((m) => ({
-      priceDelta: m.priceDelta,
-    }));
-    const lineTotal = calculateLineTotal(product.basePrice, pricingMods, 1);
-
-    setCart((prev) => {
-      const existingIdx = prev.findIndex(
-        (item) =>
-          item.productId === product.id &&
-          JSON.stringify(item.selectedModifiers.map((m) => m.id).sort()) ===
-            JSON.stringify(selectedModifiers.map((m) => m.id).sort()),
-      );
-
-      if (existingIdx >= 0) {
-        const updated = [...prev];
-        const existing = updated[existingIdx];
-        const qty = existing.quantity + 1;
-        const pricingAll: number = calculateLineTotal(
-          product.basePrice,
-          selectedModifiers.map((m) => ({ priceDelta: m.priceDelta })),
-          qty,
-        );
-        updated[existingIdx] = {
-          ...existing,
-          quantity: qty,
-          lineTotal: pricingAll,
-        };
-        return updated;
-      }
-
-      return [
-        ...prev,
-        {
-          productId: product.id,
-          productNameAr: product.nameAr,
-          productNameEn: product.nameEn,
-          basePrice: product.basePrice,
-          selectedModifiers,
-          quantity: 1,
-          lineTotal,
-        },
-      ];
-    });
-  };
-
-  const openModifiers = useCallback((product: POSCategory["products"][number]) => {
-    if (product.modifierGroups.length === 0) {
-      addToCart(product, []);
-      return;
-    }
-
-    const initial: Record<string, string[]> = {};
-    for (const g of product.modifierGroups) {
-      initial[g.id] = [];
-    }
-    setModifierSelections(initial);
-    setModifierTarget({
-      productId: product.id,
-      productNameAr: product.nameAr,
-      productNameEn: product.nameEn,
-      basePrice: product.basePrice,
-      groups: product.modifierGroups,
-    });
-  }, []);
-
-  const toggleSingle = (groupId: string, modifierName: string) => {
-    setModifierSelections((prev) => ({
-      ...prev,
-      [groupId]: [modifierName],
-    }));
-  };
-
-  const toggleMulti = (groupId: string, modifierName: string) => {
-    setModifierSelections((prev) => {
-      const current = prev[groupId] ?? [];
-      const next = current.includes(modifierName)
-        ? current.filter((n) => n !== modifierName)
-        : [...current, modifierName];
-      return { ...prev, [groupId]: next };
-    });
-  };
-
-  const confirmModifiers = () => {
-    if (!modifierTarget) return;
-
-    const selected: { id: string; nameAr: string; name: string; priceDelta: string }[] = [];
-    for (const g of modifierTarget.groups) {
-      const picked = modifierSelections[g.id] ?? [];
-      for (const modName of picked) {
-        const mod = g.modifiers.find((m) => m.name === modName);
-        if (mod) {
-          selected.push({
-            id: mod.id,
-            nameAr: mod.nameAr,
-            name: mod.name,
-            priceDelta: mod.priceDelta,
-          });
-        }
-      }
-    }
-
-    addToCart(
-      {
-        id: modifierTarget.productId,
-        nameAr: modifierTarget.productNameAr,
-        nameEn: modifierTarget.productNameEn,
-        basePrice: modifierTarget.basePrice,
-        modifierGroups: modifierTarget.groups,
-      },
-      selected,
-    );
-
-    setModifierTarget(null);
-  };
-
-  const updateQuantity = (index: number, delta: number) => {
-    setCart((prev) => {
-      const updated = [...prev];
-      const item = updated[index];
-      const newQty = Math.max(0, item.quantity + delta);
-      if (newQty === 0) {
-        return updated.filter((_, i) => i !== index);
-      }
-      const mods: PricingModifier[] = item.selectedModifiers.map((m) => ({
-        priceDelta: m.priceDelta,
-      }));
-      updated[index] = {
-        ...item,
-        quantity: newQty,
-        lineTotal: calculateLineTotal(item.basePrice, mods, newQty),
-      };
-      return updated;
-    });
-  };
-
-  const removeItem = (index: number) => {
-    setCart((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const cartTotal = calculateCartTotal(cart);
 
   return (
     <div className="bg-brand-cream flex h-screen flex-col" dir="rtl" lang="ar">
@@ -447,7 +273,7 @@ export function POSShell({ menu }: POSShellProps) {
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   placeholder="رقم الزبون (اختياري — لإرسال الفاتورة عبر واتساب)"
-                  className="border-border-subtle bg-muted text-brand-ink placeholder:text-text-secondary focus:border-brand-red/50 w-full rounded-full border px-4 py-2 text-sm transition-colors outline-none placeholder:text-xs"
+                  className="border-border-subtle bg-muted text-brand-ink placeholder:text-text-secondary focus:border-brand-red/50 w-full rounded-full border px-4 py-2 text-sm text-xs transition-colors outline-none placeholder:text-xs"
                   dir="ltr"
                 />
               </div>
@@ -463,7 +289,7 @@ export function POSShell({ menu }: POSShellProps) {
         </div>
       )}
 
-      {/* Modifier sheet / modal */}
+      {/* Modifier sheet */}
       {modifierTarget && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
           <div className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl">
@@ -471,7 +297,7 @@ export function POSShell({ menu }: POSShellProps) {
               {modifierTarget.productNameAr}
             </h2>
             <p className="text-text-secondary mb-4 text-sm">
-              {formatPrice(parseFloat(modifierTarget.basePrice) * 100)} ₪
+              {formatPrice(toMinorUnits(modifierTarget.basePrice))} ₪
             </p>
 
             <div className="mb-4 max-h-96 space-y-4 overflow-y-auto">
@@ -499,7 +325,7 @@ export function POSShell({ menu }: POSShellProps) {
                           }`}
                         >
                           {mod.nameAr}
-                          {parseFloat(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
+                          {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
                         </button>
                       );
                     })}
