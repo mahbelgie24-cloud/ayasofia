@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { randomUUID } from "node:crypto";
 import { orders, orderItems, ingredients, recipes, inventoryMoves } from "@/db/schema";
 import { recalculateCartServerSide, type CartItemForServer } from "@/lib/pricing-server";
 import { toMinorUnits } from "@/lib/pricing";
@@ -66,7 +67,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
       }
 
       const orderNumber =
-        `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`.slice(
+        `POS-${Date.now().toString(36).toUpperCase()}-${randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`.slice(
           0,
           20,
         );
