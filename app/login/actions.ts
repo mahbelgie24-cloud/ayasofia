@@ -5,6 +5,7 @@ import { verifyPin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shifts } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
+import { checkRateLimit, recordFailedAttempt, resetAttempts } from "@/lib/rate-limit";
 
 export type PinResult =
   { success: true; hasOpenShift: boolean } | { success: false; error: string };
@@ -12,6 +13,16 @@ export type PinResult =
 export async function verifyStaffPin(pin: string, anonUserId: string): Promise<PinResult> {
   if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
     return { success: false, error: "Invalid PIN" };
+  }
+
+  // Rate limit check — keyed by anonymous user ID
+  const rateCheck = checkRateLimit(anonUserId);
+  if (!rateCheck.allowed) {
+    const waitSeconds = Math.ceil(rateCheck.waitMs / 1000);
+    return {
+      success: false,
+      error: `محاولات كثيرة جداً. انتظر ${waitSeconds} ثانية`,
+    };
   }
 
   const supabase = createServiceClient();
@@ -28,8 +39,18 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   const match = staffRows.find((row) => verifyPin(pin, row.pin_hash));
 
   if (!match) {
+    const { locked, waitMs } = recordFailedAttempt(anonUserId);
+    if (locked) {
+      return {
+        success: false,
+        error: `تم قفل الحساب مؤقتاً. حاول بعد ${Math.ceil(waitMs / 1000)} ثانية`,
+      };
+    }
     return { success: false, error: "Invalid PIN" };
   }
+
+  // Successful auth — reset attempt counter
+  resetAttempts(anonUserId);
 
   const { error: authErr } = await supabase.auth.admin.updateUserById(anonUserId, {
     app_metadata: { staff_id: match.id, role: match.role },
