@@ -57,6 +57,15 @@ lib/supabase/service.ts      — server Supabase client (service role — NEVER 
 app/login/page.tsx           — PIN pad entry screen
 app/login/actions.ts         — verifyStaffPin server action (auth gate)
 components/pin-pad.tsx       — 4-digit numeric keypad UI
+lib/shifts.ts                — openShift() / closeShift() / getOpenShift() (shift lifecycle)
 db/schema.ts                 — Drizzle schema (15 tables, all with RLS via .enableRLS())
 proxy.ts                     — Route protection (UX redirects only, not auth authority)
 ```
+
+## Shift lifecycle — reuse decision
+
+On PIN login, if the staff member already has an open shift
+(`shifts.closedAt IS NULL`), the session **attaches to that existing
+shift** rather than blocking login or forcing a close. `openShift()` is
+idempotent — if called while a shift is already open, it returns the
+existing shift ID without creating a row.

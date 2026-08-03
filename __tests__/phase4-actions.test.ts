@@ -219,6 +219,22 @@ describe("RBAC — manager routes reject lower roles", () => {
       createProduct({ categoryId: "c1", nameAr: "x", nameEn: "x", basePrice: 10 }),
     ).rejects.toThrow();
   });
+
+  it("rejects manager for createStaffMember (owner-only, not just lower roles)", async () => {
+    vi.mocked(requireStaffSession).mockRejectedValueOnce(
+      new (await import("@/lib/auth")).AuthError("no", "INSUFFICIENT_ROLE"),
+    );
+    await expect(
+      createStaffMember({ name: "Ali", role: "cashier", pin: "1234" }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects manager for updateStaffMember (owner-only boundary check)", async () => {
+    vi.mocked(requireStaffSession).mockRejectedValueOnce(
+      new (await import("@/lib/auth")).AuthError("no", "INSUFFICIENT_ROLE"),
+    );
+    await expect(updateStaffMember({ id: "s1", active: false })).rejects.toThrow();
+  });
 });
 
 // ── Category delete with products check ──
