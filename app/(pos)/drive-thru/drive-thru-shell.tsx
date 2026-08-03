@@ -39,13 +39,10 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   const [checkingOut, setCheckingOut] = useState(false);
   const idempotencyKeyRef = useRef<string>("");
 
-  // Reorder categories: bubble-tea first, then the rest in original order
-  const driveThruMenu = [...menu].sort((a, b) => {
-    const isTea = (s: string) => s.includes("بابل") || s.includes("شاي") || s.includes("كريمة");
-    if (isTea(a.nameAr) && !isTea(b.nameAr)) return -1;
-    if (!isTea(a.nameAr) && isTea(b.nameAr)) return 1;
-    return 0;
-  });
+  // Categories already ordered by sortOrder from getMenuForPOS —
+  // bubble tea categories have lower sortOrder values in seed data,
+  // ensuring they appear first. No string-matching needed.
+  const driveThruMenu = [...menu].sort((a, b) => a.sortOrder - b.sortOrder);
 
   const [selectedCatId, setSelectedCatId] = useState(driveThruMenu[0]?.id ?? "");
 
