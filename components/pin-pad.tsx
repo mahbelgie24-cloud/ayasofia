@@ -4,19 +4,24 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { verifyStaffPin } from "@/app/login/actions";
+import { openShift } from "@/lib/shifts";
 
 const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, "⌫"] as const;
 
 interface Props {
-  /** Route to navigate to after a successful PIN match. */
   redirectTo: string;
 }
+
+type FlowState = "pin" | "opening-cash";
 
 export function PinPad({ redirectTo }: Props) {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [flow, setFlow] = useState<FlowState>("pin");
+  const [openingCash, setOpeningCash] = useState("");
+  const [staffIdInternal, setStaffIdInternal] = useState<string | null>(null);
 
   const handleDigit = useCallback(
     (digit: string) => {
@@ -46,10 +51,7 @@ export function PinPad({ redirectTo }: Props) {
     try {
       const supabase = createClient();
 
-      // Guardrail: anonymous sign-in happens ONLY here, inside the
-      // PIN submit handler — never on page load or elsewhere (§2).
-      const { data: anonData, error: anonErr } =
-        await supabase.auth.signInAnonymously();
+      const { data: anonData, error: anonErr } = await supabase.auth.signInAnonymously();
 
       if (anonErr || !anonData.user) {
         setError("Connection failed. Try again.");
@@ -65,9 +67,13 @@ export function PinPad({ redirectTo }: Props) {
         return;
       }
 
-      // Refresh the session so the JWT picks up the new app_metadata
-      // claims (staff_id, role) set by the server action (§2 guardrail).
       await supabase.auth.refreshSession();
+
+      if (!result.hasOpenShift) {
+        setFlow("opening-cash");
+        setLoading(false);
+        return;
+      }
 
       router.push(redirectTo);
     } catch {
@@ -76,32 +82,92 @@ export function PinPad({ redirectTo }: Props) {
     }
   }, [pin, loading, redirectTo, router]);
 
+  const handleOpenShift = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const cash = openingCash.trim() === "" ? 0 : parseFloat(openingCash);
+      const shiftResult = await openShift(isNaN(cash) ? 0 : cash);
+
+      if (!shiftResult.success) {
+        setError(shiftResult.error);
+        setLoading(false);
+        return;
+      }
+
+      router.push(redirectTo);
+    } catch {
+      setError("Something went wrong");
+      setLoading(false);
+    }
+  }, [openingCash, redirectTo, router]);
+
   const filled = pin.length;
   const canSubmit = filled === 4 && !loading;
 
+  if (flow === "opening-cash") {
+    return (
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-6">
+        <p className="text-brand-ink text-center text-sm font-medium">الرصيد الافتتاحي للوردية</p>
+        <p className="text-text-secondary text-center text-xs">
+          أدخل المبلغ النقدي الموجود في الدرج عند بداية الوردية (اختياري)
+        </p>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={openingCash}
+          onChange={(e) => setOpeningCash(e.target.value)}
+          placeholder="0.00"
+          className="border-border-subtle text-brand-ink focus:border-brand-red/50 w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
+          dir="ltr"
+          autoFocus
+        />
+        {error && (
+          <p className="text-status-error text-sm" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="flex w-full gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(redirectTo)}
+            className="border-brand-ink/10 text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors"
+          >
+            تخطي
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenShift}
+            disabled={loading}
+            className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          >
+            {loading ? "..." : "بدء الوردية"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-6">
-      {/* PIN display — 4 dots */}
       <div aria-label={`${filled} digits entered`} className="flex gap-4">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
             className={`h-5 w-5 rounded-full border-2 transition-colors ${
-              i < filled
-                ? "border-brand-red bg-brand-red"
-                : "border-brand-ink/20"
+              i < filled ? "border-brand-red bg-brand-red" : "border-brand-ink/20"
             }`}
           />
         ))}
       </div>
 
       {error && (
-        <p className="text-sm text-status-error" role="alert">
+        <p className="text-status-error text-sm" role="alert">
           {error}
         </p>
       )}
 
-      {/* Keypad grid */}
       <div className="grid w-full grid-cols-3 gap-3">
         {DIGITS.map((key) => {
           if (key === null) return <div key="spacer" />;
@@ -114,7 +180,7 @@ export function PinPad({ redirectTo }: Props) {
                 onClick={handleBackspace}
                 disabled={filled === 0 || loading}
                 aria-label="Delete last digit"
-                className="flex h-14 items-center justify-center rounded-2xl border border-brand-ink/10 text-xl text-brand-ink transition-colors hover:bg-brand-ink/5 disabled:opacity-30"
+                className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 flex h-14 items-center justify-center rounded-2xl border text-xl transition-colors disabled:opacity-30"
               >
                 ⌫
               </button>
@@ -129,7 +195,7 @@ export function PinPad({ redirectTo }: Props) {
               onClick={() => handleDigit(digit)}
               disabled={filled === 4 || loading}
               aria-label={`Digit ${digit}`}
-              className="flex h-14 items-center justify-center rounded-2xl border border-brand-ink/10 text-2xl font-medium text-brand-ink transition-colors hover:bg-brand-ink/5 active:bg-brand-red/10 disabled:opacity-30"
+              className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 active:bg-brand-red/10 flex h-14 items-center justify-center rounded-2xl border text-2xl font-medium transition-colors disabled:opacity-30"
             >
               {digit}
             </button>
@@ -142,7 +208,7 @@ export function PinPad({ redirectTo }: Props) {
           type="button"
           onClick={handleClear}
           disabled={filled === 0 || loading}
-          className="flex-1 rounded-full border border-brand-ink/10 px-4 py-3 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-ink/5 disabled:opacity-30"
+          className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-30"
         >
           Clear
         </button>
@@ -150,7 +216,7 @@ export function PinPad({ redirectTo }: Props) {
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="flex-1 rounded-full bg-brand-red px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-red/90 disabled:opacity-50"
+          className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
         >
           {loading ? "..." : "Enter"}
         </button>

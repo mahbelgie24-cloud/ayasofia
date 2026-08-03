@@ -9,6 +9,8 @@ import {
   type SelectedModifier as PricingModifier,
 } from "@/lib/pricing";
 import { checkout } from "./actions";
+import { closeShift } from "@/lib/shifts";
+import { endStaffSession } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
 
 interface CartItem {
@@ -41,6 +43,13 @@ export function POSShell({ menu }: POSShellProps) {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [customerPhone, setCustomerPhone] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
+  const [shiftModal, setShiftModal] = useState(false);
+  const [closingCash, setClosingCash] = useState("");
+  const [shiftResult, setShiftResult] = useState<{
+    totalSales: string;
+    discrepancy: string;
+  } | null>(null);
+  const [closingShift, setClosingShift] = useState(false);
   const idempotencyKeyRef = useRef<string>("");
 
   // Generate a fresh idempotency key when the cart transitions from empty
@@ -82,6 +91,31 @@ export function POSShell({ menu }: POSShellProps) {
     } finally {
       setCheckingOut(false);
     }
+  };
+
+  const handleCloseShift = async () => {
+    const cash = closingCash.trim() === "" ? 0 : parseFloat(closingCash);
+    setClosingShift(true);
+    try {
+      const result = await closeShift(isNaN(cash) ? 0 : cash);
+      if (result.success) {
+        setShiftResult({
+          totalSales: result.totalSales,
+          discrepancy: result.discrepancy,
+        });
+      } else {
+        alert(result.error);
+      }
+    } catch {
+      alert("فشل في إنهاء الوردية");
+    } finally {
+      setClosingShift(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await endStaffSession();
+    router.push("/login");
   };
 
   const selectedCat = menu.find((c) => c.id === selectedCatId) ?? menu[0];
@@ -239,6 +273,21 @@ export function POSShell({ menu }: POSShellProps) {
 
   return (
     <div className="bg-brand-cream flex h-screen flex-col" dir="rtl" lang="ar">
+      {/* Shift control bar */}
+      <div className="border-border-subtle flex shrink-0 items-center justify-between border-b bg-white px-3 py-1.5">
+        <span className="text-text-secondary text-xs font-medium">POS</span>
+        <button
+          onClick={() => {
+            setShiftResult(null);
+            setClosingCash("");
+            setShiftModal(true);
+          }}
+          className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+        >
+          إنهاء الوردية
+        </button>
+      </div>
+
       {/* Category tabs */}
       <div className="border-border-subtle flex shrink-0 gap-1 overflow-x-auto border-b bg-white px-3 py-2">
         {menu.map((cat) => (
@@ -472,6 +521,81 @@ export function POSShell({ menu }: POSShellProps) {
                 إضافة إلى السلة
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shift close modal */}
+      {shiftModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
+          <div className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl">
+            <h2 className="font-heading text-brand-ink text-lg font-semibold">إنهاء الوردية</h2>
+
+            {!shiftResult ? (
+              <div className="my-4 space-y-3">
+                <p className="text-text-secondary text-sm">
+                  أدخل المبلغ النقدي الفعلي في الدرج الآن
+                </p>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={closingCash}
+                  onChange={(e) => setClosingCash(e.target.value)}
+                  placeholder="0.00"
+                  className="border-border-subtle focus:border-brand-red/50 text-brand-ink w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
+                  dir="ltr"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShiftModal(false)}
+                    className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handleCloseShift}
+                    disabled={closingShift}
+                    className="bg-status-warning hover:bg-status-warning/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
+                  >
+                    {closingShift ? "جاري..." : "تأكيد إنهاء الوردية"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="my-4 space-y-3">
+                <div className="bg-brand-cream rounded-xl p-4 text-center">
+                  <p className="text-text-secondary text-sm">إجمالي المبيعات</p>
+                  <p className="font-heading text-brand-ink mt-1 text-2xl font-bold">
+                    {shiftResult.totalSales} ₪
+                  </p>
+                </div>
+                <div
+                  className={`rounded-xl p-4 text-center ${
+                    Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
+                      ? "bg-status-warning/10"
+                      : "bg-status-success/10"
+                  }`}
+                >
+                  <p className="text-text-secondary text-sm">الفرق</p>
+                  <p
+                    className={`font-heading mt-1 text-xl font-bold ${
+                      Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
+                        ? "text-status-warning"
+                        : "text-status-success"
+                    }`}
+                  >
+                    {shiftResult.discrepancy} ₪
+                  </p>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="bg-brand-red hover:bg-brand-red/90 w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+                >
+                  تسجيل الخروج
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
