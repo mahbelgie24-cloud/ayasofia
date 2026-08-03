@@ -18,7 +18,7 @@ export function AdminNav() {
       <ul className="space-y-1">
         {links.map((link) => {
           const active = pathname.startsWith(link.href);
-          const built = link.href !== "/admin/menu" && link.href !== "/admin/staff";
+          const built = true;
           return (
             <li key={link.href}>
               <a
