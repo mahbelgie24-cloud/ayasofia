@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { orders, orderItems, ingredients, recipes, inventoryMoves } from "@/db/schema";
 import { recalculateCartServerSide, type CartItemForServer } from "@/lib/pricing-server";
+import { toMinorUnits } from "@/lib/pricing";
 import { eq, inArray, sql } from "drizzle-orm";
 
 export interface SharedCheckoutParams {
@@ -123,8 +124,9 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         const productRecipes = recipeMap.get(line.productId);
         if (!productRecipes) continue;
         for (const rec of productRecipes) {
-          const totalUsed = parseFloat(rec.quantityUsed) * line.quantity;
-          const deltaStr = (-totalUsed).toFixed(2);
+          const qtyMinor = toMinorUnits(rec.quantityUsed);
+          const totalMinor = qtyMinor * line.quantity;
+          const deltaStr = (-totalMinor / 100).toFixed(2);
           await tx.insert(inventoryMoves).values({
             ingredientId: rec.ingredientId,
             deltaQty: deltaStr,

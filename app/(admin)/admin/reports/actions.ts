@@ -4,6 +4,7 @@ import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, orderItems, products, recipes, ingredients, shifts, staff } from "@/db/schema";
 import { and, gte, lte, desc, inArray } from "drizzle-orm";
+import { toMinorUnits, formatPrice, addMinor, multiplyMinor } from "@/lib/pricing";
 
 export interface SalesSummary {
   totalRevenue: string;
@@ -55,23 +56,28 @@ export async function getSalesSummary(startDate: string, endDate: string): Promi
     .from(orders)
     .where(and(gte(orders.createdAt, start), lte(orders.createdAt, end)));
 
-  let totalRevenue = 0;
-  const byChannel: Record<string, { count: number; revenue: string }> = {};
+  let totalRevenueAgorot = 0;
+  const byChannel: Record<string, { count: number; revenueAgorot: number }> = {};
 
   for (const row of rows) {
-    totalRevenue += parseFloat(row.total);
+    const agorot = toMinorUnits(row.total);
+    totalRevenueAgorot = addMinor(totalRevenueAgorot, agorot);
     if (!byChannel[row.channel]) {
-      byChannel[row.channel] = { count: 0, revenue: "0.00" };
+      byChannel[row.channel] = { count: 0, revenueAgorot: 0 };
     }
     byChannel[row.channel].count += 1;
-    const current = parseFloat(byChannel[row.channel].revenue) + parseFloat(row.total);
-    byChannel[row.channel].revenue = current.toFixed(2);
+    byChannel[row.channel].revenueAgorot = addMinor(byChannel[row.channel].revenueAgorot, agorot);
+  }
+
+  const channelResult: Record<string, { count: number; revenue: string }> = {};
+  for (const [ch, data] of Object.entries(byChannel)) {
+    channelResult[ch] = { count: data.count, revenue: formatPrice(data.revenueAgorot) };
   }
 
   return {
-    totalRevenue: totalRevenue.toFixed(2),
+    totalRevenue: formatPrice(totalRevenueAgorot),
     orderCount: rows.length,
-    byChannel,
+    byChannel: channelResult,
   };
 }
 
@@ -107,12 +113,15 @@ export async function getBestSellers(startDate: string, endDate: string): Promis
     .where(inArray(products.id, productIds));
   const nameMap = new Map(productRows.map((p) => [p.id, { ar: p.nameAr, en: p.nameEn }]));
 
-  const byProduct = new Map<string, { quantity: number; revenue: number }>();
+  const byProduct = new Map<string, { quantity: number; revenueAgorot: number }>();
 
   for (const item of items) {
-    const entry = byProduct.get(item.productId) ?? { quantity: 0, revenue: 0 };
+    const entry = byProduct.get(item.productId) ?? { quantity: 0, revenueAgorot: 0 };
     entry.quantity += item.quantity;
-    entry.revenue += parseFloat(item.unitPrice) * item.quantity;
+    entry.revenueAgorot = addMinor(
+      entry.revenueAgorot,
+      multiplyMinor(toMinorUnits(item.unitPrice), item.quantity),
+    );
     byProduct.set(item.productId, entry);
   }
 
@@ -122,7 +131,7 @@ export async function getBestSellers(startDate: string, endDate: string): Promis
       nameAr: nameMap.get(productId)?.ar ?? productId,
       nameEn: nameMap.get(productId)?.en ?? productId,
       quantitySold: data.quantity,
-      totalRevenue: data.revenue.toFixed(2),
+      totalRevenue: formatPrice(data.revenueAgorot),
     }))
     .sort((a, b) => b.quantitySold - a.quantitySold);
 
@@ -155,23 +164,29 @@ export async function getProductMargins(): Promise<ProductMargin[]> {
   return allProducts.map((product) => {
     const productRecipes = allRecipes.filter((r) => r.productId === product.id);
 
-    let ingredientCost = 0;
+    let ingredientCostAgorot = 0;
     for (const rec of productRecipes) {
-      const cost = parseFloat(costMap.get(rec.ingredientId) ?? "0");
-      ingredientCost += cost * parseFloat(rec.quantityUsed);
+      const costPerUnitAgorot = toMinorUnits(costMap.get(rec.ingredientId) ?? "0");
+      const qtyUsedAgorot = toMinorUnits(rec.quantityUsed);
+      // ingredient cost for this recipe line = cost * qty, both in agorot then scaled back
+      ingredientCostAgorot = addMinor(
+        ingredientCostAgorot,
+        Math.round((costPerUnitAgorot * qtyUsedAgorot) / 100),
+      );
     }
 
-    const price = parseFloat(product.basePrice);
-    const margin = price - ingredientCost;
-    const marginPercent = price > 0 ? (margin / price) * 100 : 0;
+    const priceAgorot = toMinorUnits(product.basePrice);
+    const marginAgorot = priceAgorot - ingredientCostAgorot;
+    const marginPercent =
+      priceAgorot > 0 ? parseFloat(((marginAgorot / priceAgorot) * 100).toFixed(1)) : 0;
 
     return {
       productId: product.id,
       nameAr: product.nameAr,
       nameEn: product.nameEn,
       basePrice: product.basePrice,
-      ingredientCost: ingredientCost.toFixed(2),
-      margin: margin.toFixed(2),
+      ingredientCost: formatPrice(ingredientCostAgorot),
+      margin: formatPrice(marginAgorot),
       marginPercent: marginPercent.toFixed(1),
     };
   });
@@ -193,13 +208,14 @@ export async function getZReport(): Promise<ZReportShift[]> {
   const staffMap = new Map(staffRows.map((s) => [s.id, s.name]));
 
   return shiftRows.map((shift) => {
-    const opening = parseFloat(shift.openingCash);
-    const closing = shift.closingCash ? parseFloat(shift.closingCash) : null;
-    const sales = shift.totalSales ? parseFloat(shift.totalSales) : null;
+    const openingAgorot = toMinorUnits(shift.openingCash);
+    const closingAgorot = shift.closingCash ? toMinorUnits(shift.closingCash) : null;
+    const salesAgorot = shift.totalSales ? toMinorUnits(shift.totalSales) : null;
 
     let discrepancy: string | null = null;
-    if (closing !== null && sales !== null) {
-      discrepancy = (closing - opening - sales).toFixed(2);
+    if (closingAgorot !== null && salesAgorot !== null) {
+      const diffAgorot = closingAgorot - openingAgorot - salesAgorot;
+      discrepancy = formatPrice(diffAgorot);
     }
 
     return {

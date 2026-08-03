@@ -7,6 +7,7 @@ import {
   calculateLineTotal,
   calculateCartTotal,
   formatPrice,
+  toMinorUnits,
   type SelectedModifier as PricingModifier,
 } from "@/lib/pricing";
 import { checkout } from "../pos/actions";
@@ -263,7 +264,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
                 {product.nameAr}
               </span>
               <span className="text-brand-red mt-0.5 text-xs font-medium">
-                {formatPrice(parseFloat(product.basePrice) * 100)} ₪
+                {formatPrice(toMinorUnits(product.basePrice))} ₪
               </span>
               {product.modifierGroups.length > 0 && (
                 <span className="text-text-secondary mt-0.5 text-[10px]">تخصيص</span>

@@ -1,6 +1,7 @@
 import { db } from "./index";
 import { categories, orders, orderItems, products, staff, settings } from "@/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
+import { calculateLineTotal, formatPrice } from "@/lib/pricing";
 
 export type Modifier = {
   id: string;
@@ -183,7 +184,7 @@ export async function getReceiptData(orderId: string): Promise<ReceiptData | nul
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       modifierNames: modNames,
-      lineTotal: (parseFloat(item.unitPrice) * item.quantity).toFixed(2),
+      lineTotal: formatPrice(calculateLineTotal(item.unitPrice, [], item.quantity)),
     };
   });
 
