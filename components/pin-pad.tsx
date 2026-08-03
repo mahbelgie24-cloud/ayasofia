@@ -21,7 +21,6 @@ export function PinPad({ redirectTo }: Props) {
   const [loading, setLoading] = useState(false);
   const [flow, setFlow] = useState<FlowState>("pin");
   const [openingCash, setOpeningCash] = useState("");
-  const [staffIdInternal, setStaffIdInternal] = useState<string | null>(null);
 
   const handleDigit = useCallback(
     (digit: string) => {
