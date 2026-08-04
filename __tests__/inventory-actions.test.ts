@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockTx } = vi.hoisted(() => ({
+const { mockTx, mockDbSelect } = vi.hoisted(() => ({
   mockTx: vi.fn(),
+  mockDbSelect: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", async (importOriginal) => {
@@ -13,10 +14,10 @@ vi.mock("@/lib/auth", async (importOriginal) => {
 });
 
 vi.mock("@/lib/db", () => ({
-  db: { transaction: mockTx },
+  db: { transaction: mockTx, select: mockDbSelect },
 }));
 
-import { logPurchase, logWaste } from "@/app/(admin)/admin/inventory/actions";
+import { logPurchase, logWaste, getInventoryOptions } from "@/app/(admin)/admin/inventory/actions";
 import { requireStaffSession } from "@/lib/auth";
 import { AuthError } from "@/lib/auth";
 
@@ -131,5 +132,40 @@ describe("logWaste", () => {
       new AuthError("Insufficient role", "INSUFFICIENT_ROLE"),
     );
     await expect(logWaste({ ingredientId: "x", quantity: 1 })).rejects.toThrow(AuthError);
+  });
+});
+
+// ── WEB-SEC-002: getInventoryOptions must be auth-guarded ──
+
+describe("getInventoryOptions", () => {
+  it("rejects an unauthenticated caller (no session)", async () => {
+    vi.mocked(requireStaffSession).mockRejectedValueOnce(
+      new AuthError("No authenticated session", "NO_SESSION"),
+    );
+    await expect(getInventoryOptions()).rejects.toThrow(AuthError);
+  });
+
+  it("rejects cashier / barista roles (manager+ required)", async () => {
+    vi.mocked(requireStaffSession).mockRejectedValueOnce(
+      new AuthError("Insufficient role", "INSUFFICIENT_ROLE"),
+    );
+    await expect(getInventoryOptions()).rejects.toThrow(AuthError);
+  });
+
+  it("returns ingredients and suppliers for a manager session", async () => {
+    const ingRows = [
+      { id: "ing1", name: "Tapioca Pearls" },
+      { id: "ing2", name: "Milk" },
+    ];
+    const supRows = [{ id: "sup1", name: "Tea World" }];
+    // getInventoryOptions calls Promise.all([db.select(...).from(ingredients), db.select(...).from(suppliers)])
+    // — no .where() chain, from() returns the rows directly.
+    mockDbSelect
+      .mockReturnValueOnce({ from: () => Promise.resolve(ingRows) })
+      .mockReturnValueOnce({ from: () => Promise.resolve(supRows) });
+
+    const result = await getInventoryOptions();
+    expect(result.ingredients).toEqual(ingRows);
+    expect(result.suppliers).toEqual(supRows);
   });
 });

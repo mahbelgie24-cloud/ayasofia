@@ -82,9 +82,7 @@ export interface StaffSession {
  * `proxy.ts` handles UX-level redirects for unauthenticated users but
  * is NOT the security boundary — this function is.
  */
-export async function requireStaffSession(
-  minRole?: StaffRole,
-): Promise<StaffSession> {
+export async function requireStaffSession(minRole?: StaffRole): Promise<StaffSession> {
   const supabase = await createClient();
 
   const {
@@ -93,20 +91,14 @@ export async function requireStaffSession(
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    throw new AuthError(
-      "No authenticated session",
-      "NO_SESSION",
-    );
+    throw new AuthError("No authenticated session", "NO_SESSION");
   }
 
   const staffId = user.app_metadata?.staff_id as string | undefined;
   const role = user.app_metadata?.role as StaffRole | undefined;
 
   if (!staffId || !role) {
-    throw new AuthError(
-      "Session is not linked to a staff member",
-      "NO_STAFF_ID",
-    );
+    throw new AuthError("Session is not linked to a staff member", "NO_STAFF_ID");
   }
 
   if (minRole && ROLE_RANK[role] < ROLE_RANK[minRole]) {
@@ -119,6 +111,7 @@ export async function requireStaffSession(
   return { staffId, role };
 }
 
-// TODO(cleanup): failed/superseded anonymous sessions accumulate in
-// auth.users indefinitely — needs a scheduled cleanup job before real
-// launch, see docs/technical-spec.md §15.
+// Anonymous user cleanup: a scheduled GitHub Actions workflow runs
+// the cleanup script weekly in dry-run mode.  Manual dispatch with
+// `execute=true` is required for actual deletion.  See .github/workflows/
+// cleanup-anonymous.yml and docs/operations/anonymous-user-cleanup.md.

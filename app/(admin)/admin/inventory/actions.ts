@@ -108,8 +108,12 @@ export async function logWaste(input: {
 
 /**
  * Fetch all ingredients and suppliers for dropdowns.
+ * Manager+ only — like every other action in this module.  Listing
+ * ingredient names and supplier names to an unauthenticated caller
+ * is an information-disclosure risk (OWASP A01:2021 / ASVS 7.1.1).
  */
 export async function getInventoryOptions() {
+  await requireStaffSession("manager");
   const [ingRows, supRows] = await Promise.all([
     db.select({ id: ingredients.id, name: ingredients.name }).from(ingredients),
     db.select({ id: suppliers.id, name: suppliers.name }).from(suppliers),
