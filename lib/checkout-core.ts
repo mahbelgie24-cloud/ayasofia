@@ -40,6 +40,19 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
   if (!cartItems.length) return { success: false, error: "Cart is empty" };
   if (!idempotencyKey) return { success: false, error: "Missing idempotency key" };
 
+  // Reject invalid quantities before any DB write (SEC-001).
+  // quantity must be a safe integer ≥ 1 — a negative, zero, or
+  // fractional quantity can produce malformed/zero-total orders on
+  // the public, unauthenticated self-order endpoint.
+  for (const item of cartItems) {
+    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) {
+      return {
+        success: false,
+        error: "Invalid quantity — must be a whole number of at least 1",
+      };
+    }
+  }
+
   try {
     const result = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -58,6 +71,18 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
       }
 
       const { lineItems, subtotal, modifierLookup } = await recalculateCartServerSide(cartItems);
+
+      // Every submitted product must have been recognized by the server-side
+      // recalculation. If any productId was unknown (recalc skips it with
+      // `if (!base) continue`), lineItems will be shorter than cartItems —
+      // reject the whole order rather than silently creating a partial/
+      // zero-total order (SEC-001).
+      if (lineItems.length !== cartItems.length) {
+        return {
+          success: false as const,
+          error: "One or more products could not be found",
+        };
+      }
 
       if (clientTotal !== undefined && clientTotal !== subtotal) {
         console.warn(

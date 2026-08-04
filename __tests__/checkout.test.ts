@@ -249,3 +249,64 @@ describe("checkout — concurrent idempotency key collision", () => {
     expect(mockRecalc).toHaveBeenCalled();
   });
 });
+
+describe("checkout — quantity validation (SEC-001)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(makeTx({})));
+  });
+
+  it("rejects quantity: 0", async () => {
+    const result = await checkout({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 0 }],
+      idempotencyKey: "key-q-0",
+      paymentMethod: "cash",
+    });
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toMatch(/invalid quantity/i);
+    expect(mockTx).not.toHaveBeenCalled();
+  });
+
+  it("rejects quantity: -1", async () => {
+    const result = await checkout({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: -1 }],
+      idempotencyKey: "key-q-neg",
+      paymentMethod: "cash",
+    });
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toMatch(/invalid quantity/i);
+    expect(mockTx).not.toHaveBeenCalled();
+  });
+
+  it("rejects quantity: 1.5 (fractional)", async () => {
+    const result = await checkout({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 1.5 }],
+      idempotencyKey: "key-q-frac",
+      paymentMethod: "cash",
+    });
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toMatch(/invalid quantity/i);
+    expect(mockTx).not.toHaveBeenCalled();
+  });
+
+  it("rejects when any productId is unknown (post-recalc length mismatch)", async () => {
+    // recalc returns fewer lineItems than cartItems submitted —
+    // the unknown product was silently skipped
+    mockRecalc.mockResolvedValueOnce({
+      lineItems: [{ productId: "p1", quantity: 1, unitPrice: "15.00", lineTotal: 1500 }],
+      subtotal: 1500,
+      modifierLookup: new Map(),
+    });
+
+    const result = await checkout({
+      cartItems: [
+        { productId: "p1", modifierIds: [], quantity: 1 },
+        { productId: "unknown-product", modifierIds: [], quantity: 1 },
+      ],
+      idempotencyKey: "key-unknown",
+      paymentMethod: "cash",
+    });
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toMatch(/could not be found/i);
+  });
+});

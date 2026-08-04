@@ -30,10 +30,12 @@ const { testPool } = await vi.hoisted(async () => {
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql } from "drizzle-orm";
-import { orders, orderItems, inventoryMoves, ingredients } from "@/db/schema";
+import { orders, orderItems, inventoryMoves, ingredients, products, recipes } from "@/db/schema";
 import { placeCustomerOrder } from "@/app/order/actions";
 
-const db = drizzle(testPool, { schema: { orders, orderItems, inventoryMoves, ingredients } });
+const db = drizzle(testPool, {
+  schema: { orders, orderItems, inventoryMoves, ingredients, products, recipes },
+});
 
 const stockSnapshots = new Map<string, string>();
 let createdOrderIds: string[] = [];
@@ -78,16 +80,28 @@ afterAll(async () => {
 
 describe("placeCustomerOrder — integration", () => {
   it("creates order with no staff session and deducts inventory", { timeout: 30000 }, async () => {
-    // Snapshot stock for one ingredient
-    const [ing] = await db.select().from(ingredients).limit(1);
+    // Find a product that has a recipe (so inventory deduction is testable).
+    // Previously this test passed an ingredient ID as the productId —
+    // the old code silently skipped unknown products and created a
+    // 0-total order. SEC-001 validation now correctly rejects that.
+    const recipeRow = await db.select().from(recipes).limit(1);
+    expect(recipeRow.length).toBeGreaterThan(0);
+    const productId = recipeRow[0]!.productId;
+
+    // Snapshot stock for the ingredient linked to this product's recipe
+    const [ing] = await db
+      .select()
+      .from(ingredients)
+      .where(eq(ingredients.id, recipeRow[0]!.ingredientId))
+      .limit(1);
     expect(ing).toBeDefined();
-    stockSnapshots.set(ing.id, ing.currentStock);
-    const beforeStock = parseFloat(ing.currentStock);
+    stockSnapshots.set(ing!.id, ing!.currentStock);
+    const beforeStock = parseFloat(ing!.currentStock);
 
     const result = await placeCustomerOrder({
       cartItems: [
         {
-          productId: ing.id,
+          productId,
           modifierIds: [],
           quantity: 1,
         },
