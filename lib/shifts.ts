@@ -4,6 +4,7 @@ import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shifts, orders } from "@/db/schema";
 import { eq, and, isNull, gte, lte, sql } from "drizzle-orm";
+import { toMinorUnits } from "@/lib/pricing";
 
 export type ShiftResult = { success: true; shiftId: string } | { success: false; error: string };
 
@@ -84,11 +85,11 @@ export async function closeShift(closingCash: number): Promise<CloseShiftResult>
     return { success: false, error: "Failed to close shift" };
   }
 
-  const discrepancy = (
-    closingCashNum -
-    parseFloat(current.openingCash) -
-    parseFloat(totalSales)
-  ).toFixed(2);
+  const closingAgorot = toMinorUnits(closingCashNum.toFixed(2));
+  const openingAgorot = toMinorUnits(current.openingCash);
+  const salesAgorot = toMinorUnits(totalSales);
+  const discrepancyAgorot = closingAgorot - openingAgorot - salesAgorot;
+  const discrepancy = (discrepancyAgorot / 100).toFixed(2);
 
   return {
     success: true,
