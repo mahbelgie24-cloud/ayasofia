@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Baloo_2, Baloo_Bhaijaan_2, Inter, Noto_Sans_Arabic } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
+import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 const baloo = Baloo_2({
@@ -54,10 +55,12 @@ export default function RootLayout({
         >
           تجاوز إلى المحتوى الرئيسي
         </a>
-        <AppShell />
-        <main id="main-content" className="flex flex-1 flex-col">
-          {children}
-        </main>
+        <ToastProvider>
+          <AppShell />
+          <main id="main-content" className="flex flex-1 flex-col">
+            {children}
+          </main>
+        </ToastProvider>
       </body>
     </html>
   );
