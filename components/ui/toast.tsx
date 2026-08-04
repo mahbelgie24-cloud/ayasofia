@@ -78,6 +78,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [remove],
   );
 
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ variant: ToastVariant; message: string }>).detail;
+      if (detail?.message) add(detail.variant || "error", detail.message);
+    };
+    window.addEventListener("ayasofia-toast" as keyof WindowEventMap, handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        "ayasofia-toast" as keyof WindowEventMap,
+        handler as EventListener,
+      );
+  }, [add]);
+
   const ctx = React.useMemo(
     () => ({
       error: (message: string) => add("error", message),
@@ -99,6 +112,7 @@ function ToastRegion({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: 
 
   return (
     <div
+      data-testid="toast-region"
       className="fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 sm:inset-auto sm:start-4 sm:bottom-4 sm:items-stretch"
       aria-live="polite"
       aria-atomic="false"
@@ -108,6 +122,7 @@ function ToastRegion({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: 
         return (
           <div
             key={toast.id}
+            data-testid="toast"
             role={style.role}
             className={cn(
               "ease-spring-gentle pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl px-4 py-3 shadow-lg sm:max-w-md",
