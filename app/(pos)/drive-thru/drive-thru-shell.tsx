@@ -8,6 +8,7 @@ import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "../pos/actions";
 import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { useToast } from "@/components/ui/toast";
 
 export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
@@ -31,6 +32,8 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
     setModifierTarget,
     clearCart,
   } = usePOSCart();
+
+  const toast = useToast();
 
   const driveThruMenu = [...menu].sort((a, b) => a.sortOrder - b.sortOrder);
   const [selectedCatId, setSelectedCatId] = useState(driveThruMenu[0]?.id ?? "");
@@ -57,10 +60,10 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
         setCartOpen(false);
         router.push(`/pos/receipt/${result.orderId}`);
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch {
-      alert("فشل في إتمام الطلب");
+      toast.error("فشل في إتمام الطلب");
     } finally {
       setCheckingOut(false);
     }

@@ -7,6 +7,7 @@ import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "./actions";
 import { closeShift } from "@/lib/shifts";
 import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { useToast } from "@/components/ui/toast";
 import { endStaffSession } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
 
@@ -45,6 +46,8 @@ export function POSShell({ menu }: POSShellProps) {
     clearCart,
   } = usePOSCart();
 
+  const toast = useToast();
+
   const handleCheckout = async () => {
     if (cart.length === 0 || checkingOut) return;
     setCheckingOut(true);
@@ -66,10 +69,10 @@ export function POSShell({ menu }: POSShellProps) {
         setCartOpen(false);
         router.push(`/pos/receipt/${result.orderId}`);
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch {
-      alert("فشل في إتمام الطلب");
+      toast.error("فشل في إتمام الطلب");
     } finally {
       setCheckingOut(false);
     }
@@ -83,10 +86,10 @@ export function POSShell({ menu }: POSShellProps) {
       if (result.success) {
         setShiftResult({ totalSales: result.totalSales, discrepancy: result.discrepancy });
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch {
-      alert("فشل في إنهاء الوردية");
+      toast.error("فشل في إنهاء الوردية");
     } finally {
       setClosingShift(false);
     }

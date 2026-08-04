@@ -8,6 +8,7 @@ import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { placeCustomerOrder } from "./actions";
 import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { useToast } from "@/components/ui/toast";
 
 export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
@@ -37,6 +38,8 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
     setModifierTarget,
   } = usePOSCart({ onItemAdded: handleItemAdded });
 
+  const toast = useToast();
+
   const selectedCat = menu.find((c) => c.id === selectedCatId) ?? menu[0];
 
   const handleSubmit = async () => {
@@ -56,10 +59,10 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
       if (result.success) {
         router.push(`/order/status/${result.orderId}`);
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch {
-      alert("فشل في إتمام الطلب");
+      toast.error("فشل في إتمام الطلب");
     } finally {
       setCheckingOut(false);
     }
