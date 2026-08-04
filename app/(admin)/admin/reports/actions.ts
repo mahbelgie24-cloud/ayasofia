@@ -4,7 +4,7 @@ import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, orderItems, products, recipes, ingredients, shifts, staff } from "@/db/schema";
 import { and, gte, lte, desc, inArray } from "drizzle-orm";
-import { toMinorUnits, formatPrice, addMinor, multiplyMinor } from "@/lib/pricing";
+import { toMinorUnits, toScaledInt, formatPrice, addMinor, multiplyMinor } from "@/lib/pricing";
 
 export interface SalesSummary {
   totalRevenue: string;
@@ -166,13 +166,17 @@ export async function getProductMargins(): Promise<ProductMargin[]> {
 
     let ingredientCostAgorot = 0;
     for (const rec of productRecipes) {
-      const costPerUnitAgorot = toMinorUnits(costMap.get(rec.ingredientId) ?? "0");
-      const qtyUsedAgorot = toMinorUnits(rec.quantityUsed);
-      // ingredient cost for this recipe line = cost * qty, both in agorot then scaled back
-      ingredientCostAgorot = addMinor(
-        ingredientCostAgorot,
-        Math.round((costPerUnitAgorot * qtyUsedAgorot) / 100),
-      );
+      // cost_per_unit is numeric(10,4) — must be parsed at scale 4 so
+      // sub-agorot costs (e.g. ₪0.0050) are not truncated to zero
+      // (WEB-DATA-001).  quantityUsed is numeric(12,2) → scale 2.
+      //
+      // cost4       = cost_per_unit × 10^4   (units of ₪0.0001)
+      // qty2        = quantity       × 10^2   (units of 0.01 unit)
+      // product     = cost4 × qty2             (units of ₪10^-6)
+      // ÷ 10^4 → agorot (₪0.01).  No floats, no precision loss.
+      const cost4 = toScaledInt(costMap.get(rec.ingredientId) ?? "0", 4);
+      const qty2 = toScaledInt(rec.quantityUsed, 2);
+      ingredientCostAgorot = addMinor(ingredientCostAgorot, Math.round((cost4 * qty2) / 10000));
     }
 
     const priceAgorot = toMinorUnits(product.basePrice);

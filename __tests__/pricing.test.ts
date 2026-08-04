@@ -4,6 +4,7 @@ import {
   calculateCartTotal,
   formatPrice,
   toMinorUnits,
+  toScaledInt,
   addMinor,
   subtractMinor,
   multiplyMinor,
@@ -203,13 +204,32 @@ describe("margin calculation — integer-cent arithmetic", () => {
     expect(formatPrice(950)).toBe("9.50");
   });
 
-  it("high-cost ingredient edge case", () => {
-    // costPerUnit="0.3333", quantityUsed="200.00" → cost = 0.3333*200 = 66.66 → 6666 agorot
-    // basePrice="12.00"
+  it("2-decimal margin: price 12.00 − cost 5.67 = 6.33", () => {
+    // Straightforward 2-decimal margin — both values resolve cleanly to agorot.
+    // (The previous comment described a 4-decimal cost scenario that this
+    //  code never exercised — see the toScaledInt describe block below for
+    //  the real 4-decimal margin test, WEB-DATA-001.)
     const price = toMinorUnits("12.00"); // 1200
     const cost = toMinorUnits("5.67"); // 567
     const margin = price - cost; // 633
     expect(formatPrice(margin)).toBe("6.33");
+  });
+
+  it("4-decimal margin: cost_per_unit 0.3333 × qty 200 = 66.66 → margin from 12.00 = -54.66", () => {
+    // The real formula from reports/actions.ts: cost4 * qty2 / 10000 → agorot.
+    // cost_per_unit="0.3333" (numeric(10,4)), quantityUsed="200.00" (numeric(12,2)).
+    // toMinorUnits("0.3333") collapses to 33 (truncates to 2 decimals) — the bug.
+    // toScaledInt("0.3333", 4) = 3333 — the fix.
+    const cost4 = toScaledInt("0.3333", 4);
+    const qty2 = toScaledInt("200.00", 2);
+    const costAgorot = Math.round((cost4 * qty2) / 10000); // 6666
+    const priceAgorot = toMinorUnits("12.00"); // 1200
+    const margin = priceAgorot - costAgorot; // -5466
+
+    expect(cost4).toBe(3333);
+    expect(qty2).toBe(20000);
+    expect(costAgorot).toBe(6666);
+    expect(formatPrice(margin)).toBe("-54.66");
   });
 
   it("negative margin (ingredients cost more than price)", () => {
@@ -217,5 +237,68 @@ describe("margin calculation — integer-cent arithmetic", () => {
     const cost = toMinorUnits("12.00");
     expect(price - cost).toBe(-400);
     expect(formatPrice(-400)).toBe("-4.00");
+  });
+});
+
+// ── WEB-DATA-001: toScaledInt — 4-decimal cost precision ──
+
+describe("toScaledInt — configurable-precision integer conversion", () => {
+  it("scale 2 matches toMinorUnits exactly", () => {
+    expect(toScaledInt("15.00", 2)).toBe(toMinorUnits("15.00"));
+    expect(toScaledInt("0.10", 2)).toBe(toMinorUnits("0.10"));
+    expect(toScaledInt("-3.50", 2)).toBe(toMinorUnits("-3.50"));
+  });
+
+  it("preserves the locked 2-decimal truncation contract", () => {
+    // pricing.test.ts asserts toMinorUnits("1.234") === 123; scale-2 must agree
+    expect(toScaledInt("1.234", 2)).toBe(123);
+  });
+
+  it("scale 4 preserves a sub-agorot unit cost (₪0.0050 → 50)", () => {
+    // toMinorUnits collapses this to 0 (the bug); scale 4 keeps it
+    expect(toMinorUnits("0.0050")).toBe(0);
+    expect(toScaledInt("0.0050", 4)).toBe(50);
+  });
+
+  it("scale 4 handles whole-number costs (₪5 → 50000)", () => {
+    expect(toScaledInt("5", 4)).toBe(50000);
+    expect(toScaledInt("5.0", 4)).toBe(50000);
+  });
+
+  it("scale 4 truncates a 5th decimal (numeric(10,4) caps at 4)", () => {
+    expect(toScaledInt("0.00509", 4)).toBe(50);
+  });
+
+  it("scale 4 supports negatives", () => {
+    expect(toScaledInt("-0.0050", 4)).toBe(-50);
+  });
+
+  it("returns 0 for empty / non-numeric / lone sign", () => {
+    expect(toScaledInt("", 4)).toBe(0);
+    expect(toScaledInt("not-a-number", 4)).toBe(0);
+    expect(toScaledInt("-", 4)).toBe(0);
+  });
+
+  it("WEB-DATA-001 regression: ₪0.0050/g × 50g = ₪0.25 = 25 agorot", () => {
+    // The margin formula in reports/actions.ts uses cost4 * qty2 / 10000.
+    const cost4 = toScaledInt("0.0050", 4); // ₪0.0001 units
+    const qty2 = toScaledInt("50.00", 2); // 0.01-unit units
+    const agorot = Math.round((cost4 * qty2) / 10000);
+    expect(cost4).toBe(50);
+    expect(qty2).toBe(5000);
+    expect(agorot).toBe(25);
+  });
+
+  it("WEB-DATA-001 sanity: ₪0.05/g × 50g still = ₪2.50 = 250 agorot", () => {
+    // The pre-existing worked example must not regress under the new formula
+    const cost4 = toScaledInt("0.05", 4);
+    const qty2 = toScaledInt("50.00", 2);
+    const agorot = Math.round((cost4 * qty2) / 10000);
+    expect(agorot).toBe(250);
+  });
+
+  it("stays within safe integer range for numeric(10,4) max cost", () => {
+    // numeric(10,4) → up to 999999.9999 → 9_999_999_999 (safe)
+    expect(Number.isSafeInteger(toScaledInt("999999.9999", 4))).toBe(true);
   });
 });

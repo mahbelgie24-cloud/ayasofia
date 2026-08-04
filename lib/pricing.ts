@@ -13,15 +13,26 @@
 const MINOR_UNIT_MULTIPLIER = 100;
 
 /**
- * Convert a numeric-as-string (e.g. "15.00", "-3.50") to integer
- * minor units (agorot) without ANY floating-point arithmetic.
- * Uses string manipulation only — parseInt on the major/minor parts —
- * so values like "0.10" are never exposed to JS float precision loss.
+ * Convert a numeric-as-string to an integer in 10^`scale` minor units
+ * without ANY floating-point arithmetic — string manipulation only
+ * (parseInt on the major/fractional parts), so values like "0.10" or
+ * "0.0050" are never exposed to JS float precision loss.
  *
- * Exported so UI display layers can use it instead of ad-hoc
- * `parseFloat(x) * 100`.
+ * `scale` = number of decimal places to preserve:
+ *   - scale 2 → agorot (standard money unit; `toMinorUnits` uses this)
+ *   - scale 4 → 1/10000-shekel, used for `ingredients.cost_per_unit`
+ *     which is numeric(10,4).  Without this, a sub-agorot unit cost
+ *     such as ₪0.0050 collapses to 0 in margin reports (WEB-DATA-001).
+ *
+ * Values carrying more decimals than `scale` are TRUNCATED.  This is
+ * the correct, contract-locked behaviour for scale 2 (asserted in
+ * pricing.test.ts) and acceptable for scale 4 since the column itself
+ * caps at 4 decimals.  Negative values are supported.
+ *
+ * `majorInt * 10^scale` stays within Number.MAX_SAFE_INTEGER for the
+ * precisions used here (numeric(10,4), numeric(12,2)).
  */
-export function toMinorUnits(numericStr: string): number {
+export function toScaledInt(numericStr: string, scale = 2): number {
   if (!numericStr || typeof numericStr !== "string") return 0;
 
   const trimmed = numericStr.trim();
@@ -29,16 +40,29 @@ export function toMinorUnits(numericStr: string): number {
 
   const negative = trimmed.startsWith("-");
   const abs = negative ? trimmed.slice(1) : trimmed;
-  const [major = "0", cents = "00"] = abs.split(".");
+  const [major = "0", frac = ""] = abs.split(".");
 
   const majorInt = parseInt(major, 10);
   if (!isFinite(majorInt)) return 0;
 
-  const centsPadded = cents.slice(0, 2).padEnd(2, "0");
-  const centsInt = parseInt(centsPadded, 10);
+  const fracPadded = frac.slice(0, scale).padEnd(scale, "0");
+  const fracInt = parseInt(fracPadded, 10);
+  if (!isFinite(fracInt)) return 0;
 
-  const agorot = majorInt * MINOR_UNIT_MULTIPLIER + centsInt;
-  return negative ? -agorot : agorot;
+  const value = majorInt * Math.pow(10, scale) + fracInt;
+  return negative ? -value : value;
+}
+
+/**
+ * Convert a numeric-as-string (e.g. "15.00", "-3.50") to integer
+ * minor units (agorot).  Thin wrapper over `toScaledInt(…, 2)` —
+ * the 2-decimal contract is unchanged (prices are numeric(10,2)).
+ *
+ * Exported so UI display layers can use it instead of ad-hoc
+ * `parseFloat(x) * 100`.
+ */
+export function toMinorUnits(numericStr: string): number {
+  return toScaledInt(numericStr, 2);
 }
 
 function fromMinorUnits(agorot: number): string {
