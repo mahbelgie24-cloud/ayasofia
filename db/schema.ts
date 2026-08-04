@@ -213,6 +213,28 @@ export const inventoryMoves = pgTable("inventory_moves", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }).enableRLS();
 
+// Every price change is logged with the old and new value — spec §12
+// requires "an audit log on every price or stock adjustment."  Stock
+// has inventory_moves above; prices have this table.  Without it, a
+// manager could silently change a product's base_price and leave no
+// trace of who did it or what the old price was (WEB-SEC-006).
+export const priceChanges = pgTable("price_changes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  // "product" or "modifier" — which entity's price changed
+  entityType: text("entity_type").notNull(),
+  // No FK: either products.id or modifiers.id, discriminated by entityType
+  entityId: uuid("entity_id").notNull(),
+  // "base_price" or "price_delta" — which price field changed
+  field: text("field").notNull(),
+  // Numeric-as-string, matching how Drizzle returns numeric columns
+  oldValue: text("old_value").notNull(),
+  newValue: text("new_value").notNull(),
+  changedBy: uuid("changed_by")
+    .notNull()
+    .references(() => staff.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}).enableRLS();
+
 export const suppliers = pgTable("suppliers", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),

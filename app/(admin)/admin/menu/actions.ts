@@ -2,8 +2,17 @@
 
 import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { categories, products, modifierGroups, modifiers, recipes, ingredients } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import {
+  categories,
+  products,
+  modifierGroups,
+  modifiers,
+  recipes,
+  ingredients,
+  priceChanges,
+  staff,
+} from "@/db/schema";
+import { eq, sql, desc } from "drizzle-orm";
 
 // ── Categories ──
 
@@ -94,7 +103,7 @@ export async function updateProduct(input: {
   isAvailable?: boolean;
   trackInventory?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
-  await requireStaffSession("manager");
+  const { staffId } = await requireStaffSession("manager");
   const data: Record<string, unknown> = {};
   if (input.nameAr !== undefined) data.nameAr = input.nameAr.trim();
   if (input.nameEn !== undefined) data.nameEn = input.nameEn.trim();
@@ -106,6 +115,40 @@ export async function updateProduct(input: {
   if (Object.keys(data).length === 0) {
     return { success: false, error: "لا توجد تغييرات" };
   }
+
+  // Spec §12: audit log on every price adjustment (WEB-SEC-006).
+  // When basePrice is changing, fetch the old value and write a
+  // price_changes row atomically with the update.  Non-price fields
+  // skip the audit path — only price adjustments are logged.
+  if (input.basePrice !== undefined) {
+    const [existing] = await db
+      .select({ basePrice: products.basePrice })
+      .from(products)
+      .where(eq(products.id, input.id))
+      .limit(1);
+
+    if (!existing) {
+      return { success: false, error: "المنتج غير موجود" };
+    }
+
+    const newPrice = input.basePrice.toFixed(2);
+
+    if (existing.basePrice !== newPrice) {
+      await db.transaction(async (tx) => {
+        await tx.update(products).set(data).where(eq(products.id, input.id));
+        await tx.insert(priceChanges).values({
+          entityType: "product",
+          entityId: input.id,
+          field: "base_price",
+          oldValue: existing.basePrice,
+          newValue: newPrice,
+          changedBy: staffId,
+        });
+      });
+      return { success: true };
+    }
+  }
+
   await db.update(products).set(data).where(eq(products.id, input.id));
   return { success: true };
 }
@@ -190,12 +233,43 @@ export async function updateModifier(input: {
   name?: string;
   priceDelta?: number;
 }): Promise<{ success: boolean; error?: string }> {
-  await requireStaffSession("manager");
+  const { staffId } = await requireStaffSession("manager");
   const data: Record<string, unknown> = {};
   if (input.nameAr !== undefined) data.nameAr = input.nameAr.trim();
   if (input.name !== undefined) data.name = input.name.trim();
   if (input.priceDelta !== undefined) data.priceDelta = input.priceDelta.toFixed(2);
   if (Object.keys(data).length === 0) return { success: false, error: "لا توجد تغييرات" };
+
+  // Spec §12: audit log on every price adjustment (WEB-SEC-006).
+  if (input.priceDelta !== undefined) {
+    const [existing] = await db
+      .select({ priceDelta: modifiers.priceDelta })
+      .from(modifiers)
+      .where(eq(modifiers.id, input.id))
+      .limit(1);
+
+    if (!existing) {
+      return { success: false, error: "المعدّل غير موجود" };
+    }
+
+    const newDelta = input.priceDelta.toFixed(2);
+
+    if (existing.priceDelta !== newDelta) {
+      await db.transaction(async (tx) => {
+        await tx.update(modifiers).set(data).where(eq(modifiers.id, input.id));
+        await tx.insert(priceChanges).values({
+          entityType: "modifier",
+          entityId: input.id,
+          field: "price_delta",
+          oldValue: existing.priceDelta,
+          newValue: newDelta,
+          changedBy: staffId,
+        });
+      });
+      return { success: true };
+    }
+  }
+
   await db.update(modifiers).set(data).where(eq(modifiers.id, input.id));
   return { success: true };
 }
@@ -352,4 +426,48 @@ export async function getFullMenuForAdmin(): Promise<{
     })),
     ingredients: allIngredients,
   };
+}
+
+// ── Price-change audit log (spec §12, WEB-SEC-006) ──
+
+export interface PriceChangeEntry {
+  id: string;
+  entityType: string;
+  entityId: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  staffName: string | null;
+  createdAt: string;
+}
+
+export async function getPriceChangeAudit(limit = 50): Promise<PriceChangeEntry[]> {
+  await requireStaffSession("manager");
+
+  const rows = await db
+    .select({
+      id: priceChanges.id,
+      entityType: priceChanges.entityType,
+      entityId: priceChanges.entityId,
+      field: priceChanges.field,
+      oldValue: priceChanges.oldValue,
+      newValue: priceChanges.newValue,
+      staffName: staff.name,
+      createdAt: priceChanges.createdAt,
+    })
+    .from(priceChanges)
+    .leftJoin(staff, eq(priceChanges.changedBy, staff.id))
+    .orderBy(desc(priceChanges.createdAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    entityType: r.entityType,
+    entityId: r.entityId,
+    field: r.field,
+    oldValue: r.oldValue,
+    newValue: r.newValue,
+    staffName: r.staffName,
+    createdAt: r.createdAt.toISOString(),
+  }));
 }
