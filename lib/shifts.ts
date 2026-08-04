@@ -3,7 +3,7 @@
 import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shifts, orders } from "@/db/schema";
-import { eq, and, isNull, gte, lte, sql } from "drizzle-orm";
+import { eq, and, ne, isNull, gte, lte, sql } from "drizzle-orm";
 import { toMinorUnits } from "@/lib/pricing";
 
 export type ShiftResult = { success: true; shiftId: string } | { success: false; error: string };
@@ -64,6 +64,7 @@ export async function closeShift(closingCash: number): Promise<CloseShiftResult>
     .where(
       and(
         eq(orders.staffId, staffId),
+        ne(orders.status, "cancelled"),
         gte(orders.createdAt, current.openedAt),
         lte(orders.createdAt, new Date()),
       ),
