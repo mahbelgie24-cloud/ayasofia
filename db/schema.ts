@@ -17,6 +17,7 @@ import {
   timestamp,
   jsonb,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { authenticatedRole } from "drizzle-orm/supabase";
@@ -167,12 +168,17 @@ export const orders = pgTable(
     idempotencyKey: text("idempotency_key").notNull().unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  () => [
+  (t) => [
     pgPolicy("staff can read live orders", {
       for: "select",
       to: authenticatedRole,
       using: sql`(auth.jwt() -> 'app_metadata' ->> 'staff_id') is not null`,
     }),
+    // Indexes for the range scans used by closeShift (SUM by staff+date)
+    // and getSalesSummary (SUM by date). Without these, the queries
+    // seq-scan the entire orders table, which slows as orders grow.
+    index("orders_created_at_idx").on(t.createdAt),
+    index("orders_staff_id_created_at_idx").on(t.staffId, t.createdAt),
   ],
 ).enableRLS();
 
