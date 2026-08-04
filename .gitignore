@@ -67,14 +67,9 @@ yarn-error.log*
 
 # Drizzle Kit
 /db/migrations/meta/_journal.json
-!/db/migrations/meta/_journal.json
 
 # Sentry
 .sentryclirc
 
 # Turbo
 .turbo
-
-# Local development
-*.local
-!.env.example
