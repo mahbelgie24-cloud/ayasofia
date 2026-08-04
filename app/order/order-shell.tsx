@@ -1,177 +1,41 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { POSCategory } from "@/lib/db/queries";
-import {
-  calculateLineTotal,
-  calculateCartTotal,
-  formatPrice,
-  toMinorUnits,
-  type SelectedModifier as PricingModifier,
-} from "@/lib/pricing";
+import { formatPrice, toMinorUnits } from "@/lib/pricing";
+import { usePOSCart } from "@/hooks/usePOSCart";
 import { placeCustomerOrder } from "./actions";
-
-interface CartItem {
-  productId: string;
-  productNameAr: string;
-  basePrice: string;
-  selectedModifiers: { id: string; nameAr: string; name: string; priceDelta: string }[];
-  quantity: number;
-  lineTotal: number;
-}
 
 export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
   const [selectedCatId, setSelectedCatId] = useState(menu[0]?.id ?? "");
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [modifierTarget, setModifierTarget] = useState<{
-    productId: string;
-    productNameAr: string;
-    basePrice: string;
-    groups: POSCategory["products"][number]["modifierGroups"];
-  } | null>(null);
-  const [modifierSelections, setModifierSelections] = useState<Record<string, string[]>>({});
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
   const [addedAnim, setAddedAnim] = useState<string | null>(null);
-  const idempotencyKeyRef = useRef<string>("");
 
-  useEffect(() => {
-    if (cart.length > 0 && !idempotencyKeyRef.current) {
-      idempotencyKeyRef.current = crypto.randomUUID();
-    }
-    if (cart.length === 0) {
-      idempotencyKeyRef.current = "";
-    }
-  }, [cart.length]);
+  const handleItemAdded = useCallback((productId: string) => {
+    setAddedAnim(productId);
+    setTimeout(() => setAddedAnim(null), 400);
+  }, []);
+
+  const {
+    cart,
+    cartTotal,
+    modifierTarget,
+    modifierSelections,
+    idempotencyKeyRef,
+    openModifiers,
+    toggleSingle,
+    toggleMulti,
+    updateQuantity,
+    confirmModifiers,
+    setModifierTarget,
+  } = usePOSCart({ onItemAdded: handleItemAdded });
 
   const selectedCat = menu.find((c) => c.id === selectedCatId) ?? menu[0];
-
-  const addToCart = useCallback(
-    (
-      product: { id: string; nameAr: string; basePrice: string },
-      mods: { id: string; nameAr: string; name: string; priceDelta: string }[],
-    ) => {
-      const pricingMods: PricingModifier[] = mods.map((m) => ({ priceDelta: m.priceDelta }));
-      const lineTotal = calculateLineTotal(product.basePrice, pricingMods, 1);
-      setCart((prev) => {
-        const idx = prev.findIndex(
-          (item) =>
-            item.productId === product.id &&
-            JSON.stringify(item.selectedModifiers.map((m) => m.id).sort()) ===
-              JSON.stringify(mods.map((m) => m.id).sort()),
-        );
-        if (idx >= 0) {
-          const updated = [...prev];
-          const qty = updated[idx].quantity + 1;
-          updated[idx] = {
-            ...updated[idx],
-            quantity: qty,
-            lineTotal: calculateLineTotal(
-              product.basePrice,
-              mods.map((m) => ({ priceDelta: m.priceDelta })),
-              qty,
-            ),
-          };
-          return updated;
-        }
-        return [
-          ...prev,
-          {
-            productId: product.id,
-            productNameAr: product.nameAr,
-            basePrice: product.basePrice,
-            selectedModifiers: mods,
-            quantity: 1,
-            lineTotal,
-          },
-        ];
-      });
-      setAddedAnim(product.id);
-      setTimeout(() => setAddedAnim(null), 400);
-    },
-    [],
-  );
-
-  const openModifiers = useCallback(
-    (product: POSCategory["products"][number]) => {
-      if (product.modifierGroups.length === 0) {
-        addToCart(product, []);
-        return;
-      }
-      const initial: Record<string, string[]> = {};
-      for (const g of product.modifierGroups) initial[g.id] = [];
-      setModifierSelections(initial);
-      setModifierTarget({
-        productId: product.id,
-        productNameAr: product.nameAr,
-        basePrice: product.basePrice,
-        groups: product.modifierGroups,
-      });
-    },
-    [addToCart],
-  );
-
-  const toggle = (groupId: string, type: "single" | "multi", modName: string) => {
-    setModifierSelections((prev) => {
-      const current = prev[groupId] ?? [];
-      if (type === "single") return { ...prev, [groupId]: [modName] };
-      return {
-        ...prev,
-        [groupId]: current.includes(modName)
-          ? current.filter((n) => n !== modName)
-          : [...current, modName],
-      };
-    });
-  };
-
-  const confirmModifiers = () => {
-    if (!modifierTarget) return;
-    const selected: { id: string; nameAr: string; name: string; priceDelta: string }[] = [];
-    for (const g of modifierTarget.groups) {
-      for (const modName of modifierSelections[g.id] ?? []) {
-        const mod = g.modifiers.find((m) => m.name === modName);
-        if (mod)
-          selected.push({
-            id: mod.id,
-            nameAr: mod.nameAr,
-            name: mod.name,
-            priceDelta: mod.priceDelta,
-          });
-      }
-    }
-    addToCart(
-      {
-        id: modifierTarget.productId,
-        nameAr: modifierTarget.productNameAr,
-        basePrice: modifierTarget.basePrice,
-      },
-      selected,
-    );
-    setModifierTarget(null);
-  };
-
-  const updateQty = (index: number, delta: number) => {
-    setCart((prev) => {
-      const updated = [...prev];
-      const item = updated[index];
-      const newQty = Math.max(0, item.quantity + delta);
-      if (newQty === 0) return updated.filter((_, i) => i !== index);
-      updated[index] = {
-        ...item,
-        quantity: newQty,
-        lineTotal: calculateLineTotal(
-          item.basePrice,
-          item.selectedModifiers.map((m) => ({ priceDelta: m.priceDelta })),
-          newQty,
-        ),
-      };
-      return updated;
-    });
-  };
 
   const handleSubmit = async () => {
     if (cart.length === 0 || !customerName.trim() || checkingOut) return;
@@ -198,8 +62,6 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
       setCheckingOut(false);
     }
   };
-
-  const total = calculateCartTotal(cart);
 
   return (
     <div className="bg-brand-cream flex min-h-screen flex-col" dir="rtl" lang="ar">
@@ -263,7 +125,7 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
             onClick={() => setCartOpen(!cartOpen)}
             className="bg-brand-red w-full rounded-full px-4 py-2 text-sm font-bold text-white"
           >
-            {`${cart.length} سلعة — ${formatPrice(total)} ₪`} {cartOpen ? "▲" : "▼"}
+            {`${cart.length} سلعة — ${formatPrice(cartTotal)} ₪`} {cartOpen ? "▲" : "▼"}
           </button>
 
           {cartOpen && (
@@ -282,14 +144,14 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
                     )}
                     <div className="mt-0.5 flex items-center gap-1">
                       <button
-                        onClick={() => updateQty(idx, -1)}
+                        onClick={() => updateQuantity(idx, -1)}
                         className="bg-muted flex size-5 items-center justify-center rounded-full text-xs"
                       >
                         −
                       </button>
                       <span>{item.quantity}</span>
                       <button
-                        onClick={() => updateQty(idx, 1)}
+                        onClick={() => updateQuantity(idx, 1)}
                         className="bg-muted flex size-5 items-center justify-center rounded-full text-xs"
                       >
                         +
@@ -344,11 +206,15 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
                       return (
                         <button
                           key={mod.id}
-                          onClick={() => toggle(group.id, group.type, mod.name)}
+                          onClick={() =>
+                            group.type === "single"
+                              ? toggleSingle(group.id, mod.name)
+                              : toggleMulti(group.id, mod.name)
+                          }
                           className={`rounded-full border px-3 py-1.5 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
                         >
                           {mod.nameAr}
-                          {parseFloat(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
+                          {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
                         </button>
                       );
                     })}

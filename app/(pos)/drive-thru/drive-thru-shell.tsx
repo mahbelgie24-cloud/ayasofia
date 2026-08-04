@@ -1,59 +1,37 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { POSCategory } from "@/lib/db/queries";
-import {
-  calculateLineTotal,
-  calculateCartTotal,
-  formatPrice,
-  toMinorUnits,
-  type SelectedModifier as PricingModifier,
-} from "@/lib/pricing";
+import { formatPrice, toMinorUnits } from "@/lib/pricing";
+import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "../pos/actions";
-
-interface CartItem {
-  productId: string;
-  productNameAr: string;
-  productNameEn: string;
-  basePrice: string;
-  selectedModifiers: { id: string; nameAr: string; name: string; priceDelta: string }[];
-  quantity: number;
-  lineTotal: number;
-}
 
 export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
-  const [modifierTarget, setModifierTarget] = useState<{
-    productId: string;
-    productNameAr: string;
-    productNameEn: string;
-    basePrice: string;
-    groups: POSCategory["products"][number]["modifierGroups"];
-  } | null>(null);
-  const [modifierSelections, setModifierSelections] = useState<Record<string, string[]>>({});
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [customerPhone, setCustomerPhone] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
-  const idempotencyKeyRef = useRef<string>("");
 
-  // Categories already ordered by sortOrder from getMenuForPOS —
-  // bubble tea categories have lower sortOrder values in seed data,
-  // ensuring they appear first. No string-matching needed.
+  const {
+    cart,
+    cartTotal,
+    modifierTarget,
+    modifierSelections,
+    idempotencyKeyRef,
+    openModifiers,
+    toggleSingle,
+    toggleMulti,
+    updateQuantity,
+    removeItem,
+    confirmModifiers,
+    setModifierTarget,
+    clearCart,
+  } = usePOSCart();
+
   const driveThruMenu = [...menu].sort((a, b) => a.sortOrder - b.sortOrder);
-
   const [selectedCatId, setSelectedCatId] = useState(driveThruMenu[0]?.id ?? "");
-
-  useEffect(() => {
-    if (cart.length > 0 && !idempotencyKeyRef.current) {
-      idempotencyKeyRef.current = crypto.randomUUID();
-    }
-    if (cart.length === 0) {
-      idempotencyKeyRef.current = "";
-    }
-  }, [cart.length]);
 
   const handleCheckout = async () => {
     if (cart.length === 0 || checkingOut) return;
@@ -69,11 +47,11 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
         idempotencyKey: idempotencyKeyRef.current,
         paymentMethod,
         channel: "drive_thru",
-        clientTotal: calculateCartTotal(cart),
+        clientTotal: cartTotal,
         customerPhone: customerPhone || undefined,
       });
       if (result.success) {
-        setCart([]);
+        clearCart();
         setCartOpen(false);
         router.push(`/pos/receipt/${result.orderId}`);
       } else {
@@ -87,133 +65,6 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   };
 
   const selectedCat = driveThruMenu.find((c) => c.id === selectedCatId) ?? driveThruMenu[0];
-
-  const addToCart = (
-    product: { id: string; nameAr: string; nameEn: string; basePrice: string },
-    selectedModifiers: { id: string; nameAr: string; name: string; priceDelta: string }[],
-  ) => {
-    const pricingMods: PricingModifier[] = selectedModifiers.map((m) => ({
-      priceDelta: m.priceDelta,
-    }));
-    const lineTotal = calculateLineTotal(product.basePrice, pricingMods, 1);
-    setCart((prev) => {
-      const existingIdx = prev.findIndex(
-        (item) =>
-          item.productId === product.id &&
-          JSON.stringify(item.selectedModifiers.map((m) => m.id).sort()) ===
-            JSON.stringify(selectedModifiers.map((m) => m.id).sort()),
-      );
-      if (existingIdx >= 0) {
-        const updated = [...prev];
-        const qty = updated[existingIdx].quantity + 1;
-        updated[existingIdx] = {
-          ...updated[existingIdx],
-          quantity: qty,
-          lineTotal: calculateLineTotal(
-            product.basePrice,
-            selectedModifiers.map((m) => ({ priceDelta: m.priceDelta })),
-            qty,
-          ),
-        };
-        return updated;
-      }
-      return [
-        ...prev,
-        {
-          productId: product.id,
-          productNameAr: product.nameAr,
-          productNameEn: product.nameEn,
-          basePrice: product.basePrice,
-          selectedModifiers,
-          quantity: 1,
-          lineTotal,
-        },
-      ];
-    });
-  };
-
-  const openModifiers = useCallback((product: POSCategory["products"][number]) => {
-    if (product.modifierGroups.length === 0) {
-      addToCart(product, []);
-      return;
-    }
-    const initial: Record<string, string[]> = {};
-    for (const g of product.modifierGroups) initial[g.id] = [];
-    setModifierSelections(initial);
-    setModifierTarget({
-      productId: product.id,
-      productNameAr: product.nameAr,
-      productNameEn: product.nameEn,
-      basePrice: product.basePrice,
-      groups: product.modifierGroups,
-    });
-  }, []);
-
-  const toggleSingle = (groupId: string, modName: string) => {
-    setModifierSelections((prev) => ({ ...prev, [groupId]: [modName] }));
-  };
-
-  const toggleMulti = (groupId: string, modName: string) => {
-    setModifierSelections((prev) => {
-      const current = prev[groupId] ?? [];
-      return {
-        ...prev,
-        [groupId]: current.includes(modName)
-          ? current.filter((n) => n !== modName)
-          : [...current, modName],
-      };
-    });
-  };
-
-  const confirmModifiers = () => {
-    if (!modifierTarget) return;
-    const selected: { id: string; nameAr: string; name: string; priceDelta: string }[] = [];
-    for (const g of modifierTarget.groups) {
-      for (const modName of modifierSelections[g.id] ?? []) {
-        const mod = g.modifiers.find((m) => m.name === modName);
-        if (mod)
-          selected.push({
-            id: mod.id,
-            nameAr: mod.nameAr,
-            name: mod.name,
-            priceDelta: mod.priceDelta,
-          });
-      }
-    }
-    addToCart(
-      {
-        id: modifierTarget.productId,
-        nameAr: modifierTarget.productNameAr,
-        nameEn: modifierTarget.productNameEn,
-        basePrice: modifierTarget.basePrice,
-      },
-      selected,
-    );
-    setModifierTarget(null);
-  };
-
-  const updateQuantity = (index: number, delta: number) => {
-    setCart((prev) => {
-      const updated = [...prev];
-      const item = updated[index];
-      const newQty = Math.max(0, item.quantity + delta);
-      if (newQty === 0) return updated.filter((_, i) => i !== index);
-      updated[index] = {
-        ...item,
-        quantity: newQty,
-        lineTotal: calculateLineTotal(
-          item.basePrice,
-          item.selectedModifiers.map((m) => ({ priceDelta: m.priceDelta })),
-          newQty,
-        ),
-      };
-      return updated;
-    });
-  };
-
-  const removeItem = (index: number) => setCart((prev) => prev.filter((_, i) => i !== index));
-
-  const cartTotal = calculateCartTotal(cart);
 
   return (
     <div className="bg-brand-cream flex h-screen flex-col" dir="rtl" lang="ar">
@@ -377,7 +228,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
                           className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
                         >
                           {mod.nameAr}
-                          {parseFloat(mod.priceDelta) > 0 && ` (+${mod.priceDelta})`}
+                          {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta})`}
                         </button>
                       );
                     })}

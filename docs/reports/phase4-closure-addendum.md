@@ -16,15 +16,15 @@
 
 ## جدول الإنجاز: Group A (Phase 4 §4.6 — Technical Debt)
 
-| المهمة                              | الحالة       | الملفات                                                                                                             | الاختبار                                                                      |
-| ----------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| A1 — Fix Customer Order idempotency | ✅ DONE      | `app/order/order-shell.tsx:38-48, 185`                                                                              | `phase3-actions.test.ts` — duplicate idempotencyKey test                      |
-| A2 — Eliminate parseFloat on money  | ✅ DONE      | `lib/pricing.ts`, `lib/db/queries.ts`, `lib/checkout-core.ts`, `app/(admin)/admin/reports/actions.ts`, UI shells ×3 | `pricing.test.ts` — 20 new tests (toMinorUnits, helpers, discrepancy, margin) |
-| A3 — Replace Math.random()          | ✅ DONE      | `lib/checkout-core.ts:69`                                                                                           | Covered by existing checkout tests                                            |
-| A4 — Extract usePOSCart hook        | ⚠️ PARTIALLY | `hooks/usePOSCart.ts`, `app/(pos)/pos/pos-shell.tsx` refactored; drive-thru-shell + order-shell retain own impl     | Covered by 124 existing tests (0 modifications needed)                        |
-| A5 — Wire tax calculation           | ✅ DONE      | `lib/checkout-core.ts:74-88`                                                                                        | Covered by existing checkout tests                                            |
-| A6 — /admin/settings page           | ✅ DONE      | `app/(admin)/admin/settings/` (actions + page + shell)                                                              | Owner-only RBAC required (inline)                                             |
-| A7 — Drive-Thru sortOrder           | ✅ DONE      | `app/(pos)/drive-thru/drive-thru-shell.tsx:42-45` — removed `.includes("بابل")`, replaced with sortOrder            | Covered by existing tests                                                     |
+| المهمة                              | الحالة  | الملفات                                                                                                                        | الاختبار                                                                                             |
+| ----------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| A1 — Fix Customer Order idempotency | ✅ DONE | `app/order/order-shell.tsx:38-48, 185`                                                                                         | `phase3-actions.test.ts` — duplicate idempotencyKey test                                             |
+| A2 — Eliminate parseFloat on money  | ✅ DONE | `lib/pricing.ts`, `lib/db/queries.ts`, `lib/checkout-core.ts`, `app/(admin)/admin/reports/actions.ts`, UI shells ×3            | `pricing.test.ts` — 20 new tests (toMinorUnits, helpers, discrepancy, margin)                        |
+| A3 — Replace Math.random()          | ✅ DONE | `lib/checkout-core.ts:69`                                                                                                      | Covered by existing checkout tests                                                                   |
+| A4 — Extract usePOSCart hook        | ✅ DONE | `hooks/usePOSCart.ts`, `app/(pos)/pos/pos-shell.tsx`, `app/(pos)/drive-thru/drive-thru-shell.tsx`, `app/order/order-shell.tsx` | Covered by 132 existing tests (0 modifications needed). All three consumers now use the shared hook. |
+| A5 — Wire tax calculation           | ✅ DONE | `lib/checkout-core.ts:74-88`                                                                                                   | Covered by existing checkout tests                                                                   |
+| A6 — /admin/settings page           | ✅ DONE | `app/(admin)/admin/settings/` (actions + page + shell)                                                                         | Owner-only RBAC required (inline)                                                                    |
+| A7 — Drive-Thru sortOrder           | ✅ DONE | `app/(pos)/drive-thru/drive-thru-shell.tsx:42-45` — removed `.includes("بابل")`, replaced with sortOrder                       | Covered by existing tests                                                                            |
 
 ---
 

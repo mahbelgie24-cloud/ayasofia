@@ -31,7 +31,8 @@ export interface ModifierTarget {
   groups: POSCategory["products"][number]["modifierGroups"];
 }
 
-export function usePOSCart() {
+export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void }) {
+  const onItemAdded = opts?.onItemAdded;
   const [cart, setCart] = useState<CartItem[]>([]);
   const [modifierTarget, setModifierTarget] = useState<ModifierTarget | null>(null);
   const [modifierSelections, setModifierSelections] = useState<Record<string, string[]>>({});
@@ -48,7 +49,7 @@ export function usePOSCart() {
 
   const addToCart = useCallback(
     (
-      product: { id: string; nameAr: string; nameEn: string; basePrice: string },
+      product: { id: string; nameAr: string; nameEn?: string; basePrice: string },
       selectedModifiers: Array<{
         id: string;
         nameAr: string;
@@ -91,7 +92,7 @@ export function usePOSCart() {
           {
             productId: product.id,
             productNameAr: product.nameAr,
-            productNameEn: product.nameEn,
+            productNameEn: product.nameEn ?? "",
             basePrice: product.basePrice,
             selectedModifiers,
             quantity: initialQty,
@@ -99,8 +100,10 @@ export function usePOSCart() {
           },
         ];
       });
+
+      onItemAdded?.(product.id);
     },
-    [],
+    [onItemAdded],
   );
 
   const openModifiers = useCallback(
