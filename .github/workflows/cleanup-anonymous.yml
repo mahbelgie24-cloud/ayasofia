@@ -2,13 +2,20 @@ name: Anonymous User Cleanup
 
 on:
   schedule:
-    - cron: "0 3 * * *" # Daily at 03:00 UTC
+    # Weekly dry-run — Monday 03:00 UTC.  Checks accumulation without
+    # deleting anything.  Review results, run manual dispatch with
+    # execute=true when ready.
+    - cron: "0 3 * * 1"
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "Run in dry-run mode (no deletions)"
+      execute:
+        description: "Actually delete users (uncheck for dry-run)"
         type: boolean
-        default: true
+        default: false
+      retention_hours:
+        description: "Max age in hours before a user is eligible"
+        type: string
+        default: "24"
 
 permissions:
   contents: read
@@ -26,18 +33,22 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      # npm ci --ignore-scripts avoids running husky prepare in CI
+      # where git hooks are unnecessary and may fail.
+      - run: npm ci --ignore-scripts
 
-      - name: Dry-run cleanup
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      - name: Dry-Run Cleanup
+        if: ${{ !inputs.execute }}
         run: npm run cleanup:anonymous
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANONYMOUS_USER_MAX_AGE_HOURS: ${{ inputs.retention_hours }}
 
-      - name: Execute cleanup (scheduled + manual execute)
-        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run) }}
+      - name: Execute Cleanup
+        if: ${{ inputs.execute }}
         run: npm run cleanup:anonymous -- --execute
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANONYMOUS_USER_MAX_AGE_HOURS: ${{ inputs.retention_hours }}
