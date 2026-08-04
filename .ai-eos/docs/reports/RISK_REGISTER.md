@@ -32,7 +32,7 @@
 | R05 | اختراق PIN (brute force)           | عالي   | حرج   | أمني   | Rate limiting + account lockout (Phase 5)           | نشط    |
 | R06 | خطأ في حسابات الأسعار              | منخفض  | حرج   | تقني   | Server-side recalculation + اختبارات 67             | مُراقب |
 | R07 | ازدواجية الطلبات (سباق شبكي)       | منخفض  | عالي  | تقني   | idempotencyKey + unique constraint + 23505 recovery | مُراقب |
-| R08 | تراكم المستخدمين المجهولين         | مرتفع  | متوسط | تقني   | Cron job تنظيف (Phase 5)                            | نشط    |
+| R08 | تراكم المستخدمين المجهولين         | مرتفع  | متوسط | تقني   | ✅ Cron job مجدول (B2)                              | مُغلق  |
 | R09 | تسرب service-role key              | منخفض  | حرج   | أمني   | .env.local git-ignored + لا client import           | مُراقب |
 | R10 | تعارض PIN بين موظفين               | منخفض  | متوسط | أمني   | تحقق من التفرد عند إضافة/تعديل موظف (Phase 4)       | نشط    |
 | R11 | انقطاع Supabase                    | منخفض  | عالي  | تقني   | Offline mode (Phase 5)                              | نشط    |

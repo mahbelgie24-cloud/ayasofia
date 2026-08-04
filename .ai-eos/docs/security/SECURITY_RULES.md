@@ -65,31 +65,31 @@ DATABASE_URL=postgresql://...           # SERVER ONLY
 
 ## ٣. تدقيق OWASP Top 10
 
-| #   | الثغرة                    | الحالة في مشروعنا                                   |
-| --- | ------------------------- | --------------------------------------------------- |
-| A01 | Broken Access Control     | ✅ RLS + requireStaffSession على كل action          |
-| A02 | Cryptographic Failures    | ✅ scrypt للـ PIN، TLS للنقل                        |
-| A03 | Injection                 | ✅ Drizzle ORM (parameterized queries) — لا SQL نيء |
-| A04 | Insecure Design           | ✅ مراجعة معمارية لكل تغيير كبير                    |
-| A05 | Security Misconfiguration | ⚠️ Rate limiting مفقود للـ PIN                      |
-| A06 | Vulnerable Components     | ⚠️ تحتاج `npm audit` دوري                           |
-| A07 | Auth Failures             | ⚠️ PIN 4 أرقام بدون rate limiting                   |
-| A08 | Software & Data Integrity | ✅ idempotency keys + server-side recomputation     |
-| A09 | Logging & Monitoring      | ⚠️ Sentry موجود لكن غير مفعل فعليًا                 |
-| A10 | SSRF                      | ✅ لا استدعاءات خارجية حالية                        |
+| #   | الثغرة                    | الحالة في مشروعنا                                                    |
+| --- | ------------------------- | -------------------------------------------------------------------- |
+| A01 | Broken Access Control     | ✅ RLS + requireStaffSession على كل action                           |
+| A02 | Cryptographic Failures    | ✅ scrypt للـ PIN، TLS للنقل                                         |
+| A03 | Injection                 | ✅ Drizzle ORM (parameterized queries) — لا SQL نيء                  |
+| A04 | Insecure Design           | ✅ مراجعة معمارية لكل تغيير كبير                                     |
+| A05 | Security Misconfiguration | ✅ Rate limiting مفعل على PIN، cleanup job للـ anonymous users مجدول |
+| A06 | Vulnerable Components     | ⚠️ تحتاج `npm audit` دوري                                            |
+| A07 | Auth Failures             | ✅ Rate limiting + lockout على PIN (B1)، anonymous user cleanup (B2) |
+| A08 | Software & Data Integrity | ✅ idempotency keys + server-side recomputation                      |
+| A09 | Logging & Monitoring      | ⚠️ Sentry موجود لكن غير مفعل فعليًا                                  |
+| A10 | SSRF                      | ✅ لا استدعاءات خارجية حالية                                         |
 
 ---
 
 ## ٤. فجوات أمنية معروفة (يجب معالجتها)
 
-| #   | الفجوة                              | الخطورة | الإصلاح المخطط                     | المرحلة |
-| --- | ----------------------------------- | ------- | ---------------------------------- | ------- |
-| 1   | لا rate limiting على verifyStaffPin | عالي    | عداد محاولات + exponential backoff | Phase 5 |
-| 2   | لا تنظيف للمستخدمين المجهولين       | متوسط   | Cron job دوري                      | Phase 5 |
-| 3   | Sentry غير مفعل فعليًا              | متوسط   | تهيئة Sentry في next.config        | Phase 5 |
-| 4   | `Math.random()` لـ order numbers    | منخفض   | `crypto.randomUUID()`              | Phase 4 |
-| 5   | لا CSP headers                      | منخفض   | Content-Security-Policy            | Phase 5 |
-| 6   | لا CSRF protection صريحة            | منخفض   | Next.js Server Actions تحمي ضمنيًا | —       |
+| #   | الفجوة                              | الخطورة  | الإصلاح المخطط                                              | المرحلة |
+| --- | ----------------------------------- | -------- | ----------------------------------------------------------- | ------- |
+| 1   | لا rate limiting على verifyStaffPin | ✅ مُغلق | Rate limiting + lockout في B1                               | Phase 5 |
+| 2   | لا تنظيف للمستخدمين المجهولين       | ✅ مُغلق | `scripts/cleanup-anonymous-users.ts` + GitHub Actions daily | Phase 5 |
+| 3   | Sentry غير مفعل فعليًا              | متوسط    | تهيئة Sentry في next.config                                 | Phase 5 |
+| 4   | `Math.random()` لـ order numbers    | ✅ مُغلق | `crypto.randomUUID()` في A3                                 | Phase 4 |
+| 5   | لا CSP headers                      | منخفض    | Content-Security-Policy                                     | Phase 5 |
+| 6   | لا CSRF protection صريحة            | منخفض    | Next.js Server Actions تحمي ضمنيًا                          | —       |
 
 ---
 

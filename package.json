@@ -23,6 +23,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "npx tsx db/seed.ts",
+    "cleanup:anonymous": "npx tsx scripts/cleanup-anonymous-users.ts",
     "clean": "rm -rf .next node_modules/.cache",
     "prepare": "husky"
   },
