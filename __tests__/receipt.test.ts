@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildReceiptText } from "@/lib/receipt";
+import { buildReceiptText, extractModifierDeltas } from "@/lib/receipt";
+import { calculateLineTotal } from "@/lib/pricing";
 import type { ReceiptData } from "@/lib/db/queries";
 
 const sampleData: ReceiptData = {
@@ -118,5 +119,70 @@ describe("buildReceiptText", () => {
     expect(encoded).toContain(encodeURIComponent("Ayasofia Sweet"));
     // Arabic text should be encoded
     expect(encoded).toContain(encodeURIComponent("ميلك تي كلاسيك"));
+  });
+});
+
+// ── WEB-DATA-002: extractModifierDeltas — receipt line-total recomputation ──
+
+describe("extractModifierDeltas", () => {
+  it("returns [] for null / undefined / non-array", () => {
+    expect(extractModifierDeltas(null)).toEqual([]);
+    expect(extractModifierDeltas(undefined)).toEqual([]);
+    expect(extractModifierDeltas({})).toEqual([]);
+    expect(extractModifierDeltas("not-an-array")).toEqual([]);
+  });
+
+  it("returns [] for an empty snapshot", () => {
+    expect(extractModifierDeltas([])).toEqual([]);
+  });
+
+  it("extracts priceDeltas from the current snapshot format", () => {
+    const snapshot = [
+      { modifierId: "m1", nameAr: "لؤلؤ", nameEn: "Pearls", priceDelta: "2.00" },
+      { modifierId: "m2", nameAr: "كبير", nameEn: "Large", priceDelta: "1.00" },
+    ];
+    expect(extractModifierDeltas(snapshot)).toEqual([
+      { priceDelta: "2.00" },
+      { priceDelta: "1.00" },
+    ]);
+  });
+
+  it("ignores legacy plain-string entries (no delta information)", () => {
+    // Legacy rows stored modifier IDs as strings — no recoverable delta
+    expect(extractModifierDeltas(["m1", "m2"])).toEqual([]);
+  });
+
+  it("handles a mixed snapshot (object + legacy string)", () => {
+    const snapshot = [
+      { modifierId: "m1", nameAr: "لؤلؤ", nameEn: "Pearls", priceDelta: "2.00" },
+      "legacy-id",
+    ];
+    expect(extractModifierDeltas(snapshot)).toEqual([{ priceDelta: "2.00" }]);
+  });
+
+  it("coerces a numeric priceDelta to a string", () => {
+    const snapshot = [{ modifierId: "m1", nameAr: "x", nameEn: "y", priceDelta: 1.5 }];
+    expect(extractModifierDeltas(snapshot)).toEqual([{ priceDelta: "1.5" }]);
+  });
+
+  it('treats a missing/zero priceDelta as "0"', () => {
+    const snapshot = [
+      { modifierId: "m1", nameAr: "Regular", nameEn: "Regular" }, // no priceDelta key
+      { modifierId: "m2", nameAr: "Large", nameEn: "Large", priceDelta: "0.00" },
+    ];
+    expect(extractModifierDeltas(snapshot)).toEqual([{ priceDelta: "0" }, { priceDelta: "0.00" }]);
+  });
+
+  it("WEB-DATA-002 regression: line total now includes modifier deltas", () => {
+    // getReceiptData previously passed [] to calculateLineTotal, dropping
+    // every modifier delta. base 15.00 + 2.00 + 1.00 = 18.00 × 2 = 3600.
+    const snapshot = [
+      { modifierId: "m1", nameAr: "لؤلؤ", nameEn: "Pearls", priceDelta: "2.00" },
+      { modifierId: "m2", nameAr: "كبير", nameEn: "Large", priceDelta: "1.00" },
+    ];
+    const lineTotal = calculateLineTotal("15.00", extractModifierDeltas(snapshot), 2);
+    expect(lineTotal).toBe(3600);
+    // The pre-fix code path ([]) would have produced 3000 — guard against regression
+    expect(calculateLineTotal("15.00", [], 2)).toBe(3000);
   });
 });

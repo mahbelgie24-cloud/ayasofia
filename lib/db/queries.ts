@@ -2,6 +2,7 @@ import { db } from "./index";
 import { categories, orders, orderItems, products, staff, settings } from "@/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
 import { calculateLineTotal, formatPrice } from "@/lib/pricing";
+import { extractModifierDeltas } from "@/lib/receipt";
 
 export type Modifier = {
   id: string;
@@ -178,13 +179,22 @@ export async function getReceiptData(orderId: string): Promise<ReceiptData | nul
       modNames = ((snapshot as unknown as string[]) ?? []).map((id) => `[${id}]`);
     }
     const prod = productMap.get(item.productId);
+    // Recompute the line total server-side from the base price + the
+    // modifier price-deltas in the snapshot (WEB-DATA-002).  Passing []
+    // here used to drop every modifier delta, so the printed per-line
+    // totals did not sum to the printed subtotal.
+    const lineTotalAgorot = calculateLineTotal(
+      item.unitPrice,
+      extractModifierDeltas(snapshot),
+      item.quantity,
+    );
     return {
       productNameAr: prod?.nameAr ?? item.productId,
       productNameEn: prod?.nameEn ?? item.productId,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       modifierNames: modNames,
-      lineTotal: formatPrice(calculateLineTotal(item.unitPrice, [], item.quantity)),
+      lineTotal: formatPrice(lineTotalAgorot),
     };
   });
 
