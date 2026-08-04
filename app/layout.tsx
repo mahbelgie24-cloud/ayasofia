@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
-import {
-  Baloo_2,
-  Baloo_Bhaijaan_2,
-  Inter,
-  Noto_Sans_Arabic,
-} from "next/font/google";
+import { Baloo_2, Baloo_Bhaijaan_2, Inter, Noto_Sans_Arabic } from "next/font/google";
+import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const baloo = Baloo_2({
@@ -51,7 +47,18 @@ export default function RootLayout({
       dir="rtl"
       className={`${baloo.variable} ${balooAr.variable} ${inter.variable} ${notoAr.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <a
+          href="#main-content"
+          className="focus:bg-brand-red sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-2xl focus:px-4 focus:py-3 focus:text-white focus:outline-none"
+        >
+          تجاوز إلى المحتوى الرئيسي
+        </a>
+        <AppShell />
+        <main id="main-content" className="flex flex-1 flex-col">
+          {children}
+        </main>
+      </body>
     </html>
   );
 }
