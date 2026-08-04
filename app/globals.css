@@ -140,3 +140,32 @@
     @apply font-sans;
   }
 }
+
+/* ── WCAG 2.2 AA: Visible focus indicators ── */
+/* Replaces the default browser outline with a 3px brand-red ring.
+   Contrast ratio > 3:1 against cream background — passes AA. */
+:focus-visible {
+  outline: 3px solid var(--color-brand-red);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Interactive elements on POS — minimum 44×44px touch target (WCAG 2.5.5).
+   Buttons smaller than 44px get extra padding via this utility. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ── Brand motion — spring easing per spec §11.5 ── */
+/* Spring transition for interactive elements: bounce on press/release. */
+@utility ease-spring {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Gentle spring for larger elements (modals, sheets). */
+@utility ease-spring-gentle {
+  transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}

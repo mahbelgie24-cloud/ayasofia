@@ -6,6 +6,7 @@ import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "./actions";
 import { closeShift } from "@/lib/shifts";
+import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { endStaffSession } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
 
@@ -289,143 +290,126 @@ export function POSShell({ menu }: POSShellProps) {
         </div>
       )}
 
-      {/* Modifier sheet */}
-      {modifierTarget && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
-          <div className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl">
-            <h2 className="font-heading text-brand-ink text-lg font-semibold">
-              {modifierTarget.productNameAr}
-            </h2>
-            <p className="text-text-secondary mb-4 text-sm">
-              {formatPrice(toMinorUnits(modifierTarget.basePrice))} ₪
-            </p>
+      {/* Modifier sheet — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+      <Sheet
+        open={!!modifierTarget}
+        onOpenChange={(open) => {
+          if (!open) setModifierTarget(null);
+        }}
+      >
+        <SheetTitle>{modifierTarget?.productNameAr ?? ""}</SheetTitle>
+        <p className="text-text-secondary mb-4 text-sm">
+          {formatPrice(toMinorUnits(modifierTarget?.basePrice ?? "0"))} ₪
+        </p>
 
-            <div className="mb-4 max-h-96 space-y-4 overflow-y-auto">
-              {modifierTarget.groups.map((group) => (
-                <div key={group.id}>
-                  <p className="text-brand-ink mb-1.5 text-sm font-medium">
-                    {group.name}
-                    {group.isRequired && <span className="text-status-error mr-1 text-xs">*</span>}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {group.modifiers.map((mod) => {
-                      const isSelected = (modifierSelections[group.id] ?? []).includes(mod.name);
-                      return (
-                        <button
-                          key={mod.id}
-                          onClick={() =>
-                            group.type === "single"
-                              ? toggleSingle(group.id, mod.name)
-                              : toggleMulti(group.id, mod.name)
-                          }
-                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                            isSelected
-                              ? "border-brand-red bg-brand-red text-white"
-                              : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/50"
-                          }`}
-                        >
-                          {mod.nameAr}
-                          {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+        <div className="mb-4 max-h-96 space-y-4 overflow-y-auto">
+          {modifierTarget?.groups.map((group) => (
+            <div key={group.id}>
+              <p className="text-brand-ink mb-1.5 text-sm font-medium">
+                {group.name}
+                {group.isRequired && <span className="text-status-error mr-1 text-xs">*</span>}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {group.modifiers.map((mod) => {
+                  const isSelected = (modifierSelections[group.id] ?? []).includes(mod.name);
+                  return (
+                    <button
+                      key={mod.id}
+                      onClick={() =>
+                        group.type === "single"
+                          ? toggleSingle(group.id, mod.name)
+                          : toggleMulti(group.id, mod.name)
+                      }
+                      aria-pressed={isSelected}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        isSelected
+                          ? "border-brand-red bg-brand-red text-white"
+                          : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/50"
+                      }`}
+                    >
+                      {mod.nameAr}
+                      {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          ))}
+        </div>
 
+        <div className="flex gap-2">
+          <SheetClose onClick={() => setModifierTarget(null)}>إلغاء</SheetClose>
+          <button
+            onClick={confirmModifiers}
+            className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+          >
+            إضافة إلى السلة
+          </button>
+        </div>
+      </Sheet>
+
+      {/* Shift close modal — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+      <Sheet open={shiftModal} onOpenChange={setShiftModal}>
+        <SheetTitle>إنهاء الوردية</SheetTitle>
+
+        {!shiftResult ? (
+          <div className="my-4 space-y-3">
+            <p className="text-text-secondary text-sm">أدخل المبلغ النقدي الفعلي في الدرج الآن</p>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={closingCash}
+              onChange={(e) => setClosingCash(e.target.value)}
+              placeholder="0.00"
+              className="border-border-subtle focus:border-brand-red/50 text-brand-ink w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
+              dir="ltr"
+            />
             <div className="flex gap-2">
+              <SheetClose>إلغاء</SheetClose>
               <button
-                onClick={() => setModifierTarget(null)}
-                className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
+                onClick={handleCloseShift}
+                disabled={closingShift}
+                className="bg-status-warning hover:bg-status-warning/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
               >
-                إلغاء
-              </button>
-              <button
-                onClick={confirmModifiers}
-                className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
-              >
-                إضافة إلى السلة
+                {closingShift ? "جاري..." : "تأكيد إنهاء الوردية"}
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Shift close modal */}
-      {shiftModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
-          <div className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl">
-            <h2 className="font-heading text-brand-ink text-lg font-semibold">إنهاء الوردية</h2>
-
-            {!shiftResult ? (
-              <div className="my-4 space-y-3">
-                <p className="text-text-secondary text-sm">
-                  أدخل المبلغ النقدي الفعلي في الدرج الآن
-                </p>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={closingCash}
-                  onChange={(e) => setClosingCash(e.target.value)}
-                  placeholder="0.00"
-                  className="border-border-subtle focus:border-brand-red/50 text-brand-ink w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
-                  dir="ltr"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShiftModal(false)}
-                    className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    onClick={handleCloseShift}
-                    disabled={closingShift}
-                    className="bg-status-warning hover:bg-status-warning/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
-                  >
-                    {closingShift ? "جاري..." : "تأكيد إنهاء الوردية"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="my-4 space-y-3">
-                <div className="bg-brand-cream rounded-xl p-4 text-center">
-                  <p className="text-text-secondary text-sm">إجمالي المبيعات</p>
-                  <p className="font-heading text-brand-ink mt-1 text-2xl font-bold">
-                    {shiftResult.totalSales} ₪
-                  </p>
-                </div>
-                <div
-                  className={`rounded-xl p-4 text-center ${
-                    Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
-                      ? "bg-status-warning/10"
-                      : "bg-status-success/10"
-                  }`}
-                >
-                  <p className="text-text-secondary text-sm">الفرق</p>
-                  <p
-                    className={`font-heading mt-1 text-xl font-bold ${
-                      Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
-                        ? "text-status-warning"
-                        : "text-status-success"
-                    }`}
-                  >
-                    {shiftResult.discrepancy} ₪
-                  </p>
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="bg-brand-red hover:bg-brand-red/90 w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
-                >
-                  تسجيل الخروج
-                </button>
-              </div>
-            )}
+        ) : (
+          <div className="my-4 space-y-3">
+            <div className="bg-brand-cream rounded-xl p-4 text-center">
+              <p className="text-text-secondary text-sm">إجمالي المبيعات</p>
+              <p className="font-heading text-brand-ink mt-1 text-2xl font-bold">
+                {shiftResult.totalSales} ₪
+              </p>
+            </div>
+            <div
+              className={`rounded-xl p-4 text-center ${
+                Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
+                  ? "bg-status-warning/10"
+                  : "bg-status-success/10"
+              }`}
+            >
+              <p className="text-text-secondary text-sm">الفرق</p>
+              <p
+                className={`font-heading mt-1 text-xl font-bold ${
+                  Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
+                    ? "text-status-warning"
+                    : "text-status-success"
+                }`}
+              >
+                {shiftResult.discrepancy} ₪
+              </p>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="bg-brand-red hover:bg-brand-red/90 w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+            >
+              تسجيل الخروج
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </Sheet>
     </div>
   );
 }

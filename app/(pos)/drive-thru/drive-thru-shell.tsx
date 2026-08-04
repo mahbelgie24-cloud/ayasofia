@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import type { POSCategory } from "@/lib/db/queries";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "../pos/actions";
+import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 
 export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
@@ -103,10 +105,12 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
                 product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
               }`}
             >
-              <img
+              <Image
                 src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
                 alt={product.nameAr}
-                className="mb-1 h-12 w-12 object-contain"
+                width={48}
+                height={48}
+                className="mb-1 object-contain"
               />
               <span className="font-heading text-brand-ink text-xs leading-tight font-semibold">
                 {product.nameAr}
@@ -204,55 +208,52 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
         </div>
       )}
 
-      {modifierTarget && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
-          <div className="w-full max-w-md rounded-t-2xl bg-white p-4 sm:rounded-2xl">
-            <h2 className="font-heading text-brand-ink text-base font-semibold">
-              {modifierTarget.productNameAr}
-            </h2>
-            <div className="my-3 max-h-64 space-y-3 overflow-y-auto">
-              {modifierTarget.groups.map((group) => (
-                <div key={group.id}>
-                  <p className="text-brand-ink mb-1 text-xs font-medium">{group.name}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {group.modifiers.map((mod) => {
-                      const isSel = (modifierSelections[group.id] ?? []).includes(mod.name);
-                      return (
-                        <button
-                          key={mod.id}
-                          onClick={() =>
-                            group.type === "single"
-                              ? toggleSingle(group.id, mod.name)
-                              : toggleMulti(group.id, mod.name)
-                          }
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
-                        >
-                          {mod.nameAr}
-                          {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta})`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+      {/* Modifier sheet — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+      <Sheet
+        open={!!modifierTarget}
+        onOpenChange={(open) => {
+          if (!open) setModifierTarget(null);
+        }}
+        className="p-4"
+      >
+        <SheetTitle className="text-base">{modifierTarget?.productNameAr ?? ""}</SheetTitle>
+        <div className="my-3 max-h-64 space-y-3 overflow-y-auto">
+          {modifierTarget?.groups.map((group) => (
+            <div key={group.id}>
+              <p className="text-brand-ink mb-1 text-xs font-medium">{group.name}</p>
+              <div className="flex flex-wrap gap-1">
+                {group.modifiers.map((mod) => {
+                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.name);
+                  return (
+                    <button
+                      key={mod.id}
+                      onClick={() =>
+                        group.type === "single"
+                          ? toggleSingle(group.id, mod.name)
+                          : toggleMulti(group.id, mod.name)
+                      }
+                      aria-pressed={isSel}
+                      className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
+                    >
+                      {mod.nameAr}
+                      {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta})`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setModifierTarget(null)}
-                className="border-border-subtle flex-1 rounded-full border py-2 text-xs"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={confirmModifiers}
-                className="bg-brand-red flex-1 rounded-full py-2 text-xs font-bold text-white"
-              >
-                إضافة
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+        <div className="flex gap-2">
+          <SheetClose className="py-2 text-xs">إلغاء</SheetClose>
+          <button
+            onClick={confirmModifiers}
+            className="bg-brand-red flex-1 rounded-full py-2 text-xs font-bold text-white"
+          >
+            إضافة
+          </button>
+        </div>
+      </Sheet>
     </div>
   );
 }

@@ -13,9 +13,12 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-border-subtle flex w-48 shrink-0 flex-col border-l bg-white p-4">
+    <nav
+      className="border-border-subtle flex w-48 shrink-0 flex-col border-l bg-white p-4"
+      aria-label="قائمة الإدارة"
+    >
       <h2 className="font-heading text-brand-ink mb-4 text-lg font-semibold">الإدارة</h2>
-      <ul className="space-y-1">
+      <ul className="space-y-1" role="list">
         {links.map((link) => {
           const active = pathname.startsWith(link.href);
           const built = true;
@@ -23,6 +26,7 @@ export function AdminNav() {
             <li key={link.href}>
               <a
                 href={built ? link.href : "#"}
+                aria-current={active ? "page" : undefined}
                 className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   active
                     ? "bg-brand-red text-white"

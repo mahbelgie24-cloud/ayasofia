@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { getOrderStatus } from "./actions";
 
 interface OrderData {
@@ -99,7 +100,13 @@ export function OrderStatusClient({
     <div className="mx-auto max-w-lg px-4 py-8" dir="rtl" lang="ar">
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="mb-4 text-center">
-          <img src="/icons/logo-mono.svg" alt="" className="mx-auto mb-3 h-10 w-auto invert" />
+          <Image
+            src="/icons/logo-mono.svg"
+            alt=""
+            width={40}
+            height={40}
+            className="mx-auto mb-3 h-10 w-auto invert"
+          />
           <h1 className="font-heading text-brand-ink text-xl font-bold">حالة الطلب</h1>
         </div>
 

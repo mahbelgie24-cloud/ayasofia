@@ -2,10 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import type { POSCategory } from "@/lib/db/queries";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { placeCustomerOrder } from "./actions";
+import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 
 export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
@@ -67,7 +69,13 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
     <div className="bg-brand-cream flex min-h-screen flex-col" dir="rtl" lang="ar">
       {/* Hero header */}
       <div className="bg-brand-red px-4 py-6 text-center text-white">
-        <img src="/icons/logo-mono.svg" alt="" className="mx-auto mb-2 h-10 w-auto invert" />
+        <Image
+          src="/icons/logo-mono.svg"
+          alt=""
+          width={40}
+          height={40}
+          className="mx-auto mb-2 h-10 w-auto invert"
+        />
         <h1 className="font-heading text-xl font-bold">Ayasofia Sweet</h1>
         <p className="mt-1 text-sm text-white/80">اطلب مشروبك المفضل</p>
       </div>
@@ -99,10 +107,12 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
                 addedAnim === product.id ? "animate-bounce" : ""
               }`}
             >
-              <img
+              <Image
                 src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
                 alt={product.nameAr}
-                className="mb-2 h-16 w-16 object-contain"
+                width={64}
+                height={64}
+                className="mb-2 object-contain"
               />
               <span className="font-heading text-brand-ink text-sm font-semibold">
                 {product.nameAr}
@@ -189,56 +199,51 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
         </div>
       )}
 
-      {/* Modifier sheet */}
-      {modifierTarget && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
-          <div className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl">
-            <h2 className="font-heading text-brand-ink text-lg font-semibold">
-              {modifierTarget.productNameAr}
-            </h2>
-            <div className="my-3 max-h-96 space-y-3 overflow-y-auto">
-              {modifierTarget.groups.map((group) => (
-                <div key={group.id}>
-                  <p className="text-brand-ink mb-1 text-sm font-medium">{group.name}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {group.modifiers.map((mod) => {
-                      const isSel = (modifierSelections[group.id] ?? []).includes(mod.name);
-                      return (
-                        <button
-                          key={mod.id}
-                          onClick={() =>
-                            group.type === "single"
-                              ? toggleSingle(group.id, mod.name)
-                              : toggleMulti(group.id, mod.name)
-                          }
-                          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
-                        >
-                          {mod.nameAr}
-                          {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+      {/* Modifier sheet — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+      <Sheet
+        open={!!modifierTarget}
+        onOpenChange={(open) => {
+          if (!open) setModifierTarget(null);
+        }}
+      >
+        <SheetTitle>{modifierTarget?.productNameAr ?? ""}</SheetTitle>
+        <div className="my-3 max-h-96 space-y-3 overflow-y-auto">
+          {modifierTarget?.groups.map((group) => (
+            <div key={group.id}>
+              <p className="text-brand-ink mb-1 text-sm font-medium">{group.name}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {group.modifiers.map((mod) => {
+                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.name);
+                  return (
+                    <button
+                      key={mod.id}
+                      onClick={() =>
+                        group.type === "single"
+                          ? toggleSingle(group.id, mod.name)
+                          : toggleMulti(group.id, mod.name)
+                      }
+                      aria-pressed={isSel}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
+                    >
+                      {mod.nameAr}
+                      {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setModifierTarget(null)}
-                className="border-border-subtle flex-1 rounded-full border py-2.5 text-sm"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={confirmModifiers}
-                className="bg-brand-red flex-1 rounded-full py-2.5 text-sm font-bold text-white"
-              >
-                إضافة إلى السلة
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+        <div className="flex gap-2">
+          <SheetClose>إلغاء</SheetClose>
+          <button
+            onClick={confirmModifiers}
+            className="bg-brand-red flex-1 rounded-full py-2.5 text-sm font-bold text-white"
+          >
+            إضافة إلى السلة
+          </button>
+        </div>
+      </Sheet>
     </div>
   );
 }
