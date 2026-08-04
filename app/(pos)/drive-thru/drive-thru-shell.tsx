@@ -155,18 +155,21 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
                     <div className="mt-0.5 flex items-center gap-1">
                       <button
                         onClick={() => updateQuantity(idx, -1)}
-                        className="bg-muted flex size-5 items-center justify-center rounded-full text-xs"
+                        className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
                       >
                         −
                       </button>
                       <span>{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(idx, 1)}
-                        className="bg-muted flex size-5 items-center justify-center rounded-full text-xs"
+                        className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
                       >
                         +
                       </button>
-                      <button onClick={() => removeItem(idx)} className="text-text-secondary mr-1">
+                      <button
+                        onClick={() => removeItem(idx)}
+                        className="text-text-secondary hover:text-status-error flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
+                      >
                         ✕
                       </button>
                     </div>

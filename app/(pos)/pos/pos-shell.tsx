@@ -216,14 +216,14 @@ export function POSShell({ menu }: POSShellProps) {
                       <div className="mt-1 flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(idx, -1)}
-                          className="bg-muted flex size-6 items-center justify-center rounded-full text-sm font-bold"
+                          className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold"
                         >
                           −
                         </button>
                         <span className="text-sm">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(idx, 1)}
-                          className="bg-muted flex size-6 items-center justify-center rounded-full text-sm font-bold"
+                          className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold"
                         >
                           +
                         </button>
@@ -232,7 +232,7 @@ export function POSShell({ menu }: POSShellProps) {
                     <div className="flex flex-col items-end gap-1">
                       <button
                         onClick={() => removeItem(idx)}
-                        className="text-text-secondary hover:text-status-error text-xs"
+                        className="text-text-secondary hover:text-status-error flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
                         aria-label="حذف"
                       >
                         ✕
