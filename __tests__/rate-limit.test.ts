@@ -1,5 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { checkRateLimit, recordFailedAttempt, resetAttempts } from "@/lib/rate-limit";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  checkRateLimit,
+  recordFailedAttempt,
+  resetAttempts,
+  checkThrottle,
+  resetThrottle,
+} from "@/lib/rate-limit";
 
 describe("rate-limit — checkRateLimit", () => {
   it("allows when no state exists", () => {
@@ -110,5 +116,65 @@ describe("rate-limit — doubling lockout", () => {
     if (!result.allowed) {
       expect(result.waitMs).toBeGreaterThanOrEqual(60000);
     }
+  });
+});
+
+// ── WEB-SEC-001: checkThrottle — fixed-window per-IP limiter ──
+
+describe("rate-limit — checkThrottle (fixed-window)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("allows up to max attempts inside one window", () => {
+    vi.setSystemTime(0);
+    const key = `throttle-${Math.random()}`;
+    for (let i = 0; i < 10; i++) {
+      expect(checkThrottle(key, { max: 10, windowMs: 60_000 }).allowed).toBe(true);
+    }
+  });
+
+  it("denies the max+1 attempt with a positive retryAfterMs", () => {
+    vi.setSystemTime(0);
+    const key = `throttle-${Math.random()}`;
+    for (let i = 0; i < 5; i++) checkThrottle(key, { max: 5, windowMs: 60_000 });
+    const r = checkThrottle(key, { max: 5, windowMs: 60_000 });
+    expect(r.allowed).toBe(false);
+    if (!r.allowed) {
+      expect(r.retryAfterMs).toBeGreaterThan(0);
+      expect(r.retryAfterMs).toBeLessThanOrEqual(60_000);
+    }
+  });
+
+  it("resets the counter once the window rolls over", () => {
+    vi.setSystemTime(1000);
+    const key = `throttle-${Math.random()}`;
+    for (let i = 0; i < 5; i++) checkThrottle(key, { max: 5, windowMs: 1000 });
+    expect(checkThrottle(key, { max: 5, windowMs: 1000 }).allowed).toBe(false);
+    // Advance past the window (window started at t=1000, length 1000)
+    vi.setSystemTime(3000);
+    expect(checkThrottle(key, { max: 5, windowMs: 1000 }).allowed).toBe(true);
+  });
+
+  it("tracks keys independently", () => {
+    vi.setSystemTime(0);
+    const a = `throttle-a-${Math.random()}`;
+    const b = `throttle-b-${Math.random()}`;
+    for (let i = 0; i < 5; i++) checkThrottle(a, { max: 5, windowMs: 60_000 });
+    expect(checkThrottle(a, { max: 5, windowMs: 60_000 }).allowed).toBe(false);
+    expect(checkThrottle(b, { max: 5, windowMs: 60_000 }).allowed).toBe(true);
+  });
+
+  it("resetThrottle clears a key", () => {
+    vi.setSystemTime(0);
+    const key = `throttle-${Math.random()}`;
+    for (let i = 0; i < 5; i++) checkThrottle(key, { max: 5, windowMs: 60_000 });
+    expect(checkThrottle(key, { max: 5, windowMs: 60_000 }).allowed).toBe(false);
+    resetThrottle(key);
+    expect(checkThrottle(key, { max: 5, windowMs: 60_000 }).allowed).toBe(true);
   });
 });

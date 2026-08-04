@@ -2,6 +2,13 @@
 import { vi } from "vitest";
 import { describe, it, expect, afterAll, afterEach, beforeEach } from "vitest";
 
+// Mock next/headers — placeCustomerOrder now calls headers() for IP
+// rate-limiting.  In the integration test there's no request scope,
+// so we provide a stable test IP.  vi.mock is hoisted above imports.
+vi.mock("next/headers", () => ({
+  headers: vi.fn().mockResolvedValue(new Headers({ "x-forwarded-for": "127.0.0.1" })),
+}));
+
 const { testPool } = await vi.hoisted(async () => {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");

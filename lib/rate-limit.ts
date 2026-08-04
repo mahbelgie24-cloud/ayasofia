@@ -64,6 +64,57 @@ export function resetAttempts(key: string): void {
   attempts.delete(key);
 }
 
+// ---------- Generic fixed-window throttle (per-key) ----------
+//
+// Independent from the PIN lockout logic above.  Used by public,
+// unauthenticated server actions (e.g. customer self-order, spec §12
+// exception) to cap abuse from a single source IP.
+//
+// Serverless caveat: state is in-memory and resets on cold starts, so
+// a determined attacker fanning requests across many instances can
+// exceed the cap.  This is the P0 mitigation (WEB-SEC-001); a durable
+// Upstash/DB-backed limiter is tracked as WEB-SEC-004.
+
+interface ThrottleState {
+  count: number;
+  windowStart: number;
+}
+
+export interface ThrottleOptions {
+  max: number;
+  windowMs: number;
+}
+
+const throttleMap = new Map<string, ThrottleState>();
+
+/**
+ * Fixed-window throttle.  Records an attempt and returns `allowed`,
+ * or — once `max` attempts have been made in the current window —
+ * returns `retryAfterMs` (ms until the window rolls over and the
+ * counter resets).  Opening a new window starts a fresh count.
+ */
+export function checkThrottle(
+  key: string,
+  opts: ThrottleOptions,
+): { allowed: true } | { allowed: false; retryAfterMs: number } {
+  const now = Date.now();
+  const state = throttleMap.get(key);
+  if (!state || now - state.windowStart > opts.windowMs) {
+    throttleMap.set(key, { count: 1, windowStart: now });
+    return { allowed: true };
+  }
+  if (state.count >= opts.max) {
+    return { allowed: false, retryAfterMs: state.windowStart + opts.windowMs - now };
+  }
+  state.count += 1;
+  return { allowed: true };
+}
+
+/** Remove a throttle key (e.g. after a verified legitimate signal). */
+export function resetThrottle(key: string): void {
+  throttleMap.delete(key);
+}
+
 /**
  * Periodically clean up stale entries (older than 30 minutes).
  * Runs every 5 minutes.
@@ -77,6 +128,12 @@ if (typeof setInterval !== "undefined") {
       for (const [key, state] of attempts) {
         if (state.lockedUntil && state.lockedUntil < cutoff) {
           attempts.delete(key);
+        }
+      }
+      // Prune throttle windows that have long since rolled over.
+      for (const [key, state] of throttleMap) {
+        if (Date.now() - state.windowStart > 30 * 60 * 1000) {
+          throttleMap.delete(key);
         }
       }
     },
