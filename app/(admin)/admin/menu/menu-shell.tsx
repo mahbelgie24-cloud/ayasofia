@@ -127,7 +127,7 @@ export function MenuShell() {
                         showMsg("تم الحذف");
                       } else showMsg(r.error ?? "فشل");
                     }}
-                    className="text-status-error rounded px-2 py-0.5 text-xs hover:bg-red-50"
+                    className="text-status-error hover:bg-status-error/10 rounded px-2 py-0.5 text-xs"
                   >
                     حذف
                   </button>
@@ -157,7 +157,7 @@ export function MenuShell() {
                             await toggleProductAvailable(prod.id, !prod.isAvailable);
                             refresh();
                           }}
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                          className={`ease-spring rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
                             prod.isAvailable
                               ? "bg-status-success/10 text-status-success"
                               : "bg-status-error/10 text-status-error"
