@@ -12,8 +12,13 @@ export function ReceiptClient({ data }: Props) {
   const [shared, setShared] = useState(false);
   const plainText = useMemo(() => buildReceiptText(data), [data]);
 
-  // Auto-trigger print on mount
+  // Auto-trigger print on mount (skip in headless / automated contexts)
   useEffect(() => {
+    const isAutomated =
+      typeof navigator !== "undefined" &&
+      ((navigator as Navigator & { webdriver?: boolean }).webdriver ||
+        !window.matchMedia("(display-mode: browser)").matches);
+    if (isAutomated) return;
     const t = setTimeout(() => window.print(), 400);
     return () => clearTimeout(t);
   }, []);

@@ -7,14 +7,14 @@ import type { Page } from "@playwright/test";
  */
 export async function loginWithPin(page: Page, pin = "1111") {
   await page.goto("/login");
-  await page.waitForSelector("button[aria-label='Digit 1']", { timeout: 10000 });
+  await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
   for (const d of pin) {
-    await page.click(`button[aria-label='Digit ${d}']`);
+    await page.click(`button[aria-label='رقم ${d}']`);
     await page.waitForTimeout(200);
   }
 
-  await page.click("button:has-text('Enter')");
+  await page.click("button:has-text('تأكيد')");
 
   // If no open shift exists, the PinPad shows an opening-cash form.
   // Wait for the skip button to appear and click it.

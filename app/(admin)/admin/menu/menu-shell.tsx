@@ -153,17 +153,22 @@ export function MenuShell() {
                       </div>
                       <div className="flex items-center gap-1">
                         <button
+                          role="switch"
+                          aria-checked={prod.isAvailable}
+                          aria-label={prod.isAvailable ? "تحديد كمتاح" : "تحديد كغير متاح"}
                           onClick={async () => {
                             await toggleProductAvailable(prod.id, !prod.isAvailable);
                             refresh();
                           }}
-                          className={`ease-spring rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
-                            prod.isAvailable
-                              ? "bg-status-success/10 text-status-success"
-                              : "bg-status-error/10 text-status-error"
+                          className={`ease-spring relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+                            prod.isAvailable ? "bg-status-success" : "bg-status-error/40"
                           }`}
                         >
-                          {prod.isAvailable ? "متاح" : "غير متاح"}
+                          <span
+                            className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                              prod.isAvailable ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
                         </button>
                         <button
                           onClick={() =>

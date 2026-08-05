@@ -41,7 +41,7 @@ export function SettingsShell() {
                 value={values[key] ?? ""}
                 onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
                 className="border-border-subtle flex-1 rounded-lg border bg-white px-3 py-2 text-sm"
-                dir={key === "tax_rate" ? "ltr" : undefined}
+                dir={key === "tax_rate" || key === "shop_phone" ? "ltr" : undefined}
               />
               <button
                 onClick={() => handleSave(key, values[key] ?? "")}

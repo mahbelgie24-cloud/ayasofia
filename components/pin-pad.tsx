@@ -178,7 +178,7 @@ export function PinPad({ redirectTo }: Props) {
                 type="button"
                 onClick={handleBackspace}
                 disabled={filled === 0 || loading}
-                aria-label="Delete last digit"
+                aria-label="حذف الرقم الأخير"
                 className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 ease-spring flex h-14 items-center justify-center rounded-2xl border text-xl transition-colors disabled:opacity-30"
               >
                 ⌫
@@ -193,7 +193,7 @@ export function PinPad({ redirectTo }: Props) {
               type="button"
               onClick={() => handleDigit(digit)}
               disabled={filled === 4 || loading}
-              aria-label={`Digit ${digit}`}
+              aria-label={`رقم ${digit}`}
               className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 active:bg-brand-red/10 ease-spring flex h-14 items-center justify-center rounded-2xl border text-2xl font-medium transition-colors disabled:opacity-30"
             >
               {digit}
@@ -209,7 +209,7 @@ export function PinPad({ redirectTo }: Props) {
           disabled={filled === 0 || loading}
           className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 ease-spring flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-30"
         >
-          Clear
+          مسح
         </button>
         <button
           type="button"
@@ -217,7 +217,7 @@ export function PinPad({ redirectTo }: Props) {
           disabled={!canSubmit}
           className="bg-brand-red hover:bg-brand-red/90 ease-spring flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
         >
-          {loading ? "..." : "Enter"}
+          {loading ? "..." : "تأكيد"}
         </button>
       </div>
     </div>

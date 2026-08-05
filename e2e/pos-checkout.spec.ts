@@ -148,7 +148,7 @@ test.describe("Phase 1 DoD — 20 sales", () => {
       }
 
       await checkout(page);
-      await page.goto("/pos");
+      await page.goBack();
       await page.waitForTimeout(500);
     }
   });

@@ -12,14 +12,21 @@ import {
   type ZReportShift,
 } from "./actions";
 
+function localDateStr(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr(new Date());
 }
 
 function weekAgoStr(): string {
   const d = new Date();
   d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function ReportsContent({
@@ -285,6 +292,24 @@ export function ReportsShell() {
   const [startDate, setStartDate] = useState(weekAgoStr());
   const [endDate, setEndDate] = useState(todayStr());
 
+  const handleStartDate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val > endDate) {
+      setStartDate(endDate);
+    } else {
+      setStartDate(val);
+    }
+  };
+
+  const handleEndDate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val < startDate) {
+      setEndDate(startDate);
+    } else {
+      setEndDate(val);
+    }
+  };
+
   return (
     <div dir="rtl" lang="ar">
       <h1 className="font-heading text-brand-ink text-2xl font-bold">التقارير</h1>
@@ -315,14 +340,14 @@ export function ReportsShell() {
           <input
             type="date"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={handleStartDate}
             className="border-border-subtle rounded-lg border bg-white px-3 py-1.5 text-sm"
           />
           <label className="text-text-secondary text-sm">إلى</label>
           <input
             type="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={handleEndDate}
             className="border-border-subtle rounded-lg border bg-white px-3 py-1.5 text-sm"
           />
         </div>
