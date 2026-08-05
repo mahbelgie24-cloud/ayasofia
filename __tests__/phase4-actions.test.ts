@@ -216,7 +216,7 @@ describe("RBAC — manager routes reject lower roles", () => {
       new (await import("@/lib/auth")).AuthError("no", "INSUFFICIENT_ROLE"),
     );
     await expect(
-      createProduct({ categoryId: "c1", nameAr: "x", nameEn: "x", basePrice: 10 }),
+      createProduct({ categoryId: "c1", nameAr: "x", nameEn: "x", basePrice: "10" }),
     ).rejects.toThrow();
   });
 

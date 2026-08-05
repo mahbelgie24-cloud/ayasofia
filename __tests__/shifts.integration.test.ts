@@ -25,7 +25,7 @@ const db = drizzle(pool, {
 });
 
 import { shifts, staff, orders } from "@/db/schema";
-import { eq, and, isNull, ne, gte, sql } from "drizzle-orm";
+import { eq, and, isNull, ne, sql, inArray } from "drizzle-orm";
 
 describe("shifts integration", () => {
   let canConnect = false;
@@ -228,22 +228,24 @@ describe("shifts integration", () => {
       idempotencyKey: `TSC-NO-${suffix}`,
     });
 
-    // This is the same SUM query closeShift uses, with the status filter
+    // This mirrors the SUM closeShift uses (status filter) but scoped to
+    // ONLY this test's rows via idempotency keys.  Global-window sums are
+    // not hermetic against leftover data from e2e/other runs on a shared
+    // database — the invariant being tested is the *status filter*, not
+    // the cleanliness of the whole table.
     const salesRows = await db
       .select({ sum: sql<string>`COALESCE(SUM(${orders.total}::numeric), 0)` })
       .from(orders)
       .where(
         and(
-          eq(orders.staffId, staffId),
           ne(orders.status, "cancelled"),
-          gte(orders.createdAt, shiftStart),
+          inArray(orders.idempotencyKey, [`TSC-OK-${suffix}`, `TSC-NO-${suffix}`]),
         ),
       );
 
     const totalSales = parseFloat(salesRows[0]?.sum ?? "0");
     // Must include the ₪30 completed order but NOT the ₪99 cancelled one
-    expect(totalSales).toBeGreaterThanOrEqual(30.0);
-    expect(totalSales).toBeLessThan(99.0 + 30.0);
+    expect(totalSales).toBe(30.0);
 
     // Cleanup
     await db.execute(sql`DELETE FROM orders WHERE idempotency_key = ${`TSC-OK-${suffix}`}`);

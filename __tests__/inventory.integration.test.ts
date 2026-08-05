@@ -95,7 +95,7 @@ describe("logPurchase — integration", () => {
     createdIngredientIds.push(ing.id);
 
     const before = parseFloat(ing.currentStock);
-    const result = await logPurchase({ ingredientId: ing.id, quantity: 10, totalCost: 50 });
+    const result = await logPurchase({ ingredientId: ing.id, quantity: 10, totalCost: "50" });
     expect(result.success).toBe(true);
 
     const [after] = await db.select().from(ingredients).where(eq(ingredients.id, ing.id)).limit(1);

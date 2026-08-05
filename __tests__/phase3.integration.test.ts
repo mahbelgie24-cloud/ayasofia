@@ -30,18 +30,39 @@ const { testPool } = await vi.hoisted(async () => {
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql } from "drizzle-orm";
-import { orders, orderItems, inventoryMoves, ingredients, products, recipes } from "@/db/schema";
+import {
+  orders,
+  orderItems,
+  inventoryMoves,
+  ingredients,
+  products,
+  recipes,
+  modifierGroups,
+  modifiers,
+} from "@/db/schema";
 import { placeCustomerOrder } from "@/app/order/actions";
+import { executeCheckout } from "@/lib/checkout-core";
 
 const db = drizzle(testPool, {
-  schema: { orders, orderItems, inventoryMoves, ingredients, products, recipes },
+  schema: {
+    orders,
+    orderItems,
+    inventoryMoves,
+    ingredients,
+    products,
+    recipes,
+    modifierGroups,
+    modifiers,
+  },
 });
 
 const stockSnapshots = new Map<string, string>();
 let createdOrderIds: string[] = [];
+let createdModifierIds: string[] = [];
 
 beforeEach(async () => {
   createdOrderIds = [];
+  createdModifierIds = [];
   stockSnapshots.clear();
 });
 
@@ -59,6 +80,13 @@ afterEach(async () => {
     }
     try {
       await db.execute(sql`DELETE FROM orders WHERE id = ${oid}`);
+    } catch {
+      /* */
+    }
+  }
+  for (const mid of createdModifierIds) {
+    try {
+      await db.delete(modifiers).where(eq(modifiers.id, mid));
     } catch {
       /* */
     }
@@ -96,7 +124,6 @@ describe("placeCustomerOrder — integration", () => {
       .limit(1);
     expect(ing).toBeDefined();
     stockSnapshots.set(ing!.id, ing!.currentStock);
-    const beforeStock = parseFloat(ing!.currentStock);
 
     const result = await placeCustomerOrder({
       cartItems: [
@@ -124,5 +151,78 @@ describe("placeCustomerOrder — integration", () => {
     expect(order.channel).toBe("takeaway");
     expect(order.customerName).toBe("Test Customer");
     expect(order.staffId).toBeNull();
+  });
+});
+
+describe("checkout — modifier-linked ingredient deduction (M2)", () => {
+  it("deducts ingredient stock for a linked topping modifier", { timeout: 30000 }, async () => {
+    // Find a product that has BOTH a recipe and a modifier group.
+    const recipeRow = await db
+      .select({ productId: recipes.productId, ingredientId: recipes.ingredientId })
+      .from(recipes)
+      .limit(1);
+    expect(recipeRow.length).toBeGreaterThan(0);
+    const productId = recipeRow[0]!.productId;
+
+    const [group] = await db
+      .select({ id: modifierGroups.id })
+      .from(modifierGroups)
+      .where(eq(modifierGroups.productId, productId))
+      .limit(1);
+    expect(group).toBeDefined();
+
+    const ingredientId = recipeRow[0]!.ingredientId;
+    const [ing] = await db
+      .select({ id: ingredients.id, currentStock: ingredients.currentStock })
+      .from(ingredients)
+      .where(eq(ingredients.id, ingredientId))
+      .limit(1);
+    expect(ing).toBeDefined();
+    stockSnapshots.set(ing!.id, ing!.currentStock);
+    const before = parseFloat(ing!.currentStock);
+
+    // Create a modifier linked to that ingredient (50 per serving).
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const [mod] = await db
+      .insert(modifiers)
+      .values({
+        groupId: group!.id,
+        nameAr: "مكوّن اختبار",
+        name: `TEST-LINK-${suffix}`,
+        priceDelta: "0.00",
+        ingredientId: ing!.id,
+        ingredientQty: "50.00",
+      })
+      .returning({ id: modifiers.id });
+    createdModifierIds.push(mod.id);
+
+    const result = await executeCheckout({
+      cartItems: [{ productId, modifierIds: [mod.id], quantity: 2 }],
+      idempotencyKey: `TEST-M2-${Date.now()}-${suffix}`,
+      paymentMethod: "cash",
+      channel: "takeaway",
+      staffId: null,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    createdOrderIds.push(result.orderId);
+
+    // Stock must have dropped by exactly 50 × 2 = 100 for the modifier.
+    const [after] = await db
+      .select({ currentStock: ingredients.currentStock })
+      .from(ingredients)
+      .where(eq(ingredients.id, ing!.id))
+      .limit(1);
+    expect(parseFloat(after!.currentStock)).toBe(before - 100);
+
+    // An auditable sale move must reference the order.
+    const [move] = await db
+      .select()
+      .from(inventoryMoves)
+      .where(eq(inventoryMoves.refOrderId, result.orderId))
+      .limit(1);
+    expect(move).toBeDefined();
+    expect(move!.reason).toBe("sale");
+    expect(parseFloat(move!.deltaQty)).toBe(-100);
   });
 });

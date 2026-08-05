@@ -83,7 +83,7 @@ describe("updateProduct — price-change audit log (WEB-SEC-006)", () => {
     const { tx, getAuditRow } = makeAuditCapturingTx();
     mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
-    const result = await updateProduct({ id: "p1", basePrice: 18 });
+    const result = await updateProduct({ id: "p1", basePrice: "18" });
     expect(result.success).toBe(true);
 
     const audit = getAuditRow();
@@ -104,7 +104,7 @@ describe("updateProduct — price-change audit log (WEB-SEC-006)", () => {
     const { tx, getAuditRow } = makeAuditCapturingTx();
     mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
-    await updateProduct({ id: "p1", basePrice: 15 });
+    await updateProduct({ id: "p1", basePrice: "15" });
     // Same price → no transaction, no audit row
     expect(getAuditRow()).toBeNull();
     expect(mockTx).not.toHaveBeenCalled();
@@ -120,7 +120,7 @@ describe("updateProduct — price-change audit log (WEB-SEC-006)", () => {
   it("returns error for nonexistent product when basePrice is specified", async () => {
     mockDbSelect.mockReturnValueOnce(selectChain([], true));
 
-    const result = await updateProduct({ id: "nonexistent", basePrice: 20 });
+    const result = await updateProduct({ id: "nonexistent", basePrice: "20" });
     expect(result.success).toBe(false);
     expect(result.error).toContain("غير موجود");
   });
@@ -135,7 +135,7 @@ describe("updateProduct — price-change audit log (WEB-SEC-006)", () => {
     const { tx, getAuditRow } = makeAuditCapturingTx();
     mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
-    await updateProduct({ id: "p1", basePrice: 12 });
+    await updateProduct({ id: "p1", basePrice: "12" });
     expect(getAuditRow()?.changedBy).toBe("staff-xyz");
   });
 });
@@ -149,7 +149,7 @@ describe("updateModifier — price-change audit log (WEB-SEC-006)", () => {
     const { tx, getAuditRow } = makeAuditCapturingTx();
     mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
-    const result = await updateModifier({ id: "m1", priceDelta: 3 });
+    const result = await updateModifier({ id: "m1", priceDelta: "3" });
     expect(result.success).toBe(true);
 
     const audit = getAuditRow();
@@ -170,7 +170,7 @@ describe("updateModifier — price-change audit log (WEB-SEC-006)", () => {
     const { tx, getAuditRow } = makeAuditCapturingTx();
     mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
-    await updateModifier({ id: "m1", priceDelta: 2 });
+    await updateModifier({ id: "m1", priceDelta: "2" });
     expect(getAuditRow()).toBeNull();
     expect(mockTx).not.toHaveBeenCalled();
   });

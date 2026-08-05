@@ -36,21 +36,21 @@ describe("logPurchase", () => {
   });
 
   it("rejects empty ingredientId", async () => {
-    const r = await logPurchase({ ingredientId: "", quantity: 1, totalCost: 10 });
+    const r = await logPurchase({ ingredientId: "", quantity: 1, totalCost: "10" });
     expect(r.success).toBe(false);
   });
 
   it("rejects zero or negative quantity", async () => {
-    expect((await logPurchase({ ingredientId: "x", quantity: 0, totalCost: 10 })).success).toBe(
+    expect((await logPurchase({ ingredientId: "x", quantity: 0, totalCost: "10" })).success).toBe(
       false,
     );
-    expect((await logPurchase({ ingredientId: "x", quantity: -1, totalCost: 10 })).success).toBe(
+    expect((await logPurchase({ ingredientId: "x", quantity: -1, totalCost: "10" })).success).toBe(
       false,
     );
   });
 
   it("succeeds for valid input", async () => {
-    const r = await logPurchase({ ingredientId: "x", quantity: 5, totalCost: 50 });
+    const r = await logPurchase({ ingredientId: "x", quantity: 5, totalCost: "50" });
     expect(r.success).toBe(true);
   });
 
@@ -69,7 +69,7 @@ describe("logPurchase", () => {
       };
       return fn(tx);
     });
-    await logPurchase({ ingredientId: "x", quantity: 3.5, totalCost: 20 });
+    await logPurchase({ ingredientId: "x", quantity: 3.5, totalCost: "20" });
     expect(capt).toBeDefined();
     expect((capt as unknown as { deltaQty: string }).deltaQty).toBe("3.50");
     expect((capt as unknown as { reason: string }).reason).toBe("purchase");
@@ -79,7 +79,7 @@ describe("logPurchase", () => {
     vi.mocked(requireStaffSession).mockRejectedValueOnce(
       new AuthError("Insufficient role", "INSUFFICIENT_ROLE"),
     );
-    await expect(logPurchase({ ingredientId: "x", quantity: 1, totalCost: 10 })).rejects.toThrow(
+    await expect(logPurchase({ ingredientId: "x", quantity: 1, totalCost: "10" })).rejects.toThrow(
       AuthError,
     );
   });
