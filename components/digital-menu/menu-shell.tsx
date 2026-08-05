@@ -238,7 +238,7 @@ export function MenuShell({
             className="mx-auto mb-2 h-11 w-auto invert"
           />
           <h1 className="font-heading text-xl font-bold">أهلًا بك في {branchName}</h1>
-          <p className="mt-1 text-sm text-white/85">مشروبك… على مزاجك تمامًا.</p>
+          <p className="mt-1 text-sm text-white">مشروبك… على مزاجك تمامًا.</p>
           {table && (
             <span className="mt-3 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
               الطاولة {table.code}
@@ -267,7 +267,7 @@ export function MenuShell({
               className="h-13 w-13 shrink-0 object-contain"
             />
             <span className="min-w-0 flex-1">
-              <span className="text-brand-red text-xs font-bold">اقتراح اليوم</span>
+              <span className="text-brand-red-dark text-xs font-bold">اقتراح اليوم</span>
               <span className="font-heading text-brand-ink block truncate text-sm font-semibold">
                 {todaySuggestion.titleAr ?? todaySuggestion.nameAr}
               </span>
@@ -276,7 +276,7 @@ export function MenuShell({
                   {todaySuggestion.descriptionAr}
                 </span>
               )}
-              <span className="text-brand-red mt-0.5 block text-sm font-bold">
+              <span className="text-brand-red-dark mt-0.5 block text-sm font-bold">
                 {formatPrice(toMinorUnits(todaySuggestion.basePrice))} ₪
               </span>
             </span>

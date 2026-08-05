@@ -3,6 +3,7 @@
 import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { settings } from "@/db/schema";
+import { invalidateFeatureFlags } from "@/lib/features";
 import { eq } from "drizzle-orm";
 
 export async function getSettings(): Promise<Record<string, string>> {
@@ -29,5 +30,6 @@ export async function saveSetting(
   } else {
     await db.insert(settings).values({ key: key.trim(), value: value.trim() });
   }
+  invalidateFeatureFlags();
   return { success: true };
 }

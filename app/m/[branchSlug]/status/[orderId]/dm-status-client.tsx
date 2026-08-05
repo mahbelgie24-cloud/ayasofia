@@ -108,7 +108,7 @@ export function DMStatusClient({
             className="mx-auto mb-2 h-10 w-auto invert"
           />
           <h1 className="font-heading text-xl font-bold">متابعة طلبك</h1>
-          <p className="mt-1 text-sm text-white/85">رقم الطلب: {initial.orderNumber}</p>
+          <p className="mt-1 text-sm text-white">رقم الطلب: {initial.orderNumber}</p>
           {initial.tableCode && (
             <span className="mt-3 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
               الطاولة {initial.tableCode}

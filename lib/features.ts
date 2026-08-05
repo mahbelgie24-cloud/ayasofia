@@ -20,6 +20,7 @@
 import { db } from "@/lib/db";
 import { settings } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { cached, invalidateByPrefix } from "@/lib/cache";
 
 export function parseFlag(value: string | undefined | null): boolean {
   if (!value) return false;
@@ -31,20 +32,40 @@ function flagKey(name: string): string {
   return `feature.${name}`;
 }
 
+/**
+ * Feature flags are read on every public page/action render. Caching the
+ * read in-process (30s TTL) removes a per-request Postgres round-trip from
+ * the critical path — the dominant cost on a remote Supabase pooler. The
+ * view lags an admin toggle by at most TTL; `invalidateFeatureFlag` is
+ * called by admin settings writes to apply it immediately (C2 pattern).
+ */
+const FEATURE_FLAG_TTL_MS = 30_000;
+
 /** Read a single feature flag from the settings table. */
 export async function isFeatureEnabled(name: string): Promise<boolean> {
-  try {
-    const [row] = await db
-      .select({ value: settings.value })
-      .from(settings)
-      .where(eq(settings.key, flagKey(name)))
-      .limit(1);
-    return parseFlag(row?.value);
-  } catch {
-    // Config read failure defaults to OFF — safer to withhold a public
-    // surface than to expose it when its backing flag can't be read.
-    return false;
-  }
+  return cached(
+    `feature:${name}`,
+    async () => {
+      try {
+        const [row] = await db
+          .select({ value: settings.value })
+          .from(settings)
+          .where(eq(settings.key, flagKey(name)))
+          .limit(1);
+        return parseFlag(row?.value);
+      } catch {
+        // Config read failure defaults to OFF — safer to withhold a public
+        // surface than to expose it when its backing flag can't be read.
+        return false;
+      }
+    },
+    FEATURE_FLAG_TTL_MS,
+  );
+}
+
+/** Drop all cached feature-flag reads (call after an admin settings write). */
+export function invalidateFeatureFlags(): void {
+  invalidateByPrefix("feature:");
 }
 
 export const FEATURE_DIGITAL_MENU = "digital_menu";

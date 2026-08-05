@@ -71,7 +71,7 @@ export function WifiConnect({ suggestion }: { suggestion: Suggestion }) {
 
           {suggestion.product && (
             <div className="bg-brand-red-soft mt-5 rounded-2xl p-4">
-              <p className="text-brand-red text-xs font-bold">اقتراح اليوم</p>
+              <p className="text-brand-red-dark text-xs font-bold">اقتراح اليوم</p>
               <div className="mt-2 flex items-center justify-center gap-3">
                 <Image
                   src={suggestion.product.imageUrl ?? "/icons/icon-bubbletea.svg"}
@@ -84,7 +84,7 @@ export function WifiConnect({ suggestion }: { suggestion: Suggestion }) {
                   <p className="font-heading text-brand-ink text-sm font-semibold">
                     {suggestion.product.titleAr ?? suggestion.product.nameAr}
                   </p>
-                  <p className="text-brand-red text-sm font-bold">
+                  <p className="text-brand-red-dark text-sm font-bold">
                     {suggestion.product.basePrice} ₪
                   </p>
                 </div>

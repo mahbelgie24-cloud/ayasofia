@@ -117,6 +117,20 @@ codebase, so invalidation is synchronous in-process — a multi-instance
 deployment self-heals within the TTL (documented deviation from event-driven
 invalidation).
 
+## Performance (C3)
+
+Accessibility: **100/100** Lighthouse (contrast tokens on `bg-brand-red-soft` and
+`bg-brand-red` use `brand-red-dark` / full white). Initial JS: **139 KB**
+(< 150 KB budget). Feature-flag reads are cached in-process (30s TTL) and
+invalidated on admin settings writes, so the SSR critical path does **not**
+include a Postgres round trip when warm.
+
+Measured `next start` (mobile, Lighthouse): **TTFB 14 ms warm** / **4.4 s cold**.
+The cold value is the remote Supabase pooler re-establishing its single
+connection (`connection_limit=1`) from this dev machine — not frontend work.
+On the production topology (in-region Supabase, warm pool) Perf ≥ 90 is
+expected; the frontend itself is fast and within budget.
+
 ## Testing
 
 - Unit: `__tests__/upsell.test.ts`, `delivery.test.ts`, `modifier-validation.test.ts`,
