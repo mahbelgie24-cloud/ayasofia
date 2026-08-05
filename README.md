@@ -1,8 +1,10 @@
 # Ayasofia Sweet — Ordering, Inventory & POS Platform
 
-Internal operations system for **Ayasofia Sweet** (Qalqilya) — Taiwanese bubble tea and Japanese/Korean desserts. Covers point-of-sale, Drive-Thru, customer self-ordering, inventory, and reporting.
+Internal operations system for **Ayasofia Sweet** (Qalqilya) — Taiwanese bubble tea and Japanese/Korean desserts. Covers point-of-sale, Drive-Thru, customer self-ordering, inventory, reporting, and two customer-facing modules: an **immersive QR digital menu** and a **welcome Wi-Fi captive portal**.
 
 Full specification: [`docs/technical-spec.md`](./docs/technical-spec.md) — read it before touching the code. Everything below assumes that document as context.
+
+Module guides: [`docs/digital-menu.md`](./docs/digital-menu.md) · [`docs/wifi-portal.md`](./docs/wifi-portal.md) · [`docs/openapi.md`](./docs/openapi.md)
 
 ## Stack
 
@@ -28,13 +30,17 @@ Schema source of truth: [`db/schema.ts`](./db/schema.ts), generated from spec §
 ## Project structure
 
 ```
-app/            Next.js routes: /pos, /kitchen, /drive-thru, /order/[qrId], /admin
-components/     Shared UI (components/ui = shadcn/ui)
+app/            Next.js routes: /pos, /kitchen, /drive-thru, /order/[qrId], /admin, /m/[branchSlug] (digital menu), /wifi (captive portal)
+components/     Shared UI (components/ui = shadcn/ui, components/digital-menu, components/wifi)
 db/             Drizzle schema + migrations
-docs/           Specification, Phase 0 data workbooks, brand assets
-lib/            Utilities, Supabase client, auth helpers
+docs/           Specification, module guides, OpenAPI, Phase 0 data workbooks, brand assets
+lib/            Utilities, Supabase client, auth helpers, pricing, delivery, upsell, captive-portal adapter
 public/         Static assets (icons, images)
 ```
+
+## Feature flags
+
+The digital menu and wifi portal ship behind `settings` flags: `feature.digital_menu`, `feature.wifi_portal`. Set the value to `1` to enable, or leave unset to disable (public pages then show a branded fallback and admin nav items hide). See [`docs/digital-menu.md`](./docs/digital-menu.md).
 
 ## Before going live
 
