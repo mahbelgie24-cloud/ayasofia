@@ -29,7 +29,7 @@ const { testPool } = await vi.hoisted(async () => {
 });
 
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   orders,
   orderItems,
@@ -156,26 +156,45 @@ describe("placeCustomerOrder — integration", () => {
 
 describe("checkout — modifier-linked ingredient deduction (M2)", () => {
   it("deducts ingredient stock for a linked topping modifier", { timeout: 30000 }, async () => {
-    // Find a product that has BOTH a recipe and a modifier group.
-    const recipeRow = await db
-      .select({ productId: recipes.productId, ingredientId: recipes.ingredientId })
-      .from(recipes)
-      .limit(1);
-    expect(recipeRow.length).toBeGreaterThan(0);
-    const productId = recipeRow[0]!.productId;
+    // Find a product that has BOTH a recipe and a modifier group, then link
+    // the modifier to an ingredient that is NOT in that product's recipe.
+    // Otherwise the base recipe deduction would also hit the same row and
+    // mask the modifier-specific deduction we assert here (review M2).
+    const recipeRows = await db.select().from(recipes);
+    expect(recipeRows.length).toBeGreaterThan(0);
 
-    const [group] = await db
-      .select({ id: modifierGroups.id })
-      .from(modifierGroups)
-      .where(eq(modifierGroups.productId, productId))
-      .limit(1);
-    expect(group).toBeDefined();
+    const recipeIngredientIds = new Map<string, Set<string>>();
+    for (const row of recipeRows) {
+      const set = recipeIngredientIds.get(row.productId) ?? new Set<string>();
+      set.add(row.ingredientId);
+      recipeIngredientIds.set(row.productId, set);
+    }
 
-    const ingredientId = recipeRow[0]!.ingredientId;
+    const allIngredients = await db.select({ id: ingredients.id }).from(ingredients);
+    expect(allIngredients.length).toBeGreaterThan(0);
+
+    const productIds = [...new Set(recipeRows.map((r) => r.productId))];
+    let chosen: { productId: string; groupId: string; spareIngredientId: string } | undefined;
+
+    for (const productId of productIds) {
+      const [group] = await db
+        .select({ id: modifierGroups.id })
+        .from(modifierGroups)
+        .where(eq(modifierGroups.productId, productId))
+        .limit(1);
+      if (!group) continue;
+      const blocked = recipeIngredientIds.get(productId) ?? new Set<string>();
+      const spare = allIngredients.find((i) => !blocked.has(i.id));
+      if (!spare) continue;
+      chosen = { productId, groupId: group.id, spareIngredientId: spare.id };
+      break;
+    }
+    expect(chosen).toBeDefined();
+
     const [ing] = await db
       .select({ id: ingredients.id, currentStock: ingredients.currentStock })
       .from(ingredients)
-      .where(eq(ingredients.id, ingredientId))
+      .where(eq(ingredients.id, chosen!.spareIngredientId))
       .limit(1);
     expect(ing).toBeDefined();
     stockSnapshots.set(ing!.id, ing!.currentStock);
@@ -186,7 +205,7 @@ describe("checkout — modifier-linked ingredient deduction (M2)", () => {
     const [mod] = await db
       .insert(modifiers)
       .values({
-        groupId: group!.id,
+        groupId: chosen!.groupId,
         nameAr: "مكوّن اختبار",
         name: `TEST-LINK-${suffix}`,
         priceDelta: "0.00",
@@ -197,7 +216,7 @@ describe("checkout — modifier-linked ingredient deduction (M2)", () => {
     createdModifierIds.push(mod.id);
 
     const result = await executeCheckout({
-      cartItems: [{ productId, modifierIds: [mod.id], quantity: 2 }],
+      cartItems: [{ productId: chosen!.productId, modifierIds: [mod.id], quantity: 2 }],
       idempotencyKey: `TEST-M2-${Date.now()}-${suffix}`,
       paymentMethod: "cash",
       channel: "takeaway",
@@ -215,11 +234,16 @@ describe("checkout — modifier-linked ingredient deduction (M2)", () => {
       .limit(1);
     expect(parseFloat(after!.currentStock)).toBe(before - 100);
 
-    // An auditable sale move must reference the order.
+    // An auditable sale move must reference the order and the right ingredient.
     const [move] = await db
       .select()
       .from(inventoryMoves)
-      .where(eq(inventoryMoves.refOrderId, result.orderId))
+      .where(
+        and(
+          eq(inventoryMoves.refOrderId, result.orderId),
+          eq(inventoryMoves.ingredientId, ing!.id),
+        ),
+      )
       .limit(1);
     expect(move).toBeDefined();
     expect(move!.reason).toBe("sale");
