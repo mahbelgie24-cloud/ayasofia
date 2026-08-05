@@ -273,6 +273,7 @@ Every rounded element in the mark (cup, straw curve, dot grid, letterforms) sets
 | `radius.full` | pill  | Primary CTA buttons    |
 
 - Icons: consistent 2px stroke, rounded line caps (`stroke-linecap: round`) — matches the mark's thick, soft strokes.
+- **Elevation:** `shadow-sm` for resting cards, `shadow-md` for hover/interactive card states, `shadow-lg` for overlay layers (toasts, receipt action bar) — one consistent system, no ad-hoc values.
 - **Recurring motif:** the 6-dot tapioca grid from the logo, reused as a subtle decorative pattern in empty states and loading indicators — a distinctive brand touch tied to the actual product, not a generic spinner.
 
 ### 11.5 Motion
