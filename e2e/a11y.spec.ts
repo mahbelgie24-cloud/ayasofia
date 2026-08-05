@@ -65,7 +65,6 @@ test.describe("A11y — toast notifications", () => {
 test.describe("A11y — touch target size (WCAG 2.5.5)", () => {
   async function openCartWithItem(page: Page) {
     await loginWithPin(page);
-    await page.goto("/pos");
     await addItemToCart(page, "ميلك تي كلاسيك", []);
     const cartToggle = page
       .getByRole("button", { name: /سلعة/ })
@@ -82,7 +81,7 @@ test.describe("A11y — touch target size (WCAG 2.5.5)", () => {
 
     const qtyMinus = page.getByRole("button", { name: "−" }).first();
     const qtyPlus = page.getByRole("button", { name: "+" }).first();
-    const removeBtn = page.getByRole("button", { name: "✕" }).first();
+    const removeBtn = page.getByRole("button", { name: "حذف" }).first();
 
     for (const btn of [qtyMinus, qtyPlus, removeBtn]) {
       const box = await btn.boundingBox();

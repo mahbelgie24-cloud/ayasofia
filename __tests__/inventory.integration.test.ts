@@ -45,9 +45,11 @@ const db = drizzle(testPool, { schema: { ingredients, inventoryMoves } });
 
 const stockSnapshots = new Map<string, string>();
 let createdMoveIds: string[] = [];
+let createdIngredientIds: string[] = [];
 
 beforeEach(async () => {
   createdMoveIds = [];
+  createdIngredientIds = [];
   stockSnapshots.clear();
 });
 
@@ -68,6 +70,13 @@ afterEach(async () => {
       /* */
     }
   }
+  for (const id of createdIngredientIds) {
+    try {
+      await db.delete(ingredients).where(eq(ingredients.id, id));
+    } catch {
+      /* */
+    }
+  }
 });
 
 afterAll(async () => {
@@ -76,9 +85,14 @@ afterAll(async () => {
 
 describe("logPurchase — integration", () => {
   it("increases stock by the exact purchase amount", { timeout: 30000 }, async () => {
-    const [ing] = await db.select().from(ingredients).limit(1);
-    expect(ing).toBeDefined();
-    stockSnapshots.set(ing.id, ing.currentStock);
+    const [ing] = await db
+      .insert(ingredients)
+      .values({
+        name: `test-purchase-${Date.now()}`,
+        unit: "g",
+      })
+      .returning();
+    createdIngredientIds.push(ing.id);
 
     const before = parseFloat(ing.currentStock);
     const result = await logPurchase({ ingredientId: ing.id, quantity: 10, totalCost: 50 });
@@ -102,9 +116,14 @@ describe("logWaste — integration", () => {
     "decreases stock by the exact waste amount and can go negative",
     { timeout: 30000 },
     async () => {
-      const [ing] = await db.select().from(ingredients).limit(1);
-      expect(ing).toBeDefined();
-      stockSnapshots.set(ing.id, ing.currentStock);
+      const [ing] = await db
+        .insert(ingredients)
+        .values({
+          name: `test-waste-${Date.now()}`,
+          unit: "g",
+        })
+        .returning();
+      createdIngredientIds.push(ing.id);
 
       const before = parseFloat(ing.currentStock);
       const result = await logWaste({ ingredientId: ing.id, quantity: 99999 });
