@@ -51,6 +51,8 @@ export async function recalculateCartServerSide(
             nameAr: modifiers.nameAr,
             name: modifiers.name,
             priceDelta: modifiers.priceDelta,
+            ingredientId: modifiers.ingredientId,
+            ingredientQty: modifiers.ingredientQty,
           })
           .from(modifiers)
           .where(inArray(modifiers.id, allModIds))
@@ -62,7 +64,14 @@ export async function recalculateCartServerSide(
   const modifierLookup = new Map(
     modifierRows.map((m) => [
       m.id,
-      { modifierId: m.id, nameAr: m.nameAr, nameEn: m.name, priceDelta: m.priceDelta },
+      {
+        modifierId: m.id,
+        nameAr: m.nameAr,
+        nameEn: m.name,
+        priceDelta: m.priceDelta,
+        ingredientId: m.ingredientId,
+        ingredientQty: m.ingredientQty,
+      },
     ]),
   );
 

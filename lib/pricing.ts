@@ -122,6 +122,8 @@ export interface CartItemForServer {
   productId: string;
   modifierIds: string[];
   quantity: number;
+  /** Optional free-text line note (DM-03). Server-side length-capped. */
+  notes?: string;
 }
 
 export interface ModifierSnapshot {
@@ -129,6 +131,12 @@ export interface ModifierSnapshot {
   nameAr: string;
   nameEn: string;
   priceDelta: string;
+  /** Optional ingredient linkage (spec §8.4) — null for modifiers with
+   *  no inventory impact (sugar/ice levels).  Carried through checkout
+   *  so topping stock is deducted server-side, never trusted from the
+   *  client. */
+  ingredientId?: string | null;
+  ingredientQty?: string | null;
 }
 
 export interface ServerLineResult {

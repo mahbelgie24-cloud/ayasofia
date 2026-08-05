@@ -53,6 +53,7 @@ export function buildReceiptText(data: ReceiptData): string {
   lines.push("───────────────────────");
   lines.push(`رقم الطلب: ${data.orderNumber}`);
   lines.push(`طريقة الدفع: ${data.paymentMethod ?? "غير محدد"}`);
+  if (data.tableCode) lines.push(`الطاولة: ${data.tableCode}`);
   if (data.staffName) lines.push(`الموظف: ${data.staffName}`);
   lines.push(`التاريخ: ${new Date(data.createdAt).toLocaleString("ar")}`);
   lines.push("───────────────────────");

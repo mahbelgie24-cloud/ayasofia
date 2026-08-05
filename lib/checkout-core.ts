@@ -1,19 +1,34 @@
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
-import { orders, orderItems, ingredients, recipes, inventoryMoves, settings } from "@/db/schema";
+import {
+  orders,
+  orderItems,
+  ingredients,
+  recipes,
+  inventoryMoves,
+  settings,
+  modifierGroups,
+  modifiers,
+} from "@/db/schema";
 import { recalculateCartServerSide, type CartItemForServer } from "@/lib/pricing-server";
 import { toMinorUnits } from "@/lib/pricing";
 import { eq, inArray, sql } from "drizzle-orm";
+import { getDeliveryFeeRules, computeDeliveryFee, validateMinimumOrder } from "@/lib/delivery";
+import { validateModifierSelection } from "@/lib/modifier-validation";
 
 export interface SharedCheckoutParams {
   cartItems: CartItemForServer[];
   idempotencyKey: string;
   paymentMethod: string;
-  channel: "dine_in" | "takeaway" | "drive_thru";
+  channel: "dine_in" | "takeaway" | "drive_thru" | "delivery";
   staffId: string | null;
   customerPhone?: string;
   customerName?: string;
   clientTotal?: number;
+  // Digital-menu & extra fields (FR-DM-15, C1, C6)
+  source?: "POS" | "DIGITAL_MENU";
+  tableId?: string | null;
+  deliveryAddress?: string;
 }
 
 export type SharedCheckoutResult =
@@ -35,6 +50,9 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
     customerPhone,
     customerName,
     clientTotal,
+    source = "POS",
+    tableId = null,
+    deliveryAddress,
   } = params;
 
   if (!cartItems.length) return { success: false, error: "Cart is empty" };
@@ -84,6 +102,56 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         };
       }
 
+      // Server-side modifier validation (FR-DM-13): a crafted payload must
+      // not skip a required modifier group, exceed a multi-group's max
+      // selections, or submit modifiers that don't belong to the product.
+      // Runs for every source (POS + digital menu) on the single pipeline.
+      const productIds = [...new Set(cartItems.map((ci) => ci.productId))];
+      const groupRows = await tx
+        .select({
+          id: modifierGroups.id,
+          productId: modifierGroups.productId,
+          type: modifierGroups.type,
+          isRequired: modifierGroups.isRequired,
+          maxSelections: modifierGroups.maxSelections,
+        })
+        .from(modifierGroups)
+        .where(inArray(modifierGroups.productId, productIds));
+      const groupIds = groupRows.map((g) => g.id);
+      const modRows =
+        groupIds.length > 0
+          ? await tx
+              .select({ id: modifiers.id, groupId: modifiers.groupId })
+              .from(modifiers)
+              .where(inArray(modifiers.groupId, groupIds))
+          : [];
+      const modsByGroup = new Map<string, string[]>();
+      for (const m of modRows) {
+        const list = modsByGroup.get(m.groupId) ?? [];
+        list.push(m.id);
+        modsByGroup.set(m.groupId, list);
+      }
+
+      for (let li = 0; li < cartItems.length; li++) {
+        const cartLine = cartItems[li];
+        const lineGroups = groupRows
+          .filter((g) => g.productId === cartLine.productId)
+          .map((g) => ({
+            id: g.id,
+            type: g.type as "single" | "multi",
+            isRequired: g.isRequired,
+            maxSelections: g.maxSelections,
+            modifiers: (modsByGroup.get(g.id) ?? []).map((id) => ({ id })),
+          }));
+        const violations = validateModifierSelection(lineGroups, cartLine.modifierIds);
+        if (violations.length > 0) {
+          return {
+            success: false as const,
+            error: "Invalid modifier selection",
+          };
+        }
+      }
+
       if (clientTotal !== undefined && clientTotal !== subtotal) {
         console.warn(
           `[checkout] Total mismatch — client ${clientTotal} agorot vs server ${subtotal} agorot. ` +
@@ -109,7 +177,24 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
       const taxAgorot = Math.round((subtotal * taxRateMinor) / 10000);
       const totalAgorot = subtotal + taxAgorot;
       const taxStr = (taxAgorot / 100).toFixed(2);
-      const totalStr = (totalAgorot / 100).toFixed(2);
+
+      // Delivery fee — computed SERVER-side from settings rules, never
+      // trusted from the client (C6). Applies only to channel=delivery.
+      let deliveryFeeAgorot = 0;
+      let deliveryFeeStr = "0.00";
+      if (channel === "delivery") {
+        const rules = await getDeliveryFeeRules();
+        const minErr = validateMinimumOrder(subtotal, rules);
+        if (minErr) {
+          return { success: false as const, error: minErr };
+        }
+        const fee = computeDeliveryFee(subtotal, rules);
+        deliveryFeeAgorot = fee.feeMinor;
+        deliveryFeeStr = fee.fee;
+      }
+
+      const grandTotalAgorot = totalAgorot + deliveryFeeAgorot;
+      const totalStr = (grandTotalAgorot / 100).toFixed(2);
 
       const [order] = await tx
         .insert(orders)
@@ -126,6 +211,10 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           idempotencyKey,
           customerPhone: customerPhone || null,
           customerName: customerName || null,
+          source,
+          tableId,
+          deliveryAddress: deliveryAddress || null,
+          deliveryFee: deliveryFeeStr,
         })
         .returning({ id: orders.id });
 
@@ -134,13 +223,23 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         return { success: false as const, error: "Failed to create order" };
       }
 
-      for (const item of lineItems) {
-        const modIds = cartItems.find((ci) => ci.productId === item.productId)?.modifierIds ?? [];
+      // lineItems is 1:1 with cartItems by index (verified by the
+      // length check above) — index-aligned so two lines of the SAME
+      // product with different modifier sets keep their own modifiers.
+      for (let li = 0; li < lineItems.length; li++) {
+        const item = lineItems[li];
+        const cartLine = cartItems[li];
+        const modIds = cartLine?.modifierIds ?? [];
         const snapshot = modIds.map((id) => modifierLookup.get(id)).filter(Boolean);
+        // Free-text line note (DM-03) — capped server-side so a malicious
+        // payload can't bloat the row. Empty/"whitespace" notes stored as null.
+        const rawNote = cartLine?.notes?.trim() ?? "";
+        const note = rawNote.length > 0 ? rawNote.slice(0, 500) : null;
         await tx.insert(orderItems).values({
           orderId: order.id,
           productId: item.productId,
           selectedModifiers: snapshot,
+          notes: note,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         });
@@ -158,7 +257,9 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         recipeMap.set(row.productId, list);
       }
 
-      for (const line of lineItems) {
+      for (let li = 0; li < lineItems.length; li++) {
+        const line = lineItems[li];
+        const cartLine = cartItems[li];
         const productRecipes = recipeMap.get(line.productId);
         if (!productRecipes) continue;
         for (const rec of productRecipes) {
@@ -178,6 +279,32 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
               currentStock: sql`${ingredients.currentStock} + ${deltaStr}::numeric`,
             })
             .where(eq(ingredients.id, rec.ingredientId));
+        }
+
+        // Modifier-linked ingredients (spec §8.4): each selected topping
+        // that carries an ingredient linkage deducts its per-serving
+        // quantity.  The linkage is resolved server-side from the DB
+        // (modifierLookup), never trusted from the client (review M2).
+        const modIds = (cartLine?.modifierIds ?? []).filter((id) => modifierLookup.has(id));
+        for (const modId of modIds) {
+          const mod = modifierLookup.get(modId)!;
+          if (!mod.ingredientId || mod.ingredientQty == null) continue;
+          const qtyMinor = toMinorUnits(mod.ingredientQty);
+          const totalMinor = qtyMinor * line.quantity;
+          const deltaStr = (-totalMinor / 100).toFixed(2);
+          await tx.insert(inventoryMoves).values({
+            ingredientId: mod.ingredientId,
+            deltaQty: deltaStr,
+            reason: "sale",
+            refOrderId: order.id,
+            createdBy: staffId,
+          });
+          await tx
+            .update(ingredients)
+            .set({
+              currentStock: sql`${ingredients.currentStock} + ${deltaStr}::numeric`,
+            })
+            .where(eq(ingredients.id, mod.ingredientId));
         }
       }
 

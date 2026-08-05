@@ -21,6 +21,8 @@ export interface CartItem {
   }>;
   quantity: number;
   lineTotal: number;
+  /** Optional free-text line note (DM-03). */
+  notes?: string;
 }
 
 export interface ModifierTarget {
@@ -57,6 +59,7 @@ export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void })
         priceDelta: string;
       }>,
       initialQty = 1,
+      notes?: string,
     ) => {
       const pricingMods: PricingModifier[] = selectedModifiers.map((m) => ({
         priceDelta: m.priceDelta,
@@ -97,6 +100,7 @@ export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void })
             selectedModifiers,
             quantity: initialQty,
             lineTotal,
+            notes: notes?.trim() ? notes.trim() : undefined,
           },
         ];
       });
@@ -137,19 +141,19 @@ export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void })
     [addToCart],
   );
 
-  const toggleSingle = useCallback((groupId: string, modifierName: string) => {
+  const toggleSingle = useCallback((groupId: string, modifierId: string) => {
     setModifierSelections((prev) => ({
       ...prev,
-      [groupId]: [modifierName],
+      [groupId]: [modifierId],
     }));
   }, []);
 
-  const toggleMulti = useCallback((groupId: string, modifierName: string) => {
+  const toggleMulti = useCallback((groupId: string, modifierId: string) => {
     setModifierSelections((prev) => {
       const current = prev[groupId] ?? [];
-      const next = current.includes(modifierName)
-        ? current.filter((n) => n !== modifierName)
-        : [...current, modifierName];
+      const next = current.includes(modifierId)
+        ? current.filter((id) => id !== modifierId)
+        : [...current, modifierId];
       return { ...prev, [groupId]: next };
     });
   }, []);
@@ -193,8 +197,8 @@ export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void })
     }> = [];
     for (const g of modifierTarget.groups) {
       const picked = modifierSelections[g.id] ?? [];
-      for (const modName of picked) {
-        const mod = g.modifiers.find((m) => m.name === modName);
+      for (const modId of picked) {
+        const mod = g.modifiers.find((m) => m.id === modId);
         if (mod) {
           selected.push({
             id: mod.id,

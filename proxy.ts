@@ -68,6 +68,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|order).*)",
+    // Public guest routes are excluded from the auth proxy so no Supabase
+    // session round-trip runs before they render (LCP budget, NFR):
+    //   m/  digital menu, wifi/  captive portal splash.
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|order|m|wifi).*)",
   ],
 };
