@@ -294,7 +294,7 @@ export function ReportsShell() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`ease-spring rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t ? "bg-brand-red text-white" : "text-brand-ink bg-muted hover:bg-muted/80"
             }`}
           >

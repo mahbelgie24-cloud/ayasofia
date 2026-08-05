@@ -118,7 +118,7 @@ export function PinPad({ redirectTo }: Props) {
           value={openingCash}
           onChange={(e) => setOpeningCash(e.target.value)}
           placeholder="0.00"
-          className="border-border-subtle text-brand-ink focus:border-brand-red/50 w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
+          className="border-border-subtle text-brand-ink focus:border-brand-red/50 ease-spring w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
           dir="ltr"
           autoFocus
         />
@@ -131,7 +131,7 @@ export function PinPad({ redirectTo }: Props) {
           <button
             type="button"
             onClick={() => router.push(redirectTo)}
-            className="border-brand-ink/10 text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors"
+            className="border-brand-ink/10 text-text-secondary hover:bg-muted ease-spring flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors"
           >
             تخطي
           </button>
@@ -139,7 +139,7 @@ export function PinPad({ redirectTo }: Props) {
             type="button"
             onClick={handleOpenShift}
             disabled={loading}
-            className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            className="bg-brand-red hover:bg-brand-red/90 ease-spring flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
           >
             {loading ? "..." : "بدء الوردية"}
           </button>
@@ -154,7 +154,7 @@ export function PinPad({ redirectTo }: Props) {
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`h-5 w-5 rounded-full border-2 transition-colors ${
+            className={`ease-spring h-5 w-5 rounded-full border-2 transition-colors ${
               i < filled ? "border-brand-red bg-brand-red" : "border-brand-ink/20"
             }`}
           />
@@ -179,7 +179,7 @@ export function PinPad({ redirectTo }: Props) {
                 onClick={handleBackspace}
                 disabled={filled === 0 || loading}
                 aria-label="Delete last digit"
-                className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 flex h-14 items-center justify-center rounded-2xl border text-xl transition-colors disabled:opacity-30"
+                className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 ease-spring flex h-14 items-center justify-center rounded-2xl border text-xl transition-colors disabled:opacity-30"
               >
                 ⌫
               </button>
@@ -194,7 +194,7 @@ export function PinPad({ redirectTo }: Props) {
               onClick={() => handleDigit(digit)}
               disabled={filled === 4 || loading}
               aria-label={`Digit ${digit}`}
-              className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 active:bg-brand-red/10 flex h-14 items-center justify-center rounded-2xl border text-2xl font-medium transition-colors disabled:opacity-30"
+              className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 active:bg-brand-red/10 ease-spring flex h-14 items-center justify-center rounded-2xl border text-2xl font-medium transition-colors disabled:opacity-30"
             >
               {digit}
             </button>
@@ -207,7 +207,7 @@ export function PinPad({ redirectTo }: Props) {
           type="button"
           onClick={handleClear}
           disabled={filled === 0 || loading}
-          className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-30"
+          className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 ease-spring flex-1 rounded-full border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-30"
         >
           Clear
         </button>
@@ -215,7 +215,7 @@ export function PinPad({ redirectTo }: Props) {
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          className="bg-brand-red hover:bg-brand-red/90 ease-spring flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
         >
           {loading ? "..." : "Enter"}
         </button>

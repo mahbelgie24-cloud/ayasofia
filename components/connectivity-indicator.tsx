@@ -18,7 +18,7 @@ export function ConnectivityIndicator() {
 
   return (
     <div
-      className={`flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`ease-spring flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors ${
         !online
           ? "bg-status-error text-white"
           : pendingSyncCount > 0

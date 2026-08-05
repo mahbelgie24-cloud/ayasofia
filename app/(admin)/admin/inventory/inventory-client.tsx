@@ -35,7 +35,7 @@ export function InventoryClient({
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`ease-spring rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t ? "bg-brand-red text-white" : "bg-muted text-brand-ink hover:bg-muted/80"
             }`}
           >
@@ -212,7 +212,7 @@ function PurchaseForm({
 
       <button
         onClick={handleSubmit}
-        className="bg-brand-red hover:bg-brand-red/90 w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+        className="bg-brand-red hover:bg-brand-red/90 ease-spring w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
       >
         تسجيل التوريد
       </button>
@@ -276,7 +276,7 @@ function WasteForm({ ingredients }: { ingredients: Ingredient[] }) {
 
       <button
         onClick={handleSubmit}
-        className="bg-status-warning hover:bg-status-warning/90 w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+        className="bg-status-warning hover:bg-status-warning/90 ease-spring w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
       >
         تسجيل الهدر
       </button>

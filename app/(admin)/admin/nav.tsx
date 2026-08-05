@@ -27,7 +27,7 @@ export function AdminNav() {
               <a
                 href={built ? link.href : "#"}
                 aria-current={active ? "page" : undefined}
-                className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`ease-spring block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   active
                     ? "bg-brand-red text-white"
                     : built

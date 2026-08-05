@@ -89,7 +89,7 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
           <button
             key={cat.id}
             onClick={() => setSelectedCatId(cat.id)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            className={`ease-spring shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
               cat.id === selectedCatId ? "bg-brand-red text-white" : "bg-muted text-brand-ink"
             }`}
           >
@@ -106,7 +106,7 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
               key={product.id}
               onClick={() => openModifiers(product)}
               disabled={!product.isAvailable}
-              className={`border-border-subtle flex flex-col items-center rounded-2xl border bg-white p-3 text-center shadow-sm transition-all hover:shadow-md disabled:opacity-40 ${
+              className={`border-border-subtle ease-spring flex flex-col items-center rounded-2xl border bg-white p-3 text-center shadow-sm transition-all hover:shadow-md disabled:opacity-40 ${
                 addedAnim === product.id ? "animate-bounce" : ""
               }`}
             >

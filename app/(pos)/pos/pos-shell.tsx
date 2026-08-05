@@ -113,7 +113,7 @@ export function POSShell({ menu }: POSShellProps) {
             setClosingCash("");
             setShiftModal(true);
           }}
-          className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+          className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 ease-spring rounded-full border px-3 py-1 text-xs font-medium transition-colors"
         >
           إنهاء الوردية
         </button>
@@ -125,7 +125,7 @@ export function POSShell({ menu }: POSShellProps) {
           <button
             key={cat.id}
             onClick={() => setSelectedCatId(cat.id)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            className={`ease-spring shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
               cat.id === selectedCatId
                 ? "bg-brand-red text-white"
                 : "bg-muted text-brand-ink hover:bg-muted/80"
@@ -147,7 +147,7 @@ export function POSShell({ menu }: POSShellProps) {
                 key={product.id}
                 onClick={() => openModifiers(product)}
                 disabled={!product.isAvailable}
-                className={`border-border-subtle flex flex-col items-center rounded-2xl border bg-white p-3 text-center transition-shadow hover:shadow-md disabled:opacity-40 ${
+                className={`border-border-subtle ease-spring flex flex-col items-center rounded-2xl border bg-white p-3 text-center transition-shadow hover:shadow-md disabled:opacity-40 ${
                   product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
                 }`}
               >
@@ -176,13 +176,13 @@ export function POSShell({ menu }: POSShellProps) {
       <div className="border-border-subtle shrink-0 border-t bg-white px-4 py-3">
         <button
           onClick={() => setCartOpen(!cartOpen)}
-          className="bg-brand-red hover:bg-brand-red/90 flex w-full items-center justify-between rounded-full px-5 py-3 text-white transition-colors"
+          className="bg-brand-red hover:bg-brand-red/90 ease-spring flex w-full items-center justify-between rounded-full px-5 py-3 text-white transition-colors"
         >
           <span className="font-heading text-lg font-bold">
             {cart.length > 0 ? `${cart.length} سلعة — ${formatPrice(cartTotal)} ₪` : "السلة فارغة"}
           </span>
           <svg
-            className={`size-5 transition-transform ${cartOpen ? "rotate-180" : ""}`}
+            className={`ease-spring size-5 transition-transform ${cartOpen ? "rotate-180" : ""}`}
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
@@ -252,7 +252,7 @@ export function POSShell({ menu }: POSShellProps) {
               <div className="mb-3 flex gap-2">
                 <button
                   onClick={() => setPaymentMethod("cash")}
-                  className={`flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`ease-spring flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
                     paymentMethod === "cash"
                       ? "bg-brand-red text-white"
                       : "bg-muted text-brand-ink hover:bg-muted/80"
@@ -262,7 +262,7 @@ export function POSShell({ menu }: POSShellProps) {
                 </button>
                 <button
                   onClick={() => setPaymentMethod("card")}
-                  className={`flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`ease-spring flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
                     paymentMethod === "card"
                       ? "bg-brand-red text-white"
                       : "bg-muted text-brand-ink hover:bg-muted/80"
@@ -277,14 +277,14 @@ export function POSShell({ menu }: POSShellProps) {
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   placeholder="رقم الزبون (اختياري — لإرسال الفاتورة عبر واتساب)"
-                  className="border-border-subtle bg-muted text-brand-ink placeholder:text-text-secondary focus:border-brand-red/50 w-full rounded-full border px-4 py-2 text-sm text-xs transition-colors outline-none placeholder:text-xs"
+                  className="border-border-subtle bg-muted text-brand-ink placeholder:text-text-secondary focus:border-brand-red/50 ease-spring w-full rounded-full border px-4 py-2 text-sm text-xs transition-colors outline-none placeholder:text-xs"
                   dir="ltr"
                 />
               </div>
               <button
                 onClick={handleCheckout}
                 disabled={checkingOut}
-                className="bg-brand-red hover:bg-brand-red/90 w-full rounded-full px-5 py-3 text-sm font-bold text-white transition-colors disabled:opacity-50"
+                className="bg-brand-red hover:bg-brand-red/90 ease-spring w-full rounded-full px-5 py-3 text-sm font-bold text-white transition-colors disabled:opacity-50"
               >
                 {checkingOut ? "جاري الدفع..." : `دفع ${formatPrice(cartTotal)} ₪`}
               </button>
@@ -324,7 +324,7 @@ export function POSShell({ menu }: POSShellProps) {
                           : toggleMulti(group.id, mod.name)
                       }
                       aria-pressed={isSelected}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`ease-spring rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                         isSelected
                           ? "border-brand-red bg-brand-red text-white"
                           : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/50"
@@ -344,7 +344,7 @@ export function POSShell({ menu }: POSShellProps) {
           <SheetClose onClick={() => setModifierTarget(null)}>إلغاء</SheetClose>
           <button
             onClick={confirmModifiers}
-            className="bg-brand-red hover:bg-brand-red/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+            className="bg-brand-red hover:bg-brand-red/90 ease-spring flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
           >
             إضافة إلى السلة
           </button>
@@ -364,7 +364,7 @@ export function POSShell({ menu }: POSShellProps) {
               value={closingCash}
               onChange={(e) => setClosingCash(e.target.value)}
               placeholder="0.00"
-              className="border-border-subtle focus:border-brand-red/50 text-brand-ink w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
+              className="border-border-subtle focus:border-brand-red/50 text-brand-ink ease-spring w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
               dir="ltr"
             />
             <div className="flex gap-2">
@@ -372,7 +372,7 @@ export function POSShell({ menu }: POSShellProps) {
               <button
                 onClick={handleCloseShift}
                 disabled={closingShift}
-                className="bg-status-warning hover:bg-status-warning/90 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
+                className="bg-status-warning hover:bg-status-warning/90 ease-spring flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
               >
                 {closingShift ? "جاري..." : "تأكيد إنهاء الوردية"}
               </button>
@@ -406,7 +406,7 @@ export function POSShell({ menu }: POSShellProps) {
             </div>
             <button
               onClick={handleSignOut}
-              className="bg-brand-red hover:bg-brand-red/90 w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+              className="bg-brand-red hover:bg-brand-red/90 ease-spring w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
             >
               تسجيل الخروج
             </button>

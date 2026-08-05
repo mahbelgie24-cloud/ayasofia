@@ -125,8 +125,8 @@ function ToastRegion({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: 
             data-testid="toast"
             role={style.role}
             className={cn(
-              "ease-spring-gentle pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl px-4 py-3 shadow-lg sm:max-w-md",
-              "animate-[toast-in_0.3s_ease-spring-gentle]",
+              "ease-spring pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl px-4 py-3 shadow-lg sm:max-w-md",
+              "animate-[toast-in_0.3s_ease-spring]",
               style.bg,
             )}
             onMouseEnter={() => {
@@ -142,7 +142,7 @@ function ToastRegion({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: 
             <p className="flex-1 text-sm leading-relaxed font-medium">{toast.message}</p>
             <button
               onClick={() => onClose(toast.id)}
-              className="shrink-0 rounded-lg p-1 text-current opacity-70 transition-opacity hover:opacity-100"
+              className="ease-spring shrink-0 rounded-lg p-1 text-current opacity-70 transition-opacity hover:opacity-100"
               aria-label="إغلاق"
             >
               ✕
