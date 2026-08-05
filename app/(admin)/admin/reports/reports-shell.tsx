@@ -81,6 +81,11 @@ function ReportsContent({
     dine_in: "صالة",
     takeaway: "خارجي",
     drive_thru: "Drive-Thru",
+    delivery: "توصيل",
+  };
+  const sourceLabels: Record<string, string> = {
+    POS: "نقطة البيع",
+    DIGITAL_MENU: "القائمة الرقمية",
   };
 
   return (
@@ -131,6 +136,36 @@ function ReportsContent({
                     <td className="px-3 py-2">{data.revenue} ₪</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-border-subtle rounded-xl border bg-white p-4">
+            <p className="text-sm font-medium">حسب المصدر (تبنّي القائمة الرقمية)</p>
+            <table className="mt-2 w-full text-sm">
+              <thead>
+                <tr className="text-text-secondary border-border-subtle border-b text-right text-xs font-semibold">
+                  <th className="px-3 py-2">المصدر</th>
+                  <th className="px-3 py-2">عدد الطلبات</th>
+                  <th className="px-3 py-2">الإيرادات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(sales.bySource).length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-text-secondary px-3 py-4 text-center">
+                      لا توجد بيانات
+                    </td>
+                  </tr>
+                ) : (
+                  Object.entries(sales.bySource).map(([source, data]) => (
+                    <tr key={source} className="border-border-subtle/50 border-b">
+                      <td className="px-3 py-2 font-medium">{sourceLabels[source] ?? source}</td>
+                      <td className="px-3 py-2">{data.count}</td>
+                      <td className="px-3 py-2">{data.revenue} ₪</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

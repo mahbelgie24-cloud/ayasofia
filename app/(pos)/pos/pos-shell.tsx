@@ -6,6 +6,7 @@ import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "./actions";
 import { closeShift } from "@/lib/shifts";
+import { enqueueOrder } from "@/lib/offline/queue";
 import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { endStaffSession } from "@/lib/auth/session";
@@ -51,12 +52,12 @@ export function POSShell({ menu }: POSShellProps) {
   const handleCheckout = async () => {
     if (cart.length === 0 || checkingOut) return;
     setCheckingOut(true);
+    const cartItems = cart.map((item) => ({
+      productId: item.productId,
+      modifierIds: item.selectedModifiers.map((m) => m.id),
+      quantity: item.quantity,
+    }));
     try {
-      const cartItems = cart.map((item) => ({
-        productId: item.productId,
-        modifierIds: item.selectedModifiers.map((m) => m.id),
-        quantity: item.quantity,
-      }));
       const result = await checkout({
         cartItems,
         idempotencyKey: idempotencyKeyRef.current,
@@ -72,7 +73,25 @@ export function POSShell({ menu }: POSShellProps) {
         toast.error(result.error);
       }
     } catch {
-      toast.error("فشل في إتمام الطلب");
+      // The sale must never be lost to a dead Wi-Fi (spec §8, §12).
+      // If the server call threw (network failure / session hiccup),
+      // persist the order to the offline queue with the SAME idempotency
+      // key so the sync engine can replay it — and only then, exactly
+      // once — on reconnect (review finding C1).
+      try {
+        await enqueueOrder(
+          JSON.stringify(cartItems),
+          idempotencyKeyRef.current,
+          paymentMethod,
+          "dine_in",
+          customerPhone || undefined,
+        );
+        clearCart();
+        setCartOpen(false);
+        toast.warning("تم حفظ الطلب محلياً — سيُرسل تلقائياً عند عودة الاتصال");
+      } catch {
+        toast.error("فشل في إتمام الطلب ولم يتم حفظه محلياً");
+      }
     } finally {
       setCheckingOut(false);
     }
@@ -314,14 +333,14 @@ export function POSShell({ menu }: POSShellProps) {
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {group.modifiers.map((mod) => {
-                  const isSelected = (modifierSelections[group.id] ?? []).includes(mod.name);
+                  const isSelected = (modifierSelections[group.id] ?? []).includes(mod.id);
                   return (
                     <button
                       key={mod.id}
                       onClick={() =>
                         group.type === "single"
-                          ? toggleSingle(group.id, mod.name)
-                          : toggleMulti(group.id, mod.name)
+                          ? toggleSingle(group.id, mod.id)
+                          : toggleMulti(group.id, mod.id)
                       }
                       aria-pressed={isSelected}
                       className={`ease-spring rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${

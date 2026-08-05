@@ -98,6 +98,11 @@ export function ReceiptClient({ data }: Props) {
           <p>
             <span className="font-semibold">طريقة الدفع:</span> {data.paymentMethod ?? "غير محدد"}
           </p>
+          {data.tableCode && (
+            <p>
+              <span className="font-semibold">الطاولة:</span> {data.tableCode}
+            </p>
+          )}
           {data.staffName && (
             <p>
               <span className="font-semibold">الموظف:</span> {data.staffName}

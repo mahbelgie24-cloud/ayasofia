@@ -2,6 +2,14 @@
 
 @theme {
   --color-brand-red: #dc0000;
+  /* Supplementary brand-red scale harmonized to brand-red #DC0000 (spec §11.2).
+     Used by the customer-facing digital menu + wifi portal for depth/hover and
+     soft "pearl" backgrounds. Components must reference these tokens, never
+     hardcode hex (spec token contract). */
+  --color-brand-red-dark: #a30000;
+  --color-brand-red-bright: #ff2a26;
+  --color-brand-red-soft: #fce5e5;
+  --color-brand-red-bg: #fff6f6;
   --color-brand-cream: #faf6f3;
   --color-brand-ink: #2b1d1d;
   --color-border-subtle: #e8dedb;
@@ -180,6 +188,57 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Brand signature motion: floating pearls (spec §11.5) ──
+   Used in the customer-facing hero / wifi splash. Each pearl rises and
+   settles on a gentle spring; the whole set is disabled under
+   prefers-reduced-motion by the global rule below. */
+@keyframes pearl-float {
+  0% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-1.25rem);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+}
+
+/* Bouncing-pearls loader — three pearls bounding in a staggered rhythm. */
+@keyframes pearl-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-0.6rem);
+  }
+}
+
+/* Pearl flying to the cart on "add" (digital menu). */
+@keyframes pearl-fly {
+  0% {
+    transform: scale(1) translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.2) translate(6rem, 4rem);
+    opacity: 0;
+  }
+}
+
+@utility animate-pearl-float {
+  animation: pearl-float 4s ease-in-out infinite;
+}
+
+@utility animate-pearl-bounce {
+  animation: pearl-bounce 1.2s ease-in-out infinite;
 }
 
 /* ── Reduced motion: disable all animations ── */

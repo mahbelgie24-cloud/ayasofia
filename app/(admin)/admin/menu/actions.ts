@@ -13,6 +13,23 @@ import {
   staff,
 } from "@/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
+import { toScaledInt, formatPrice } from "@/lib/pricing";
+
+/**
+ * Normalise a user-entered price (string) into a canonical
+ * numeric-as-string at scale 2 — the money-representation contract in
+ * spec §12.  A raw JS float must never touch a price; callers send the
+ * raw input value as a string and we parse it into integer minor units
+ * here.  Returns null when the input is not a valid amount.
+ */
+function sanitizePrice(input: string | undefined | null): string | null {
+  if (input === undefined || input === null) return null;
+  const trimmed = input.trim();
+  if (trimmed === "") return null;
+  // toScaledInt returns 0 for garbage — distinguish real zero from noise.
+  if (!/^-?\d+(\.\d{1,2})?$/.test(trimmed)) return null;
+  return formatPrice(toScaledInt(trimmed, 2));
+}
 
 // ── Categories ──
 
@@ -70,7 +87,7 @@ export async function createProduct(input: {
   categoryId: string;
   nameAr: string;
   nameEn: string;
-  basePrice: number;
+  basePrice: string;
   imageUrl?: string;
   trackInventory?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
@@ -78,14 +95,15 @@ export async function createProduct(input: {
   if (!input.nameAr.trim() || !input.nameEn.trim() || !input.categoryId) {
     return { success: false, error: "جميع الحقول المطلوبة فارغة" };
   }
-  if (input.basePrice <= 0) {
+  const price = sanitizePrice(input.basePrice);
+  if (price === null || toScaledInt(price, 2) <= 0) {
     return { success: false, error: "السعر يجب أن يكون أكبر من صفر" };
   }
   await db.insert(products).values({
     categoryId: input.categoryId,
     nameAr: input.nameAr.trim(),
     nameEn: input.nameEn.trim(),
-    basePrice: input.basePrice.toFixed(2),
+    basePrice: price,
     imageUrl: input.imageUrl || null,
     isAvailable: true,
     trackInventory: input.trackInventory ?? true,
@@ -97,7 +115,7 @@ export async function updateProduct(input: {
   id: string;
   nameAr?: string;
   nameEn?: string;
-  basePrice?: number;
+  basePrice?: string;
   categoryId?: string;
   imageUrl?: string;
   isAvailable?: boolean;
@@ -107,7 +125,13 @@ export async function updateProduct(input: {
   const data: Record<string, unknown> = {};
   if (input.nameAr !== undefined) data.nameAr = input.nameAr.trim();
   if (input.nameEn !== undefined) data.nameEn = input.nameEn.trim();
-  if (input.basePrice !== undefined) data.basePrice = input.basePrice.toFixed(2);
+  if (input.basePrice !== undefined) {
+    const price = sanitizePrice(input.basePrice);
+    if (price === null || toScaledInt(price, 2) <= 0) {
+      return { success: false, error: "السعر يجب أن يكون أكبر من صفر" };
+    }
+    data.basePrice = price;
+  }
   if (input.categoryId !== undefined) data.categoryId = input.categoryId;
   if (input.imageUrl !== undefined) data.imageUrl = input.imageUrl || null;
   if (input.isAvailable !== undefined) data.isAvailable = input.isAvailable;
@@ -117,9 +141,6 @@ export async function updateProduct(input: {
   }
 
   // Spec §12: audit log on every price adjustment (WEB-SEC-006).
-  // When basePrice is changing, fetch the old value and write a
-  // price_changes row atomically with the update.  Non-price fields
-  // skip the audit path — only price adjustments are logged.
   if (input.basePrice !== undefined) {
     const [existing] = await db
       .select({ basePrice: products.basePrice })
@@ -131,7 +152,7 @@ export async function updateProduct(input: {
       return { success: false, error: "المنتج غير موجود" };
     }
 
-    const newPrice = input.basePrice.toFixed(2);
+    const newPrice = data.basePrice as string;
 
     if (existing.basePrice !== newPrice) {
       await db.transaction(async (tx) => {
@@ -189,12 +210,19 @@ export async function updateModifierGroup(input: {
   name?: string;
   type?: "single" | "multi";
   isRequired?: boolean;
+  maxSelections?: number | null;
 }): Promise<{ success: boolean; error?: string }> {
   await requireStaffSession("manager");
   const data: Record<string, unknown> = {};
   if (input.name !== undefined) data.name = input.name.trim();
   if (input.type !== undefined) data.type = input.type;
   if (input.isRequired !== undefined) data.isRequired = input.isRequired;
+  if (input.maxSelections !== undefined) {
+    if (input.type === "multi" && input.maxSelections != null && input.maxSelections < 1) {
+      return { success: false, error: "الحد الأقصى يجب أن يكون 1 أو أكثر" };
+    }
+    data.maxSelections = input.maxSelections;
+  }
   if (Object.keys(data).length === 0) return { success: false, error: "لا توجد تغييرات" };
   await db.update(modifierGroups).set(data).where(eq(modifierGroups.id, input.id));
   return { success: true };
@@ -212,17 +240,26 @@ export async function createModifier(input: {
   groupId: string;
   nameAr: string;
   name: string;
-  priceDelta?: number;
+  priceDelta?: string;
+  ingredientId?: string | null;
+  ingredientQty?: string;
 }): Promise<{ success: boolean; error?: string }> {
   await requireStaffSession("manager");
   if (!input.nameAr.trim() || !input.name.trim()) {
     return { success: false, error: "الاسم مطلوب" };
   }
+  const delta = sanitizePrice(input.priceDelta ?? "0") ?? "0.00";
+  const qty = sanitizePrice(input.ingredientQty ?? undefined);
+  if (input.ingredientId && qty === null) {
+    return { success: false, error: "الكمية المرتبطة بالمكون غير صالحة" };
+  }
   await db.insert(modifiers).values({
     groupId: input.groupId,
     nameAr: input.nameAr.trim(),
     name: input.name.trim(),
-    priceDelta: (input.priceDelta ?? 0).toFixed(2),
+    priceDelta: delta,
+    ingredientId: input.ingredientId || null,
+    ingredientQty: input.ingredientId && qty !== null ? qty : null,
   });
   return { success: true };
 }
@@ -231,13 +268,29 @@ export async function updateModifier(input: {
   id: string;
   nameAr?: string;
   name?: string;
-  priceDelta?: number;
+  priceDelta?: string;
+  ingredientId?: string | null;
+  ingredientQty?: string;
+  clearIngredient?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   const { staffId } = await requireStaffSession("manager");
   const data: Record<string, unknown> = {};
   if (input.nameAr !== undefined) data.nameAr = input.nameAr.trim();
   if (input.name !== undefined) data.name = input.name.trim();
-  if (input.priceDelta !== undefined) data.priceDelta = input.priceDelta.toFixed(2);
+  if (input.priceDelta !== undefined) {
+    const delta = sanitizePrice(input.priceDelta);
+    if (delta === null) return { success: false, error: "قيمة السعر غير صالحة" };
+    data.priceDelta = delta;
+  }
+  if (input.clearIngredient) {
+    data.ingredientId = null;
+    data.ingredientQty = null;
+  } else if (input.ingredientId !== undefined) {
+    const qty = sanitizePrice(input.ingredientQty ?? undefined);
+    if (qty === null) return { success: false, error: "الكمية المرتبطة بالمكون غير صالحة" };
+    data.ingredientId = input.ingredientId || null;
+    data.ingredientQty = input.ingredientId ? qty : null;
+  }
   if (Object.keys(data).length === 0) return { success: false, error: "لا توجد تغييرات" };
 
   // Spec §12: audit log on every price adjustment (WEB-SEC-006).
@@ -252,7 +305,7 @@ export async function updateModifier(input: {
       return { success: false, error: "المعدّل غير موجود" };
     }
 
-    const newDelta = input.priceDelta.toFixed(2);
+    const newDelta = data.priceDelta as string;
 
     if (existing.priceDelta !== newDelta) {
       await db.transaction(async (tx) => {
@@ -285,10 +338,13 @@ export async function deleteModifier(id: string): Promise<{ success: boolean }> 
 export async function saveRecipe(input: {
   productId: string;
   ingredientId: string;
-  quantityUsed: number;
+  quantityUsed: string;
 }): Promise<{ success: boolean; error?: string }> {
   await requireStaffSession("manager");
-  if (input.quantityUsed <= 0) return { success: false, error: "الكمية يجب أن تكون أكبر من صفر" };
+  const qty = sanitizePrice(input.quantityUsed);
+  if (qty === null || toScaledInt(qty, 2) <= 0) {
+    return { success: false, error: "الكمية يجب أن تكون أكبر من صفر" };
+  }
 
   const [existing] = await db
     .select({ productId: recipes.productId, ingredientId: recipes.ingredientId })
@@ -301,7 +357,7 @@ export async function saveRecipe(input: {
   if (existing) {
     await db
       .update(recipes)
-      .set({ quantityUsed: input.quantityUsed.toFixed(2) })
+      .set({ quantityUsed: qty })
       .where(
         sql`${recipes.productId} = ${input.productId} AND ${recipes.ingredientId} = ${input.ingredientId}`,
       );
@@ -309,7 +365,7 @@ export async function saveRecipe(input: {
     await db.insert(recipes).values({
       productId: input.productId,
       ingredientId: input.ingredientId,
-      quantityUsed: input.quantityUsed.toFixed(2),
+      quantityUsed: qty,
     });
   }
   return { success: true };
@@ -347,11 +403,14 @@ export async function getFullMenuForAdmin(): Promise<{
         name: string;
         type: "single" | "multi";
         isRequired: boolean;
+        maxSelections: number | null;
         modifiers: Array<{
           id: string;
           nameAr: string;
           name: string;
           priceDelta: string;
+          ingredientId: string | null;
+          ingredientQty: string | null;
         }>;
       }>;
       recipes: Array<{
@@ -409,11 +468,14 @@ export async function getFullMenuForAdmin(): Promise<{
             name: mg.name,
             type: mg.type,
             isRequired: mg.isRequired,
+            maxSelections: mg.maxSelections,
             modifiers: mg.modifiers.map((m) => ({
               id: m.id,
               nameAr: m.nameAr,
               name: m.name,
               priceDelta: m.priceDelta,
+              ingredientId: m.ingredientId,
+              ingredientQty: m.ingredientQty,
             })),
           })),
           recipes: prodRecipes.map((r) => ({

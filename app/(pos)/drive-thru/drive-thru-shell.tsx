@@ -7,6 +7,7 @@ import type { POSCategory } from "@/lib/db/queries";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "../pos/actions";
+import { enqueueOrder } from "@/lib/offline/queue";
 import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 
@@ -41,12 +42,12 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   const handleCheckout = async () => {
     if (cart.length === 0 || checkingOut) return;
     setCheckingOut(true);
+    const cartItems = cart.map((item) => ({
+      productId: item.productId,
+      modifierIds: item.selectedModifiers.map((m) => m.id),
+      quantity: item.quantity,
+    }));
     try {
-      const cartItems = cart.map((item) => ({
-        productId: item.productId,
-        modifierIds: item.selectedModifiers.map((m) => m.id),
-        quantity: item.quantity,
-      }));
       const result = await checkout({
         cartItems,
         idempotencyKey: idempotencyKeyRef.current,
@@ -63,7 +64,23 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
         toast.error(result.error);
       }
     } catch {
-      toast.error("فشل في إتمام الطلب");
+      // Never lose a sale to a dead Wi-Fi (spec §8, §12) — queue it
+      // for the offline sync engine with the same idempotency key so it
+      // replays exactly once on reconnect (review finding C1).
+      try {
+        await enqueueOrder(
+          JSON.stringify(cartItems),
+          idempotencyKeyRef.current,
+          paymentMethod,
+          "drive_thru",
+          customerPhone || undefined,
+        );
+        clearCart();
+        setCartOpen(false);
+        toast.warning("تم حفظ الطلب محلياً — سيُرسل تلقائياً عند عودة الاتصال");
+      } catch {
+        toast.error("فشل في إتمام الطلب ولم يتم حفظه محلياً");
+      }
     } finally {
       setCheckingOut(false);
     }
@@ -229,14 +246,14 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
               <p className="text-brand-ink mb-1 text-xs font-medium">{group.name}</p>
               <div className="flex flex-wrap gap-1">
                 {group.modifiers.map((mod) => {
-                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.name);
+                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.id);
                   return (
                     <button
                       key={mod.id}
                       onClick={() =>
                         group.type === "single"
-                          ? toggleSingle(group.id, mod.name)
-                          : toggleMulti(group.id, mod.name)
+                          ? toggleSingle(group.id, mod.id)
+                          : toggleMulti(group.id, mod.id)
                       }
                       aria-pressed={isSel}
                       className={`rounded-full border px-2.5 py-1 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}

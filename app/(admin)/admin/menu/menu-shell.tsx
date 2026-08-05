@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toMinorUnits } from "@/lib/pricing";
 import {
   getFullMenuForAdmin,
   createCategory,
@@ -9,6 +10,7 @@ import {
   createProduct,
   updateProduct,
   toggleProductAvailable,
+  updateModifier,
   saveRecipe,
   deleteRecipe,
 } from "./actions";
@@ -29,6 +31,7 @@ export function MenuShell() {
   const [editProduct, setEditProduct] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState<string | null>(null);
   const [recipeProduct, setRecipeProduct] = useState<string | null>(null);
+  const [modifierIngredientTarget, setModifierIngredientTarget] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
@@ -209,15 +212,76 @@ export function MenuShell() {
                         <div>
                           <h4 className="text-xs font-semibold">المُعدِّلات</h4>
                           {prod.modifierGroups.map((mg) => (
-                            <div key={mg.id} className="mt-1 flex items-center gap-1 text-xs">
-                              <span className="font-medium">{mg.name}</span>
-                              <span className="text-text-secondary">
-                                ({mg.type === "single" ? "اختيار واحد" : "متعدد"})
-                              </span>
-                              {mg.isRequired && <span className="text-status-error">*</span>}
-                              <span className="text-text-secondary mr-auto">
-                                {mg.modifiers.map((m) => m.nameAr).join("، ")}
-                              </span>
+                            <div key={mg.id} className="mt-1 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">{mg.name}</span>
+                                <span className="text-text-secondary">
+                                  ({mg.type === "single" ? "اختيار واحد" : "متعدد"})
+                                </span>
+                                {mg.type === "multi" && mg.maxSelections != null && (
+                                  <span className="text-text-secondary">
+                                    أقصى {mg.maxSelections}
+                                  </span>
+                                )}
+                                {mg.isRequired && <span className="text-status-error">*</span>}
+                              </div>
+                              <ul className="mt-1 space-y-1">
+                                {mg.modifiers.map((m) => (
+                                  <li
+                                    key={m.id}
+                                    className="border-border-subtle/50 flex items-center gap-2 rounded-lg border px-2 py-1"
+                                  >
+                                    <span className="font-medium">{m.nameAr}</span>
+                                    <span className="text-text-secondary">
+                                      {toMinorUnits(m.priceDelta) > 0 ? `(+${m.priceDelta} ₪)` : ""}
+                                    </span>
+                                    <span className="mr-auto flex items-center gap-1">
+                                      {m.ingredientId ? (
+                                        <span className="text-text-secondary">
+                                          {menu.ingredients.find((i) => i.id === m.ingredientId)
+                                            ?.name ?? "مكوّن"}
+                                          : {m.ingredientQty}
+                                        </span>
+                                      ) : (
+                                        <span className="text-text-secondary opacity-60">
+                                          بدون مخزون
+                                        </span>
+                                      )}
+                                      <button
+                                        onClick={() => setModifierIngredientTarget(m.id)}
+                                        className="text-brand-red hover:underline"
+                                      >
+                                        {m.ingredientId ? "تعديل المكوّن" : "+ مكوّن"}
+                                      </button>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                              {modifierIngredientTarget && (
+                                <ModifierIngredientForm
+                                  ingredients={menu.ingredients}
+                                  modifierId={modifierIngredientTarget}
+                                  onSave={async (data) => {
+                                    const r = await updateModifier({
+                                      id: modifierIngredientTarget,
+                                      ...data,
+                                    });
+                                    setModifierIngredientTarget(null);
+                                    refresh();
+                                    showMsg(r.success ? "تم" : (r.error ?? "فشل"));
+                                  }}
+                                  onClear={async () => {
+                                    await updateModifier({
+                                      id: modifierIngredientTarget,
+                                      clearIngredient: true,
+                                    });
+                                    setModifierIngredientTarget(null);
+                                    refresh();
+                                    showMsg("تم إزالة الربط");
+                                  }}
+                                  onCancel={() => setModifierIngredientTarget(null)}
+                                />
+                              )}
                             </div>
                           ))}
                         </div>
@@ -438,7 +502,7 @@ function ProductEditForm({
             const data: Record<string, unknown> = {};
             if (nameAr !== product.nameAr) data.nameAr = nameAr;
             if (nameEn !== product.nameEn) data.nameEn = nameEn;
-            if (basePrice !== product.basePrice) data.basePrice = parseFloat(basePrice);
+            if (basePrice !== product.basePrice) data.basePrice = basePrice;
             if (catId) data.categoryId = catId;
             if (imageUrl !== (product.imageUrl ?? "")) data.imageUrl = imageUrl;
             if (trackInventory !== product.trackInventory) data.trackInventory = trackInventory;
@@ -472,7 +536,7 @@ function ProductCreateForm({
   onSave: (data: {
     nameAr: string;
     nameEn: string;
-    basePrice: number;
+    basePrice: string;
     imageUrl?: string;
     trackInventory: boolean;
   }) => void;
@@ -522,8 +586,10 @@ function ProductCreateForm({
       <div className="mt-2 flex gap-2">
         <button
           onClick={() => {
-            const price = parseFloat(basePrice);
-            if (!nameAr || !nameEn || isNaN(price) || price <= 0) return;
+            const price = basePrice.trim();
+            // Light client-side guard — authoritative validation (scale-2
+            // money parsing) happens server-side in sanitizePrice.
+            if (!nameAr || !nameEn || price === "") return;
             onSave({
               nameAr,
               nameEn,
@@ -547,13 +613,80 @@ function ProductCreateForm({
   );
 }
 
+function ModifierIngredientForm({
+  ingredients,
+  modifierId,
+  onSave,
+  onClear,
+  onCancel,
+}: {
+  ingredients: Array<{ id: string; name: string; unit: string }>;
+  modifierId: string;
+  onSave: (data: { ingredientId: string; ingredientQty: string }) => void;
+  onClear: () => void;
+  onCancel: () => void;
+}) {
+  const [ingId, setIngId] = useState(ingredients[0]?.id ?? "");
+  const [qty, setQty] = useState("");
+  return (
+    <div className="border-border-subtle bg-muted/30 mt-1 rounded border p-2">
+      <select
+        value={ingId}
+        onChange={(e) => setIngId(e.target.value)}
+        className="border-border-subtle mb-1 w-full rounded border bg-white px-2 py-1 text-xs"
+      >
+        {ingredients.map((i) => (
+          <option key={i.id} value={i.id}>
+            {i.name} ({i.unit})
+          </option>
+        ))}
+      </select>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={qty}
+        onChange={(e) => setQty(e.target.value)}
+        placeholder="الكمية لكل حصة (مثال: 50)"
+        className="border-border-subtle mb-1 w-full rounded border bg-white px-2 py-1 text-xs"
+      />
+      <div className="flex gap-1">
+        <button
+          onClick={() => {
+            const n = qty.trim();
+            if (!ingId || n === "") return;
+            onSave({ ingredientId: ingId, ingredientQty: n });
+          }}
+          className="bg-brand-red rounded-full px-2 py-0.5 text-xs text-white"
+        >
+          حفظ
+        </button>
+        {modifierId && (
+          <button
+            onClick={onClear}
+            className="text-status-error border-status-error/30 rounded-full border px-2 py-0.5 text-xs"
+          >
+            إزالة الربط
+          </button>
+        )}
+        <button
+          onClick={onCancel}
+          className="text-text-secondary rounded-full border px-2 py-0.5 text-xs"
+        >
+          إلغاء
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RecipeForm({
   ingredients,
   onSave,
   onCancel,
 }: {
   ingredients: Array<{ id: string; name: string; unit: string }>;
-  onSave: (data: { ingredientId: string; quantityUsed: number }) => void;
+  onSave: (data: { ingredientId: string; quantityUsed: string }) => void;
   onCancel: () => void;
 }) {
   const [ingId, setIngId] = useState(ingredients[0]?.id ?? "");
@@ -582,8 +715,8 @@ function RecipeForm({
       <div className="flex gap-1">
         <button
           onClick={() => {
-            const n = parseFloat(qty);
-            if (!ingId || isNaN(n) || n <= 0) return;
+            const n = qty.trim();
+            if (!ingId || n === "") return;
             onSave({ ingredientId: ingId, quantityUsed: n });
           }}
           className="bg-brand-red rounded-full px-2 py-0.5 text-xs text-white"

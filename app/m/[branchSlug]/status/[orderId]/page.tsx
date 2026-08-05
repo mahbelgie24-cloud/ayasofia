@@ -1,17 +1,23 @@
 import { db } from "@/lib/db";
-import { orders, orderItems, products } from "@/db/schema";
+import { orders, orderItems, products, tables } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { calculateLineTotal, formatPrice } from "@/lib/pricing";
 import { extractModifierDeltas } from "@/lib/receipt";
-import { OrderStatusClient } from "./status-client";
+import { isFeatureEnabled, FEATURE_DIGITAL_MENU } from "@/lib/features";
+import { FeatureOff } from "@/components/digital-menu/feature-off";
+import { DMStatusClient } from "./dm-status-client";
 
-interface Props {
-  params: Promise<{ orderId: string }>;
-}
+export const dynamic = "force-dynamic";
 
-export default async function OrderStatusPage({ params }: Props) {
-  const { orderId } = await params;
+export default async function DMStatusPage({
+  params,
+}: {
+  params: Promise<{ branchSlug: string; orderId: string }>;
+}) {
+  const { branchSlug, orderId } = await params;
+  const active = await isFeatureEnabled(FEATURE_DIGITAL_MENU);
+  if (!active) return <FeatureOff />;
 
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
   if (!order) notFound();
@@ -28,11 +34,24 @@ export default async function OrderStatusPage({ params }: Props) {
       : [];
   const prodMap = new Map(prodRows.map((p) => [p.id, p.nameAr]));
 
+  let tableCode: string | null = null;
+  if (order.tableId) {
+    const [t] = await db
+      .select({ code: tables.code })
+      .from(tables)
+      .where(eq(tables.id, order.tableId))
+      .limit(1);
+    tableCode = t?.code ?? null;
+  }
+
   const data = {
+    branchSlug,
     orderNumber: order.orderNumber,
     status: order.status,
     total: order.total,
-    createdAt: order.createdAt?.toISOString() ?? "",
+    tableCode,
+    channel: order.channel,
+    deliveryFee: order.deliveryFee,
     items: items.map((item) => {
       const snapshot = item.selectedModifiers as
         | Array<{ modifierId?: string; nameAr?: string; nameEn?: string; priceDelta?: string }>
@@ -47,6 +66,7 @@ export default async function OrderStatusPage({ params }: Props) {
         productNameAr: prodMap.get(item.productId) ?? item.productId,
         quantity: item.quantity,
         modifierNames,
+        notes: item.notes ?? null,
         lineTotal: formatPrice(
           calculateLineTotal(
             item.unitPrice,
@@ -58,5 +78,5 @@ export default async function OrderStatusPage({ params }: Props) {
     }),
   };
 
-  return <OrderStatusClient orderId={orderId} data={data} />;
+  return <DMStatusClient orderId={orderId} data={data} />;
 }

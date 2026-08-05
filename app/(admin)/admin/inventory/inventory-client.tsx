@@ -119,7 +119,6 @@ function PurchaseForm({
 
   const handleSubmit = async () => {
     const qty = parseFloat(quantity);
-    const cst = parseFloat(cost);
     if (!ingId || isNaN(qty) || qty <= 0) {
       setMsg("يرجى إدخال بيانات صحيحة");
       return;
@@ -127,7 +126,7 @@ function PurchaseForm({
     const result = await logPurchase({
       ingredientId: ingId,
       quantity: qty,
-      totalCost: isNaN(cst) ? 0 : cst,
+      totalCost: cost.trim() === "" ? undefined : cost,
       supplierId: newSupplier ? undefined : supplierId || undefined,
     });
     setMsg(result.success ? "تم التسجيل بنجاح" : (result.error ?? "فشل"));

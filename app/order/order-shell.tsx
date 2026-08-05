@@ -216,14 +216,14 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
               <p className="text-brand-ink mb-1 text-sm font-medium">{group.name}</p>
               <div className="flex flex-wrap gap-1.5">
                 {group.modifiers.map((mod) => {
-                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.name);
+                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.id);
                   return (
                     <button
                       key={mod.id}
                       onClick={() =>
                         group.type === "single"
-                          ? toggleSingle(group.id, mod.name)
-                          : toggleMulti(group.id, mod.name)
+                          ? toggleSingle(group.id, mod.id)
+                          : toggleMulti(group.id, mod.id)
                       }
                       aria-pressed={isSel}
                       className={`rounded-full border px-3 py-1.5 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}

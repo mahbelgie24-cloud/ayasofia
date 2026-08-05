@@ -1,8 +1,8 @@
 "use server";
 
-import { headers } from "next/headers";
 import { executeCheckout } from "@/lib/checkout-core";
 import { checkThrottle } from "@/lib/rate-limit";
+import { callerIp } from "@/lib/ip";
 import type { CartItemForServer } from "@/lib/pricing";
 
 export type PlaceOrderResult =
@@ -14,20 +14,6 @@ export type PlaceOrderResult =
 // never approaches this; a script does.  The idempotency key still
 // prevents duplicate writes — this caps *attempt rate*.
 const ORDER_RATE_LIMIT = { max: 10, windowMs: 60_000 };
-
-/**
- * Resolve the caller's source IP from the standard proxy headers.
- * On Vercel `x-forwarded-for` is always set.  When no IP can be
- * determined all such callers share the "unknown" bucket (still
- * capped, just collectively).
- */
-async function callerIp(): Promise<string> {
-  const h = await headers();
-  const forwarded = h.get("x-forwarded-for") ?? "";
-  const first = forwarded.split(",")[0].trim();
-  const realIp = h.get("x-real-ip");
-  return first || realIp || "unknown";
-}
 
 /**
  * Place a customer self-order — no auth required, no staff session.

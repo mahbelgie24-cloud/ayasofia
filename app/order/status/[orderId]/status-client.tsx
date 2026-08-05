@@ -9,7 +9,12 @@ interface OrderData {
   status: string;
   total: string;
   createdAt: string;
-  items: Array<{ productNameAr: string; quantity: number; lineTotal: string }>;
+  items: Array<{
+    productNameAr: string;
+    quantity: number;
+    modifierNames: string[];
+    lineTotal: string;
+  }>;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -124,6 +129,11 @@ export function OrderStatusClient({
             <div key={i} className="flex justify-between text-sm">
               <span>
                 {item.productNameAr} × {item.quantity}
+                {item.modifierNames.length > 0 && (
+                  <span className="text-text-secondary mr-1 text-xs">
+                    ({item.modifierNames.join("، ")})
+                  </span>
+                )}
               </span>
               <span className="font-medium">{item.lineTotal} ₪</span>
             </div>

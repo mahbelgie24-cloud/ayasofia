@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { verifyStaffPin } from "@/app/login/actions";
 import { openShift } from "@/lib/shifts";
+import { flushQueue } from "@/lib/offline/sync";
 
 const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, "⌫"] as const;
 
@@ -67,6 +68,12 @@ export function PinPad({ redirectTo }: Props) {
       }
 
       await supabase.auth.refreshSession();
+
+      // A successful login carries a fresh staff session.  Flush any
+      // orders queued during an earlier offline session (or an expired
+      // session) so they sync exactly once now that auth is valid
+      // (review finding C5).  Fire-and-forget — never block entry.
+      flushQueue().catch(() => {});
 
       if (!result.hasOpenShift) {
         setFlow("opening-cash");

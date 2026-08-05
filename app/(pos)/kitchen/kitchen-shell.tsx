@@ -8,6 +8,7 @@ const CHANNEL_LABELS: Record<string, string> = {
   dine_in: "🥤 صالة",
   takeaway: "📱 طلب خارجي",
   drive_thru: "🚘 Drive-Thru",
+  delivery: "🛵 توصيل",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,8 +59,15 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
       })
       .subscribe();
 
+    // Realtime fallback — if the WebSocket drops or an event is missed
+    // during a brief disconnect, no new order would ever appear.  A
+    // periodic refetch (every 15s) is a cheap belt-and-suspenders guard
+    // for a live KDS on flaky in-store Wi-Fi (see review R-M3).
+    const pollId = setInterval(refreshOrders, 15_000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollId);
     };
   }, [refreshOrders, playBeep]);
 
@@ -109,17 +117,34 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
                       {new Date(order.createdAt).toLocaleTimeString("ar")}
                     </p>
                   </div>
-                  <span className="bg-muted rounded-full px-2 py-1 text-xs font-medium">
-                    {CHANNEL_LABELS[order.channel] ?? order.channel}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {order.tableCode && (
+                      <span className="bg-brand-red rounded-full px-2 py-1 text-xs font-bold text-white">
+                        طاولة {order.tableCode}
+                      </span>
+                    )}
+                    <span className="bg-muted rounded-full px-2 py-1 text-xs font-medium">
+                      {CHANNEL_LABELS[order.channel] ?? order.channel}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mb-3 space-y-0.5">
                   {order.items.map((item, i) => (
-                    <p key={i} className="text-sm">
-                      <span className="font-semibold">{item.productNameAr}</span>
-                      <span className="text-text-secondary"> × {item.quantity}</span>
-                    </p>
+                    <div key={i}>
+                      <p className="text-sm">
+                        <span className="font-semibold">{item.productNameAr}</span>
+                        <span className="text-text-secondary"> × {item.quantity}</span>
+                      </p>
+                      {item.modifierNames.length > 0 && (
+                        <p className="text-text-secondary text-xs">
+                          {item.modifierNames.join("، ")}
+                        </p>
+                      )}
+                      {item.notes && (
+                        <p className="text-status-warning text-xs italic">“{item.notes}”</p>
+                      )}
+                    </div>
                   ))}
                 </div>
 

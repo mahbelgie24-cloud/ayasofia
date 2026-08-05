@@ -3,13 +3,15 @@
 import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, orderItems, products, recipes, ingredients, shifts, staff } from "@/db/schema";
-import { and, gte, lte, desc, inArray } from "drizzle-orm";
+import { and, gte, lte, desc, inArray, ne, isNull, sql } from "drizzle-orm";
 import { toMinorUnits, toScaledInt, formatPrice, addMinor, multiplyMinor } from "@/lib/pricing";
 
 export interface SalesSummary {
   totalRevenue: string;
   orderCount: number;
   byChannel: Record<string, { count: number; revenue: string }>;
+  // FR-DM-15: digital adoption — orders/revenue split by entry surface.
+  bySource: Record<string, { count: number; revenue: string }>;
 }
 
 export interface BestSeller {
@@ -51,6 +53,7 @@ export async function getSalesSummary(startDate: string, endDate: string): Promi
   const rows = await db
     .select({
       channel: orders.channel,
+      source: orders.source,
       total: orders.total,
     })
     .from(orders)
@@ -58,6 +61,7 @@ export async function getSalesSummary(startDate: string, endDate: string): Promi
 
   let totalRevenueAgorot = 0;
   const byChannel: Record<string, { count: number; revenueAgorot: number }> = {};
+  const bySource: Record<string, { count: number; revenueAgorot: number }> = {};
 
   for (const row of rows) {
     const agorot = toMinorUnits(row.total);
@@ -67,17 +71,27 @@ export async function getSalesSummary(startDate: string, endDate: string): Promi
     }
     byChannel[row.channel].count += 1;
     byChannel[row.channel].revenueAgorot = addMinor(byChannel[row.channel].revenueAgorot, agorot);
+
+    const src = row.source ?? "POS";
+    if (!bySource[src]) bySource[src] = { count: 0, revenueAgorot: 0 };
+    bySource[src].count += 1;
+    bySource[src].revenueAgorot = addMinor(bySource[src].revenueAgorot, agorot);
   }
 
   const channelResult: Record<string, { count: number; revenue: string }> = {};
   for (const [ch, data] of Object.entries(byChannel)) {
     channelResult[ch] = { count: data.count, revenue: formatPrice(data.revenueAgorot) };
   }
+  const sourceResult: Record<string, { count: number; revenue: string }> = {};
+  for (const [src, data] of Object.entries(bySource)) {
+    sourceResult[src] = { count: data.count, revenue: formatPrice(data.revenueAgorot) };
+  }
 
   return {
     totalRevenue: formatPrice(totalRevenueAgorot),
     orderCount: rows.length,
     byChannel: channelResult,
+    bySource: sourceResult,
   };
 }
 
@@ -233,4 +247,62 @@ export async function getZReport(): Promise<ZReportShift[]> {
       discrepancy,
     };
   });
+}
+
+export interface DashboardSummary {
+  todayRevenue: string;
+  todayOrderCount: number;
+  averageOrder: string;
+  lowStockCount: number;
+  openShiftCount: number;
+  topSellers: BestSeller[];
+}
+
+/**
+ * Compact KPIs for the owner dashboard (`/admin`).  Separate from the
+ * dated range queries — this intentionally aggregates across distinct
+ * windows, so it reads its own data rather than composing partials
+ * (single source of truth per number shown).
+ */
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  await requireStaffSession("manager");
+
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const todayOrders = await db
+    .select({ total: orders.total })
+    .from(orders)
+    .where(and(gte(orders.createdAt, startOfToday), ne(orders.status, "cancelled")));
+
+  let revenueAgorot = 0;
+  for (const row of todayOrders) {
+    revenueAgorot = addMinor(revenueAgorot, toMinorUnits(row.total));
+  }
+
+  const [lowStock] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(ingredients)
+    .where(sql`${ingredients.currentStock} <= ${ingredients.reorderThreshold}`);
+
+  const [openShifts] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(shifts)
+    .where(isNull(shifts.closedAt));
+
+  const topSellers = await getBestSellers(
+    startOfToday.toISOString().slice(0, 10),
+    now.toISOString().slice(0, 10),
+  );
+
+  return {
+    todayRevenue: formatPrice(revenueAgorot),
+    todayOrderCount: todayOrders.length,
+    averageOrder:
+      todayOrders.length > 0 ? (revenueAgorot / todayOrders.length / 100).toFixed(2) : "0.00",
+    lowStockCount: lowStock?.count ?? 0,
+    openShiftCount: openShifts?.count ?? 0,
+    topSellers: topSellers.slice(0, 5),
+  };
 }

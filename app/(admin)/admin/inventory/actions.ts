@@ -4,10 +4,23 @@ import { requireStaffSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ingredients, inventoryMoves, purchases, suppliers } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { toScaledInt, formatPrice } from "@/lib/pricing";
 
 interface ActionResult {
   success: boolean;
   error?: string;
+}
+
+/**
+ * Normalise a user-entered amount into canonical numeric-as-string at
+ * scale 2 (spec §12 money boundary — no raw JS float may touch a price).
+ * Returns null for invalid input.
+ */
+function sanitizeAmount(input: string | undefined | null): string | null {
+  if (input === undefined || input === null) return null;
+  const trimmed = input.trim();
+  if (trimmed === "" || !/^-?\d+(\.\d{1,2})?$/.test(trimmed)) return null;
+  return formatPrice(toScaledInt(trimmed, 2));
 }
 
 /**
@@ -17,7 +30,7 @@ interface ActionResult {
 export async function logPurchase(input: {
   ingredientId: string;
   quantity: number;
-  totalCost: number;
+  totalCost?: string;
   supplierId?: string;
 }): Promise<ActionResult> {
   const { staffId } = await requireStaffSession("manager");
@@ -26,6 +39,8 @@ export async function logPurchase(input: {
   if (!ingredientId || quantity <= 0) {
     return { success: false, error: "Invalid input" };
   }
+
+  const costStr = sanitizeAmount(totalCost ?? "0") ?? "0.00";
 
   try {
     await db.transaction(async (tx) => {
@@ -51,7 +66,7 @@ export async function logPurchase(input: {
       if (supplierId) {
         await tx.insert(purchases).values({
           supplierId,
-          totalCost: totalCost.toFixed(2),
+          totalCost: costStr,
           status: "received",
         });
       }

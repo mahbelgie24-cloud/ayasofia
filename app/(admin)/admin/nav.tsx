@@ -2,15 +2,29 @@
 
 import { usePathname } from "next/navigation";
 
-const links = [
-  { href: "/admin/inventory", label: "المخزون" },
-  { href: "/admin/reports", label: "التقارير" },
-  { href: "/admin/menu", label: "القائمة" },
-  { href: "/admin/staff", label: "الموظفين" },
-];
+interface AdminNavProps {
+  digitalMenuOn: boolean;
+  wifiPortalOn: boolean;
+}
 
-export function AdminNav() {
+export function AdminNav({ digitalMenuOn, wifiPortalOn }: AdminNavProps) {
   const pathname = usePathname();
+
+  const baseLinks = [
+    { href: "/admin", label: "لوحة التحكم" },
+    { href: "/admin/inventory", label: "المخزون" },
+    { href: "/admin/reports", label: "التقارير" },
+    { href: "/admin/menu", label: "القائمة" },
+    { href: "/admin/staff", label: "الموظفين" },
+  ];
+
+  // Feature-gated links — hidden when the feature flag is OFF (C9).
+  const featureLinks = [
+    ...(digitalMenuOn ? [{ href: "/admin/digital-menu", label: "القائمة الرقمية" }] : []),
+    ...(wifiPortalOn ? [{ href: "/admin/wifi", label: "الواي فاي" }] : []),
+  ];
+
+  const links = [...baseLinks, ...featureLinks];
 
   return (
     <nav
@@ -20,26 +34,18 @@ export function AdminNav() {
       <h2 className="font-heading text-brand-ink mb-4 text-lg font-semibold">الإدارة</h2>
       <ul className="space-y-1" role="list">
         {links.map((link) => {
-          const active = pathname.startsWith(link.href);
-          const built = true;
+          const active =
+            link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
           return (
             <li key={link.href}>
               <a
-                href={built ? link.href : "#"}
+                href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={`ease-spring block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-brand-red text-white"
-                    : built
-                      ? "text-brand-ink hover:bg-muted"
-                      : "text-text-secondary cursor-not-allowed opacity-50"
+                  active ? "bg-brand-red text-white" : "text-brand-ink hover:bg-muted"
                 }`}
-                onClick={(e) => {
-                  if (!built) e.preventDefault();
-                }}
               >
                 {link.label}
-                {!built && <span className="mr-1 text-xs">(قريباً)</span>}
               </a>
             </li>
           );
