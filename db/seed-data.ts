@@ -976,6 +976,20 @@ export const seedIngredients = [
   { name: "Waffle Batter", unit: "g", stock: 3000, reorder: 600, cost: 0.04 },
 ] as const;
 
+// ---------- Modifier → ingredient links (spec §8.4) ----------
+// Topping modifiers that consume tracked stock: keyed by the modifier option's
+// English name, mapped to [ingredient name, per-serving quantity].  A linked
+// ingredient must appear EITHER in the base recipe OR in a modifier option of
+// the product — NEVER both (swappable-ingredient rule; the seed unit test
+// `seed-stock-semantics.test.ts` asserts zero overlap for this catalog).
+export const MODIFIER_INGREDIENT_LINKS: Record<string, [string, number]> = {
+  "Tapioca Pearls": ["Tapioca Pearls (cooked)", 50],
+  "Popping Boba": ["Popping Boba", 30],
+  Pudding: ["Pudding", 40],
+  "Grass Jelly": ["Grass Jelly", 40],
+  "Red Bean": ["Red Bean", 30],
+};
+
 // ---------- Recipes ----------
 export const seedRecipes = [
   { productEn: "Classic Milk Tea", ingredient: "Black Tea Base", qty: 200 },
@@ -986,7 +1000,6 @@ export const seedRecipes = [
   { productEn: "Brown Sugar Milk Tea", ingredient: "Black Tea Base", qty: 180 },
   { productEn: "Brown Sugar Milk Tea", ingredient: "Fresh Milk", qty: 100 },
   { productEn: "Brown Sugar Milk Tea", ingredient: "Brown Sugar Syrup", qty: 30 },
-  { productEn: "Brown Sugar Milk Tea", ingredient: "Tapioca Pearls (cooked)", qty: 50 },
 
   { productEn: "Taro Milk Tea", ingredient: "Fresh Milk", qty: 150 },
   { productEn: "Taro Milk Tea", ingredient: "Taro Powder", qty: 25 },
@@ -1033,7 +1046,6 @@ export const seedRecipes = [
   { productEn: "Brown Sugar Bubble Tea", ingredient: "Black Tea Base", qty: 180 },
   { productEn: "Brown Sugar Bubble Tea", ingredient: "Fresh Milk", qty: 100 },
   { productEn: "Brown Sugar Bubble Tea", ingredient: "Brown Sugar Syrup", qty: 30 },
-  { productEn: "Brown Sugar Bubble Tea", ingredient: "Tapioca Pearls (cooked)", qty: 50 },
   { productEn: "Brown Sugar Bubble Tea", ingredient: "Regular Cups", qty: 1 },
 
   { productEn: "Taro Classic", ingredient: "Fresh Milk", qty: 150 },

@@ -27,6 +27,7 @@ import {
   seedTables,
   seedSuggestion,
   seedUpsellRules,
+  MODIFIER_INGREDIENT_LINKS,
 } from "./seed-data";
 import {
   categories,
@@ -50,19 +51,6 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 const db = drizzle(pool);
-
-/**
- * Modifier (English name) → [ingredient name, per-serving quantity].
- * Lets topping modifiers deduct tracked ingredient stock at sale time
- * (spec §8.4).  Only toppings that physically consume stock belong here.
- */
-const MODIFIER_INGREDIENT_LINKS: Record<string, [string, number]> = {
-  "Tapioca Pearls": ["Tapioca Pearls (cooked)", 50],
-  "Popping Boba": ["Popping Boba", 30],
-  Pudding: ["Pudding", 40],
-  "Grass Jelly": ["Grass Jelly", 40],
-  "Red Bean": ["Red Bean", 30],
-};
 
 async function seed() {
   console.log("\n🌱 Seeding database...\n");
