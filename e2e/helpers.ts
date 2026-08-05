@@ -32,7 +32,12 @@ export async function loginWithPin(page: Page, pin = "1111") {
 /**
  * Add an item to the cart from the POS product grid.
  */
-export async function addItemToCart(page: Page, product: string, modifiers: string[]) {
+export async function addItemToCart(
+  page: Page,
+  product: string,
+  modifiers: string[],
+  confirmText = "إضافة إلى السلة",
+) {
   await page.getByRole("button", { name: product }).first().click();
   if (modifiers.length > 0) {
     await page.waitForTimeout(300);
@@ -44,6 +49,6 @@ export async function addItemToCart(page: Page, product: string, modifiers: stri
       await page.waitForTimeout(100);
     }
   }
-  await page.getByRole("button", { name: "إضافة إلى السلة" }).click();
+  await page.getByRole("button", { name: confirmText }).click();
   await page.waitForTimeout(400);
 }
