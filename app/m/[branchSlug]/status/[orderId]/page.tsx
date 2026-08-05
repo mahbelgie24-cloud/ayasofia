@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { orders, orderItems, products, tables } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { calculateLineTotal, formatPrice } from "@/lib/pricing";
 import { extractModifierDeltas } from "@/lib/receipt";
@@ -12,14 +12,25 @@ export const dynamic = "force-dynamic";
 
 export default async function DMStatusPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchSlug: string; orderId: string }>;
+  searchParams: Promise<{ accessToken?: string | string[] }>;
 }) {
   const { branchSlug, orderId } = await params;
+  const { accessToken } = await searchParams;
+  const token = Array.isArray(accessToken) ? accessToken[0] : accessToken;
   const active = await isFeatureEnabled(FEATURE_DIGITAL_MENU);
   if (!active) return <FeatureOff />;
 
-  const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  // P2-SEC-1: gate the public digital-menu status page on the access token.
+  if (!token) notFound();
+
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.accessToken, token)))
+    .limit(1);
   if (!order) notFound();
 
   const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
@@ -78,5 +89,5 @@ export default async function DMStatusPage({
     }),
   };
 
-  return <DMStatusClient orderId={orderId} data={data} />;
+  return <DMStatusClient orderId={orderId} accessToken={token} data={data} />;
 }

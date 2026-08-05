@@ -48,7 +48,13 @@ export type DigitalMenuDataResult =
   | { success: false; error: string };
 
 export type MenuOrderResult =
-  | { success: true; orderId: string; orderNumber: string; total: string }
+  | {
+      success: true;
+      orderId: string;
+      orderNumber: string;
+      total: string;
+      accessToken: string;
+    }
   | { success: false; error: string };
 
 export type UpsellResult =

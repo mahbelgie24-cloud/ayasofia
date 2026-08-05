@@ -211,7 +211,9 @@ export function MenuShell({
       });
       if (result.success) {
         clearCart();
-        router.push(`/m/${branchSlug}/status/${result.orderId}`);
+        router.push(
+          `/m/${branchSlug}/status/${result.orderId}?accessToken=${encodeURIComponent(result.accessToken)}`,
+        );
       } else {
         toast.error(result.error);
       }

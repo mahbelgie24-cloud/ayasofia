@@ -32,7 +32,14 @@ export interface SharedCheckoutParams {
 }
 
 export type SharedCheckoutResult =
-  | { success: true; orderId: string; orderNumber: string; total: string }
+  | {
+      success: true;
+      orderId: string;
+      orderNumber: string;
+      total: string;
+      // Per-order bearer for the public status page (P2-SEC-1).
+      accessToken: string;
+    }
   | { success: false; error: string };
 
 /**
@@ -74,7 +81,12 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
   try {
     const result = await db.transaction(async (tx) => {
       const [existing] = await tx
-        .select({ id: orders.id, orderNumber: orders.orderNumber, total: orders.total })
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          total: orders.total,
+          accessToken: orders.accessToken,
+        })
         .from(orders)
         .where(eq(orders.idempotencyKey, idempotencyKey))
         .limit(1);
@@ -85,6 +97,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           orderId: existing.id,
           orderNumber: existing.orderNumber,
           total: existing.total,
+          accessToken: String(existing.accessToken),
         };
       }
 
@@ -216,7 +229,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           deliveryAddress: deliveryAddress || null,
           deliveryFee: deliveryFeeStr,
         })
-        .returning({ id: orders.id });
+        .returning({ id: orders.id, accessToken: orders.accessToken });
 
       if (!order) {
         tx.rollback();
@@ -308,7 +321,13 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         }
       }
 
-      return { success: true as const, orderId: order.id, orderNumber, total: totalStr };
+      return {
+        success: true as const,
+        orderId: order.id,
+        orderNumber,
+        total: totalStr,
+        accessToken: String(order.accessToken),
+      };
     });
 
     return result;
@@ -316,7 +335,12 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
     const pgCode = getPostgresErrorCode(err);
     if (pgCode === "23505") {
       const [existing] = await db
-        .select({ id: orders.id, orderNumber: orders.orderNumber, total: orders.total })
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          total: orders.total,
+          accessToken: orders.accessToken,
+        })
         .from(orders)
         .where(eq(orders.idempotencyKey, idempotencyKey))
         .limit(1);
@@ -326,6 +350,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           orderId: existing.id,
           orderNumber: existing.orderNumber,
           total: existing.total,
+          accessToken: String(existing.accessToken),
         };
       }
     }

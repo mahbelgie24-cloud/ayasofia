@@ -2,13 +2,19 @@
 
 import { db } from "@/lib/db";
 import { orders } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-export async function getOrderStatus(orderId: string): Promise<{ status: string } | null> {
+// P2-SEC-1: the polling endpoint must prove ownership via the access token
+// before returning status. A missing/wrong token behaves identically to a
+// missing order — no existence leak.
+export async function getOrderStatus(
+  orderId: string,
+  accessToken: string,
+): Promise<{ status: string } | null> {
   const [order] = await db
     .select({ status: orders.status })
     .from(orders)
-    .where(eq(orders.id, orderId))
+    .where(and(eq(orders.id, orderId), eq(orders.accessToken, accessToken)))
     .limit(1);
 
   if (!order) return null;

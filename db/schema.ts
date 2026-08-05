@@ -192,6 +192,11 @@ export const orders = pgTable(
   "orders",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    // Capability bearer for the public order-status page (P2-SEC-1): the
+    // guest only sees their order if they present the token minted at
+    // checkout. Staff reads are governed by RLS on the staff_id claim;
+    // this column covers the anonymous self-order surface.
+    accessToken: uuid("access_token").notNull().defaultRandom().unique(),
     orderNumber: varchar("order_number", { length: 20 }).notNull().unique(),
     channel: orderChannelEnum("channel").notNull(),
     status: orderStatusEnum("status").notNull().default("received"),

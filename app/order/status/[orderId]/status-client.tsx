@@ -27,9 +27,11 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function OrderStatusClient({
   orderId,
+  accessToken,
   data: initialData,
 }: {
   orderId: string;
+  accessToken: string;
   data: OrderData;
 }) {
   const [status, setStatus] = useState(initialData.status);
@@ -43,7 +45,7 @@ export function OrderStatusClient({
     const poll = async () => {
       if (stopped) return;
       try {
-        const result = await getOrderStatus(orderId);
+        const result = await getOrderStatus(orderId, accessToken);
         if (!result || stopped) return;
 
         if (result.status !== prevStatusRef.current) {
@@ -97,7 +99,7 @@ export function OrderStatusClient({
       stopPolling();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [orderId, initialData.status]);
+  }, [orderId, accessToken, initialData.status]);
 
   const statusLabel = STATUS_LABELS[status] ?? status;
 

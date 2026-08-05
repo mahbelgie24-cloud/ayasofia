@@ -39,9 +39,11 @@ function currentStep(status: string): number {
 
 export function DMStatusClient({
   orderId,
+  accessToken,
   data: initial,
 }: {
   orderId: string;
+  accessToken: string;
   data: DMStatusData;
 }) {
   const [status, setStatus] = useState(initial.status);
@@ -55,7 +57,7 @@ export function DMStatusClient({
     const poll = async () => {
       if (cancelled) return;
       try {
-        const result = await getOrderStatus(orderId);
+        const result = await getOrderStatus(orderId, accessToken);
         if (!result || cancelled) return;
         if (result.status !== prevRef.current) {
           prevRef.current = result.status;
@@ -90,7 +92,7 @@ export function DMStatusClient({
       stop();
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [orderId]);
+  }, [orderId, accessToken]);
 
   const step = currentStep(status);
   const cancelled = status === "cancelled";

@@ -6,7 +6,13 @@ import { callerIp } from "@/lib/ip";
 import type { CartItemForServer } from "@/lib/pricing";
 
 export type PlaceOrderResult =
-  | { success: true; orderId: string; orderNumber: string; total: string }
+  | {
+      success: true;
+      orderId: string;
+      orderNumber: string;
+      total: string;
+      accessToken: string;
+    }
   | { success: false; error: string };
 
 // Public-endpoint abuse cap (WEB-SEC-001).  A single source IP may

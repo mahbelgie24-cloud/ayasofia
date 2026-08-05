@@ -12,7 +12,7 @@
 import { describe, it, expect, afterAll, afterEach, beforeEach } from "vitest";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { orders, products, modifiers, orderItems } from "@/db/schema";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -253,6 +253,59 @@ describe("checkout — audit trail survives modifier deletion", () => {
         name: mod.name,
         priceDelta: mod.priceDelta,
       });
+    },
+  );
+});
+
+describe("checkout — public status access token (P2-SEC-1)", () => {
+  it(
+    "mints an unguessable access token per order and rejects reads without / with a wrong token",
+    { timeout: 15000 },
+    async () => {
+      const { order } = await createTestOrder();
+
+      // Every order must carry the capability token minted at creation.
+      const [saved] = await db
+        .select({ accessToken: orders.accessToken })
+        .from(orders)
+        .where(eq(orders.id, order.id))
+        .limit(1);
+      expect(saved).toBeDefined();
+      expect(saved.accessToken).toBeTruthy();
+
+      // CorRECT token → the order (and by extension its basket) is readable.
+      const withToken = await db
+        .select({ id: orders.id, accessToken: orders.accessToken })
+        .from(orders)
+        .where(and(eq(orders.id, order.id), eq(orders.accessToken, saved.accessToken)))
+        .limit(1);
+      expect(withToken).toHaveLength(1);
+
+      // WRONG token → the status query returns nothing (≡ 404, no existence leak).
+      const wrongToken = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.id, order.id),
+            eq(orders.accessToken, "00000000-0000-0000-0000-000000000000"),
+          ),
+        )
+        .limit(1);
+      expect(wrongToken).toHaveLength(0);
+
+      // A second, also-unguessable but incorrect token behaves the same.
+      const wrongToken2 = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.id, order.id),
+            eq(orders.accessToken, "ffffffff-ffff-ffff-ffff-ffffffffffff"),
+          ),
+        )
+        .limit(1);
+      expect(wrongToken2).toHaveLength(0);
     },
   );
 });

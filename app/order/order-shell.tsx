@@ -57,7 +57,9 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
         idempotencyKey: idempotencyKeyRef.current,
       });
       if (result.success) {
-        router.push(`/order/status/${result.orderId}`);
+        router.push(
+          `/order/status/${result.orderId}?accessToken=${encodeURIComponent(result.accessToken)}`,
+        );
       } else {
         toast.error(result.error);
       }
