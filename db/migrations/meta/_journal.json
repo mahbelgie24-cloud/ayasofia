@@ -57,6 +57,20 @@
       "when": 1785871543995,
       "tag": "0007_fresh_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785941713760,
+      "tag": "0008_modifier_inventory_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785945233804,
+      "tag": "0009_luxuriant_captain_stacy",
+      "breakpoints": true
     }
   ]
 }
