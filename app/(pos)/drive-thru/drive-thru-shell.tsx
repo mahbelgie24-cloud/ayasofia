@@ -86,7 +86,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
           <button
             key={cat.id}
             onClick={() => setSelectedCatId(cat.id)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`ease-spring shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               cat.id === selectedCatId
                 ? "bg-brand-red text-white"
                 : "bg-muted text-brand-ink hover:bg-muted/80"
@@ -104,7 +104,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
               key={product.id}
               onClick={() => openModifiers(product)}
               disabled={!product.isAvailable}
-              className={`border-border-subtle flex flex-col items-center rounded-xl border bg-white p-2 text-center transition-shadow hover:shadow-sm disabled:opacity-40 ${
+              className={`border-border-subtle ease-spring flex flex-col items-center rounded-xl border bg-white p-2 text-center transition-shadow hover:shadow-sm disabled:opacity-40 ${
                 product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
               }`}
             >
@@ -122,7 +122,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
                 {formatPrice(toMinorUnits(product.basePrice))} ₪
               </span>
               {product.modifierGroups.length > 0 && (
-                <span className="text-text-secondary mt-0.5 text-[10px]">تخصيص</span>
+                <span className="text-text-secondary mt-0.5 text-xs">تخصيص</span>
               )}
             </button>
           ))}
@@ -239,7 +239,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
                           : toggleMulti(group.id, mod.name)
                       }
                       aria-pressed={isSel}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
                     >
                       {mod.nameAr}
                       {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta})`}
