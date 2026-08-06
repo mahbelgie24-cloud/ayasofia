@@ -118,7 +118,7 @@ export function MenuShell() {
                         sortOrder: cat.sortOrder,
                       })
                     }
-                    className="text-text-secondary hover:bg-muted rounded px-2 py-0.5 text-xs"
+                    className="text-text-secondary hover:bg-muted flex min-h-11 items-center rounded px-2 py-0.5 text-xs"
                   >
                     تعديل
                   </button>
@@ -130,7 +130,7 @@ export function MenuShell() {
                         showMsg("تم الحذف");
                       } else showMsg(r.error ?? "فشل");
                     }}
-                    className="text-status-error hover:bg-status-error/10 rounded px-2 py-0.5 text-xs"
+                    className="text-status-error hover:bg-status-error/10 flex min-h-11 items-center rounded px-2 py-0.5 text-xs"
                   >
                     حذف
                   </button>
@@ -183,7 +183,7 @@ export function MenuShell() {
                         </button>
                         <button
                           onClick={() => setEditProduct(prod.id)}
-                          className="text-text-secondary hover:bg-muted rounded px-2 py-0.5 text-xs"
+                          className="text-text-secondary hover:bg-muted flex min-h-11 items-center rounded px-2 py-0.5 text-xs"
                         >
                           تعديل
                         </button>

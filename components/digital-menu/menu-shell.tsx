@@ -486,7 +486,7 @@ export function MenuShell({
                   </div>
                   <button
                     onClick={() => openBuilder(p)}
-                    className="bg-brand-red rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                    className="bg-brand-red min-h-11 rounded-full px-4 py-2 text-sm font-semibold text-white"
                   >
                     أضف
                   </button>
