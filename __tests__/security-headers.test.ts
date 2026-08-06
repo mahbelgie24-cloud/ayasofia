@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildCSP } from "@/lib/security-headers";
+import { buildCSP, buildHSTS } from "@/lib/security-headers";
 
 const SUPABASE_URL = "https://hdptsbfzjhmzvfyouhlg.supabase.co";
 const SUPABASE_ORIGIN = "https://hdptsbfzjhmzvfyouhlg.supabase.co";
@@ -81,6 +81,16 @@ describe("buildCSP — development", () => {
   });
 });
 
+describe("buildHSTS — preload gating (T-B18)", () => {
+  it("omits preload when flag is false", () => {
+    expect(buildHSTS(false)).toBe("max-age=63072000; includeSubDomains");
+  });
+
+  it("includes preload when flag is true", () => {
+    expect(buildHSTS(true)).toBe("max-age=63072000; includeSubDomains; preload");
+  });
+});
+
 describe("buildCSP — missing Supabase URL", () => {
   const csp = buildCSP({ dev: false, supabaseUrl: null });
 
@@ -145,13 +155,27 @@ describe("securityHeaders — full set", () => {
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
   });
 
-  it("HSTS is set with max-age, includeSubDomains, and preload", async () => {
+  it("HSTS is max-age + includeSubDomains, WITHOUT preload outside production", async () => {
     const { securityHeaders } =
       await vi.importActual<typeof import("@/lib/security-headers")>("@/lib/security-headers");
+    // In the vitest (test) env NODE_ENV !== "production", so preload is withheld.
     const headers = securityHeaders();
     expect(headers["Strict-Transport-Security"]).toContain("max-age=63072000");
     expect(headers["Strict-Transport-Security"]).toContain("includeSubDomains");
-    expect(headers["Strict-Transport-Security"]).toContain("preload");
+    expect(headers["Strict-Transport-Security"]).not.toContain("preload");
+  });
+
+  it("HSTS includes preload when NODE_ENV is production", async () => {
+    const { securityHeaders } =
+      await vi.importActual<typeof import("@/lib/security-headers")>("@/lib/security-headers");
+    const env = process.env as { NODE_ENV?: string };
+    const prev = env.NODE_ENV;
+    env.NODE_ENV = "production";
+    try {
+      expect(securityHeaders()["Strict-Transport-Security"]).toContain("preload");
+    } finally {
+      env.NODE_ENV = prev;
+    }
   });
 
   it("Permissions-Policy locks down all powerful features", async () => {

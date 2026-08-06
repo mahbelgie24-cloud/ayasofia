@@ -26,6 +26,7 @@
  */
 export function securityHeaders(): Record<string, string> {
   const dev = process.env.NODE_ENV === "development";
+  const isProd = process.env.NODE_ENV === "production";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? null;
 
   return {
@@ -36,7 +37,10 @@ export function securityHeaders(): Record<string, string> {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    // T-B18: `preload` is a permanent, irreversible submission to the HSTS
+    // preload list — only attach it in production, never on a dev/staging
+    // host (would poison an unreviewed domain).
+    "Strict-Transport-Security": buildHSTS(isProd),
     "Permissions-Policy": [
       "camera=()",
       "microphone=()",
@@ -47,6 +51,14 @@ export function securityHeaders(): Record<string, string> {
       "display-capture=()",
     ].join(", "),
   };
+}
+
+/**
+ * HSTS value. `preload` is gated: it commits the domain to the browser's
+ * preload list permanently, so callers pass false everywhere except prod.
+ */
+export function buildHSTS(preload: boolean): string {
+  return `max-age=63072000; includeSubDomains${preload ? "; preload" : ""}`;
 }
 
 // ── CSP builder (testable) ──
