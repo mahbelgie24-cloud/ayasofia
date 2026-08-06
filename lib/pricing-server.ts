@@ -18,6 +18,13 @@ import {
 export type { CartItemForServer, ServerLineResult, ServerCartResult, ModifierSnapshot };
 
 /**
+ * T-B8: a query surface that can be either the top-level `db` or a live
+ * transaction (`tx`). Pricing is recomputed inside the checkout transaction so
+ * the prices read are the same ones actually written (consistent snapshot).
+ */
+type QueryDb = { select: typeof db.select };
+
+/**
  * Server-side cart recomputation — never trust client-supplied totals.
  *
  * Looks up current product and modifier prices from the database
@@ -31,6 +38,7 @@ export type { CartItemForServer, ServerLineResult, ServerCartResult, ModifierSna
  */
 export async function recalculateCartServerSide(
   items: CartItemForServer[],
+  query: QueryDb = db,
 ): Promise<ServerCartResult> {
   if (items.length === 0) {
     return { lineItems: [], subtotal: 0, modifierLookup: new Map() };
@@ -40,12 +48,12 @@ export async function recalculateCartServerSide(
   const allModIds = [...new Set(items.flatMap((i) => i.modifierIds))];
 
   const [productRows, modifierRows] = await Promise.all([
-    db
+    query
       .select({ id: products.id, basePrice: products.basePrice })
       .from(products)
       .where(inArray(products.id, productIds)),
     allModIds.length > 0
-      ? db
+      ? query
           .select({
             id: modifiers.id,
             nameAr: modifiers.nameAr,

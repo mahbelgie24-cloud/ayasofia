@@ -106,7 +106,12 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         };
       }
 
-      const { lineItems, subtotal, modifierLookup } = await recalculateCartServerSide(cartItems);
+      // Recompute prices INSIDE the transaction (T-B8) so the price snapshot
+      // used for the total is the same snapshot the order row is written with.
+      const { lineItems, subtotal, modifierLookup } = await recalculateCartServerSide(
+        cartItems,
+        tx,
+      );
 
       // Every submitted product must have been recognized by the server-side
       // recalculation. If any productId was unknown (recalc skips it with

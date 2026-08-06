@@ -115,7 +115,10 @@ describe("checkout — server-side recomputation", () => {
       paymentMethod: "cash",
     });
 
-    expect(mockRecalc).toHaveBeenCalledWith([{ productId: "p1", modifierIds: [], quantity: 1 }]);
+    expect(mockRecalc).toHaveBeenCalledWith(
+      [{ productId: "p1", modifierIds: [], quantity: 1 }],
+      expect.anything(), // T-B8: now passed the checkout transaction
+    );
   });
 
   it("returns correct total from server recomputation", async () => {
