@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { seedRecipes, seedModifiers, MODIFIER_INGREDIENT_LINKS } from "@/db/seed-data";
+import type { RealMenu } from "@/scripts/ingest-real-menu";
 
 /**
  * Stock-semantics guard (spec §8.4): a swappable ingredient must appear
@@ -55,4 +58,69 @@ describe("seed stock semantics — no recipe/modifier ingredient overlap", () =>
     for (const set of modifierLinksPerProduct.values()) linkedCount += set.size;
     expect(linkedCount).toBeGreaterThan(0);
   });
+});
+
+/**
+ * The SAME guard applied to the shop's REAL menu, when it is present locally.
+ * The human fills `docs/real-menu.json` (see docs/real-menu-guide.md); CI has no
+ * such file and keeps demo seeds, so this block is skipped unless the file
+ * exists. Mirrors scripts/ingest-real-menu.ts' enforcement exactly.
+ */
+const REAL_MENU_PATH = resolve(__dirname, "..", "docs", "real-menu.json");
+const realMenuPresent = existsSync(REAL_MENU_PATH);
+
+describe("ingested real menu (when present) — stock semantics", () => {
+  const itWhenPresent = realMenuPresent ? it : it.skip;
+
+  itWhenPresent(
+    "has no recipe/modifier ingredient overlap; swappables live only in single+required groups",
+    () => {
+      const menu = JSON.parse(readFileSync(REAL_MENU_PATH, "utf-8")) as RealMenu;
+      expect(Array.isArray(menu.ingredients)).toBe(true);
+      const ingNames = new Set((menu.ingredients ?? []).map((i) => i.name_ar));
+
+      const violations: Array<{ product: string; issue: string }> = [];
+
+      for (const product of menu.products ?? []) {
+        const recipeIngs = new Set((product.recipe ?? []).map((r) => r.ingredient));
+
+        for (const line of product.recipe ?? []) {
+          if (!ingNames.has(line.ingredient)) {
+            violations.push({
+              product: product.name_ar,
+              issue: `وصفة تشير لخامة غير موجودة: ${line.ingredient}`,
+            });
+          }
+        }
+
+        for (const group of product.modifierGroups ?? []) {
+          for (const option of group.options ?? []) {
+            const link = option.ingredientQty;
+            if (!link) continue;
+
+            if (!ingNames.has(link.ingredient)) {
+              violations.push({
+                product: product.name_ar,
+                issue: `خيار يربط خامة غير موجودة: ${link.ingredient}`,
+              });
+            }
+            if (group.type !== "single" || group.required !== true) {
+              violations.push({
+                product: product.name_ar,
+                issue: `خيار "${option.name_ar}" يستهلك خامة لكن مجموعته ليست single+required`,
+              });
+            }
+            if (recipeIngs.has(link.ingredient)) {
+              violations.push({
+                product: product.name_ar,
+                issue: `خامة "${link.ingredient}" موجودة في الوصفة وفي خيار معدِّل (تكرار)`,
+              });
+            }
+          }
+        }
+      }
+
+      expect(violations).toEqual([]);
+    },
+  );
 });
