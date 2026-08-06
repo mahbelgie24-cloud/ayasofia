@@ -144,14 +144,14 @@ export function MenuShell() {
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-sm font-medium">{prod.nameAr}</span>
-                        <span className="text-text-secondary mr-1 text-xs">{prod.basePrice} ₪</span>
+                        <span className="text-text-secondary ms-1 text-xs">{prod.basePrice} ₪</span>
                         {!prod.isAvailable && (
-                          <span className="bg-status-error/10 text-status-error mr-1 rounded-full px-2 py-0.5 text-xs">
+                          <span className="bg-status-error/10 text-status-error ms-1 rounded-full px-2 py-0.5 text-xs">
                             غير متاح
                           </span>
                         )}
                         {prod.recipes.length === 0 && (
-                          <span className="text-status-warning mr-1 text-xs">⚠ لا وصفة</span>
+                          <span className="text-status-warning ms-1 text-xs">⚠ لا وصفة</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1">

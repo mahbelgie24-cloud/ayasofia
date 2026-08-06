@@ -584,10 +584,10 @@ export function MenuShell({
                     <p className="text-brand-ink mb-1.5 text-sm font-medium">
                       {group.name}
                       {group.isRequired && (
-                        <span className="text-status-error mr-1 text-xs">* مطلوب</span>
+                        <span className="text-status-error ms-1 text-xs">* مطلوب</span>
                       )}
                       {group.type === "multi" && group.maxSelections != null && (
-                        <span className="text-text-secondary mr-1 text-xs">
+                        <span className="text-text-secondary ms-1 text-xs">
                           (أقصى {group.maxSelections})
                         </span>
                       )}

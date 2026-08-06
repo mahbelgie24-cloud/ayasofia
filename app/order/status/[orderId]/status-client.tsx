@@ -132,7 +132,7 @@ export function OrderStatusClient({
               <span>
                 {item.productNameAr} × {item.quantity}
                 {item.modifierNames.length > 0 && (
-                  <span className="text-text-secondary mr-1 text-xs">
+                  <span className="text-text-secondary ms-1 text-xs">
                     ({item.modifierNames.join("، ")})
                   </span>
                 )}

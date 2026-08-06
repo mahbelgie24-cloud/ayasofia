@@ -162,7 +162,7 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
                   <div>
                     <span className="font-semibold">{item.productNameAr}</span>
                     {item.selectedModifiers.length > 0 && (
-                      <span className="text-text-secondary mr-1 text-xs">
+                      <span className="text-text-secondary ms-1 text-xs">
                         ({item.selectedModifiers.map((m) => m.nameAr).join("، ")})
                       </span>
                     )}

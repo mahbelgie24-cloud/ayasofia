@@ -334,7 +334,7 @@ export function POSShell({ menu }: POSShellProps) {
             <div key={group.id}>
               <p className="text-brand-ink mb-1.5 text-sm font-medium">
                 {group.name}
-                {group.isRequired && <span className="text-status-error mr-1 text-xs">*</span>}
+                {group.isRequired && <span className="text-status-error ms-1 text-xs">*</span>}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {group.modifiers.map((mod) => {
