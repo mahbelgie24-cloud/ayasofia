@@ -71,13 +71,37 @@ npx vitest run __tests__/*.integration.test.ts
 ## Project structure
 
 ```
-app/            Next.js routes: /pos, /kitchen, /drive-thru, /order/[qrId], /admin, /m/[branchSlug] (digital menu), /wifi (captive portal)
+app/            Next.js routes: /pos, /drive-thru, /kitchen, /admin (RBAC),
+                /m/[branchSlug] (digital menu incl. /status + /table),
+                /wifi (captive portal), /order (retired → 308 to /m),
+                /order/status/[orderId] (token-gated), /login (PIN)
 components/     Shared UI (components/ui = shadcn/ui, components/digital-menu, components/wifi)
 db/             Drizzle schema + migrations
-docs/           Specification, module guides, OpenAPI, Phase 0 data workbooks, brand assets
-lib/            Utilities, Supabase client, auth helpers, pricing, delivery, upsell, captive-portal adapter
+docs/           Specification, module guides, OpenAPI, KNOWN_ISSUES, brand assets
+e2e/            Playwright specs (local-run, NOT CI-gated)
+hooks/          Client hooks (usePOSCart — cart + per-submit idempotency key)
+lib/            Utilities: db, Supabase clients, auth (RBAC), pricing,
+                idempotency, delivery, upsell, captive-portal adapter,
+                security-headers, bundles, rate-limit, observability
+scripts/        bundle-budget, cleanup, validation
 public/         Static assets (icons, images)
 ```
+
+## Environment variables
+
+| Variable                                | Required | Purpose                                                        |
+| --------------------------------------- | -------- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`              | prod     | Supabase project URL (also the image/storage origin)           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`         | prod     | Public/anon key (browser-safe)                                 |
+| `SUPABASE_SERVICE_ROLE_KEY`             | prod     | Server-only admin key — never expose to the browser            |
+| `DATABASE_URL`                          | dev/prod | Drizzle/Pool connection string (`connection_limit=10` in prod) |
+| `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` | optional | Error monitoring                                               |
+| `WIFI_DEVICE_ID_SALT`                   | prod     | Salt for hashing wifi device ids (see KNOWN_ISSUES P1-M10)     |
+| `CAPTIVE_PORTAL_ADAPTER`                | optional | `mock` (default) \| `mikrotik` \| `unifi`                      |
+| `RUN_ENV`                               | optional | `staging` \| `production` (validation)                         |
+
+See [`.env.example`](./.env.example) for comments. `.env.local` is git-ignored and
+never committed.
 
 ## Feature flags
 

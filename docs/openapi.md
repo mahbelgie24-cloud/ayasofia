@@ -39,7 +39,10 @@ modifiers[] }`; modifier: `{ id, nameAr, name, priceDelta }`
   max selections) server-side.
 - Delegates to the **shared** `executeCheckout` (same pipeline as the
   cashier) with `source=DIGITAL_MENU`, server-computed delivery fee.
-- Response `{ success:true, orderId, orderNumber, total }`.
+- Response `{ success:true, orderId, orderNumber, total, accessToken, deduped }`:
+  `accessToken` gates the status page (P2-SEC-1); `deduped=true` when the same
+  cart fingerprint was already submitted (P1-M2), in which case `orderId`
+  points at the existing order.
 
 ### `getUpsellSuggestions({ cartItems, hour? })`
 
