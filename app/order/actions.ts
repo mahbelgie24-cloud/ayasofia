@@ -23,10 +23,14 @@ export type PlaceOrderResult =
 const ORDER_RATE_LIMIT = { max: 10, windowMs: 60_000 };
 
 /**
- * Place a customer self-order — no auth required, no staff session.
- * This is the deliberate public exception alongside verifyStaffPin.
- * Still: rate-limited by IP, server-side recomputation, atomic
- * transaction, idempotency.
+ * DEPRECATED (team decision Q1=B): the /order ordering surface is retired and
+ * redirects to the digital menu. Keep this server action for compatibility with
+ * any already-dispatched offline/legacy callers and its tests, but it is no
+ * longer reachable from any UI. Customer-origin orders carry source=DIGITAL_MENU
+ * to match where customers now order.
+ *
+ * Public self-order — no auth, no staff session. Still: rate-limited by IP,
+ * server-side recomputation, atomic transaction, idempotency.
  */
 export async function placeCustomerOrder(input: {
   cartItems: CartItemForServer[];
@@ -57,6 +61,7 @@ export async function placeCustomerOrder(input: {
     paymentMethod: "cash", // self-orders default to cash until Phase 6 online payments
     channel: "takeaway",
     staffId: null,
+    source: "DIGITAL_MENU", // Q1=B: customers order via the digital menu now
     customerName: input.customerName,
     customerPhone: input.customerPhone,
   });

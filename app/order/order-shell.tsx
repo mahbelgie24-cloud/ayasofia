@@ -1,5 +1,9 @@
 "use client";
 
+// DEPRECATED (Q1=B): the /order ordering surface is retired — the page 308s
+// to the digital menu. This component is no longer reachable from any route and
+// is retained only to keep its server action + tests compilable. Do not rebuild.
+
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";

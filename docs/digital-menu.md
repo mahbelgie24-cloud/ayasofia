@@ -14,6 +14,17 @@ feature flag.
 - public server actions return a typed `{ success: false, error }`,
 - the admin nav item (`/admin/digital-menu`) is hidden.
 
+## Legacy `/order` retired (Q1=B)
+
+The old standalone `/order` ordering surface is **retired**. `app/order/page.tsx`
+now issues a **308 permanent redirect** to `/m/{defaultBranchSlug}` so legacy
+printed QR codes keep working instead of 404ing. The default branch resolves
+deterministically: the `default_branch_slug` setting wins, else the first branch
+alphabetically. Order **status** pages (`/order/status/[orderId]`) are preserved
+and remain access-token-gated (P2-SEC-1) for historical orders. The retired
+`placeCustomerOrder` action is deprecated but kept for compatibility; it now
+records `source = DIGITAL_MENU` since customers order via the menu.
+
 ## URLs
 
 | Route                              | Purpose                                                                        |

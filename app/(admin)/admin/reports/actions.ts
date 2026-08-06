@@ -57,7 +57,15 @@ export async function getSalesSummary(startDate: string, endDate: string): Promi
       total: orders.total,
     })
     .from(orders)
-    .where(and(gte(orders.createdAt, start), lte(orders.createdAt, end)));
+    .where(
+      and(
+        gte(orders.createdAt, start),
+        lte(orders.createdAt, end),
+        // P1-M13: cancelled orders are not revenue — exclude them from the
+        // sales summary so totals match what was actually collected.
+        ne(orders.status, "cancelled"),
+      ),
+    );
 
   let totalRevenueAgorot = 0;
   const byChannel: Record<string, { count: number; revenueAgorot: number }> = {};
@@ -105,7 +113,16 @@ export async function getBestSellers(startDate: string, endDate: string): Promis
   const orderIds = await db
     .select({ id: orders.id })
     .from(orders)
-    .where(and(gte(orders.createdAt, start), lte(orders.createdAt, end)));
+    .where(
+      and(
+        gte(orders.createdAt, start),
+        lte(orders.createdAt, end),
+        // P1-M13: a cancelled order never completed, so its items must not
+        // count toward best sellers. This also keeps getDashboardSummary's
+        // topSellers aligned with its own (cancelled-excluded) revenue filter.
+        ne(orders.status, "cancelled"),
+      ),
+    );
 
   if (orderIds.length === 0) return [];
 
