@@ -78,6 +78,13 @@
       "when": 1785995188080,
       "tag": "0010_order_access_token",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786007001013,
+      "tag": "0011_wifi_sessions_authorized_at_index",
+      "breakpoints": true
     }
   ]
 }

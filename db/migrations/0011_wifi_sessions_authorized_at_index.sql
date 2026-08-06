@@ -1,0 +1,1 @@
+CREATE INDEX "wifi_sessions_authorized_at_idx" ON "wifi_sessions" USING btree ("authorized_at");

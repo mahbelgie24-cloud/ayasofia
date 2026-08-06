@@ -18,7 +18,7 @@ import { checkThrottle } from "@/lib/rate-limit";
 import { callerIp } from "@/lib/ip";
 import { db } from "@/lib/db";
 import { wifiSessions, settings } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { isFeatureEnabled, FEATURE_WIFI_PORTAL } from "@/lib/features";
 import { getAdapter } from "@/lib/captive-portal";
 import { getTodaySuggestionForWifi } from "@/lib/db/queries";
@@ -141,12 +141,25 @@ export async function endWifiSession(input: {
   const adapter = getAdapter();
   await adapter.revoke({ deviceId: deviceHash });
 
-  if (duration !== null) {
-    await db
-      .update(wifiSessions)
-      .set({ durationSec: duration })
-      .where(eq(wifiSessions.deviceIdHash, deviceHash));
+  // T-B3: mark the LATEST, still-active session as revoked and (if supplied)
+  // its wall-clock duration. Targeting only the newest non-revoked session
+  // avoids a stale logout clobbering a newer, still-connected session for the
+  // same device.
+  const setData: Record<string, unknown> = { revokedAt: new Date() };
+  if (duration !== null) setData.durationSec = duration;
+
+  // Select the latest still-active session id, then revoke exactly that row.
+  const [target] = await db
+    .select({ id: wifiSessions.id })
+    .from(wifiSessions)
+    .where(and(eq(wifiSessions.deviceIdHash, deviceHash), isNull(wifiSessions.revokedAt)))
+    .orderBy(desc(wifiSessions.authorizedAt))
+    .limit(1);
+
+  if (target) {
+    await db.update(wifiSessions).set(setData).where(eq(wifiSessions.id, target.id));
   }
+
   return { success: true };
 }
 

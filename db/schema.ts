@@ -413,7 +413,12 @@ export const wifiSessions = pgTable(
     routerSessionId: text("router_session_id"),
     notes: text("notes"),
   },
-  (t) => [index("wifi_sessions_device_hash_idx").on(t.deviceIdHash)],
+  (t) => [
+    index("wifi_sessions_device_hash_idx").on(t.deviceIdHash),
+    // T-B4: the wifi stats screen scans by authorized_at (today's sessions);
+    // the range scan benefits from an index as wifi_sessions grows.
+    index("wifi_sessions_authorized_at_idx").on(t.authorizedAt),
+  ],
 ).enableRLS();
 
 // ---------- Drizzle Relations (for query API) ----------
