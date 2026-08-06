@@ -25,10 +25,13 @@ export function WifiAdminShell() {
   }, []);
 
   const handleSave = async (key: string, value: string) => {
-    const r = await saveWifiSetting(key, value);
-    toast.warning(r.success ? "تم الحفظ" : (r.error ?? "فشل"));
+    try {
+      const r = await saveWifiSetting(key, value);
+      toast.warning(r.success ? "تم الحفظ" : (r.error ?? "فشل"));
+    } catch {
+      toast.error("لا يمكن كتابة هذا المفتاح");
+    }
   };
-
   return (
     <div dir="rtl" lang="ar">
       <h1 className="font-heading text-brand-ink text-2xl font-bold">الواي فاي — بوابة الترحيب</h1>

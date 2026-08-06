@@ -65,6 +65,20 @@ export class AuthError extends Error {
   }
 }
 
+/**
+ * A classification (authorization) error: the caller is authenticated at a
+ * sufficient role, but attempted an operation on data that role may not touch
+ * (e.g. a manager writing an owner-only setting, or writing outside a narrow
+ * write-allowlist). Distinct from `AuthError` (session/role gate) so callers
+ * and tests can react to policy rejection specifically (P1-M11).
+ */
+export class RBACError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RBACError";
+  }
+}
+
 export interface StaffSession {
   staffId: string;
   role: StaffRole;

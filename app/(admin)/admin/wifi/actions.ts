@@ -8,10 +8,23 @@
  * (anonymous sessions only — guest name/phone are never surfaced).
  */
 
-import { requireStaffSession } from "@/lib/auth";
+import { requireStaffSession, RBACError } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { settings, wifiSessions } from "@/db/schema";
+import { invalidateFeatureFlags } from "@/lib/features";
 import { eq, gte, count } from "drizzle-orm";
+
+// P1-M11 — WRITE allowlist for the wifi admin action. Only splash/portal copy
+// keys under the `wifi.` prefix may be written through this entry point. This
+// rejection is deliberate and broad:
+//   - `feature.*` keys toggle feature flags and are owner-policy territory —
+//     a manager must not flip them through the wifi screen,
+//   - owner-only settings (tax_rate, shop_name, currency, ...) also fall
+//     outside `wifi.` and are rejected the same way.
+// The typed RBACError lets callers/tests react to the policy rejection. This
+// gate applies to WRITES ONLY; reads (getWifiSettings, getSplashSettings) are
+// unaffected and keep returning wifi.* plus any existing keys.
+const WIFI_WRITE_ALLOW = /^wifi\./;
 
 export async function getWifiSettings(): Promise<Record<string, string>> {
   await requireStaffSession("manager");
@@ -24,18 +37,27 @@ export async function saveWifiSetting(
   value: string,
 ): Promise<{ success: boolean; error?: string }> {
   await requireStaffSession("manager");
-  if (!key.trim()) return { success: false, error: "المفتاح مطلوب" };
+  const trimmedKey = key.trim();
+  if (!trimmedKey) return { success: false, error: "المفتاح مطلوب" };
+
+  // P1-M11: only `wifi.*` keys are writable here. Everything else — including
+  // feature.* and owner-only settings — is rejected with a typed RBACError.
+  if (!WIFI_WRITE_ALLOW.test(trimmedKey)) {
+    throw new RBACError(`Key "${trimmedKey}" is not a writable wifi setting`);
+  }
+
   const trimmed = value.trim();
   const [existing] = await db
     .select({ key: settings.key })
     .from(settings)
-    .where(eq(settings.key, key.trim()))
+    .where(eq(settings.key, trimmedKey))
     .limit(1);
   if (existing) {
-    await db.update(settings).set({ value: trimmed }).where(eq(settings.key, key.trim()));
+    await db.update(settings).set({ value: trimmed }).where(eq(settings.key, trimmedKey));
   } else {
-    await db.insert(settings).values({ key: key.trim(), value: trimmed });
+    await db.insert(settings).values({ key: trimmedKey, value: trimmed });
   }
+  invalidateFeatureFlags();
   return { success: true };
 }
 
