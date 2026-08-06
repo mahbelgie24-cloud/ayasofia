@@ -4,7 +4,7 @@ import { loginWithPin, addItemToCart } from "./helpers";
 test.describe("A11y — toast notifications", () => {
   test('error toast renders with role="alert" and status-error brand token', async ({ page }) => {
     await page.goto("/login");
-    await page.waitForSelector("button[aria-label='Digit 1']", { timeout: 10000 });
+    await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
     await page.evaluate(() => {
       window.dispatchEvent(
@@ -26,7 +26,7 @@ test.describe("A11y — toast notifications", () => {
     page,
   }) => {
     await page.goto("/login");
-    await page.waitForSelector("button[aria-label='Digit 1']", { timeout: 10000 });
+    await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
     await page.evaluate(() => {
       window.dispatchEvent(
@@ -46,7 +46,7 @@ test.describe("A11y — toast notifications", () => {
 
   test("toast auto-dismisses after timeout", async ({ page }) => {
     await page.goto("/login");
-    await page.waitForSelector("button[aria-label='Digit 1']", { timeout: 10000 });
+    await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
     await page.evaluate(() => {
       window.dispatchEvent(
