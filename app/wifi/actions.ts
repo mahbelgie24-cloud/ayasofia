@@ -24,6 +24,8 @@ import { getAdapter } from "@/lib/captive-portal";
 import { getTodaySuggestionForWifi } from "@/lib/db/queries";
 
 const AUTHORIZE_LIMIT = { max: 20, windowMs: 60_000 };
+const WIFI_END_LIMIT = { max: 60, windowMs: 60_000 };
+const WIFI_SUGGESTION_LIMIT = { max: 90, windowMs: 60_000 };
 const SESSION_TTL_SECONDS = 10 * 60; // 10 minutes per authorization
 
 export type WifiAuthorizeResult =
@@ -125,6 +127,11 @@ export async function endWifiSession(input: {
   if (!active) return flagOffError(FEATURE_WIFI_PORTAL);
   if (!validDeviceId(input.deviceId)) return { success: false, error: "معرّف جهاز غير صالح" };
 
+  // T-B2: throttle the public logout/session-end endpoint per source IP.
+  const ip = await callerIp();
+  const throttle = checkThrottle(`wifi-end:${ip}`, WIFI_END_LIMIT);
+  if (!throttle.allowed) return { success: false, error: "محاولات كثيرة، حاول بعد قليل" };
+
   const deviceHash = hashDeviceId(input.deviceId);
   const duration =
     Number.isFinite(input.durationSec) && (input.durationSec ?? 0) > 0
@@ -182,6 +189,11 @@ export async function getWifiSuggestion(): Promise<{
 }> {
   const active = await isFeatureEnabled(FEATURE_WIFI_PORTAL);
   if (!active) return { success: false, product: null, branchSlug: null };
+
+  // T-B2: throttle the public suggestion read per source IP.
+  const ip = await callerIp();
+  const throttle = checkThrottle(`wifi-suggestion:${ip}`, WIFI_SUGGESTION_LIMIT);
+  if (!throttle.allowed) return { success: false, product: null, branchSlug: null };
 
   const suggestion = await getTodaySuggestionForWifi();
   return {
