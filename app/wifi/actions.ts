@@ -17,8 +17,8 @@ import { createHash } from "node:crypto";
 import { checkThrottle } from "@/lib/rate-limit";
 import { callerIp } from "@/lib/ip";
 import { db } from "@/lib/db";
-import { wifiSessions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { wifiSessions, settings } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { isFeatureEnabled, FEATURE_WIFI_PORTAL } from "@/lib/features";
 import { getAdapter } from "@/lib/captive-portal";
 import { getTodaySuggestionForWifi } from "@/lib/db/queries";
@@ -141,6 +141,31 @@ export async function endWifiSession(input: {
       .where(eq(wifiSessions.deviceIdHash, deviceHash));
   }
   return { success: true };
+}
+
+/**
+ * Read the admin-editable splash copy from settings (P1-M6). Falls back to
+ * brand defaults whenever a key is unset so the portal always renders.
+ */
+export async function getSplashSettings(): Promise<{
+  title: string;
+  subtitle: string;
+  privacyLine: string;
+}> {
+  const rows = await db
+    .select({ key: settings.key, value: settings.value })
+    .from(settings)
+    .where(
+      inArray(settings.key, ["wifi.splash_title", "wifi.splash_subtitle", "wifi.privacy_line"]),
+    );
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  return {
+    title: map.get("wifi.splash_title") ?? "أياسوفيا ترحّب بك",
+    subtitle: map.get("wifi.splash_subtitle") ?? "واي فاي مجاني للضيوف — نسبة السكر على مزاجك 🤍",
+    privacyLine:
+      map.get("wifi.privacy_line") ??
+      "لا نشارك بياناتك مع أي طرف ثالث، ولا نطلب اسمك أو رقمك للاتصال.",
+  };
 }
 
 /** Today's suggestion for the post-connect screen (shared entity, WF-06). */

@@ -66,6 +66,13 @@ PII.
 connect stats. Today's Suggestion is a shared entity with the digital menu —
 managed at `/admin/digital-menu` ("اقتراح اليوم").
 
+**Splash copy is wired end-to-end (P1-M6).** Editing
+`wifi.splash_title` / `wifi.splash_subtitle` / `wifi.privacy_line` in the admin
+screen and saving updates the guest-facing splash (`/wifi`): the server page
+reads the keys via `getSplashSettings()` and passes them into the `WifiSplash`
+component. Unset keys fall back to the brand defaults. Admin edits now have a
+visible effect — this is the chosen fix (wire it), not a dead/hardcoded copy.
+
 ## Performance (NFR-WF-01)
 
 The splash uses only inline CSS/JS and local images; fonts are build-time

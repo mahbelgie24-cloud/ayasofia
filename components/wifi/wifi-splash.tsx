@@ -32,7 +32,15 @@ function deviceId(): string {
   }
 }
 
-export function WifiSplash() {
+export function WifiSplash({
+  title = "أياسوفيا ترحّب بك",
+  subtitle = "واي فاي مجاني للضيوف — نسبة السكر على مزاجك 🤍",
+  privacyLine = "لا نشارك بياناتك مع أي طرف ثالث، ولا نطلب اسمك أو رقمك للاتصال.",
+}: {
+  title?: string;
+  subtitle?: string;
+  privacyLine?: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +87,8 @@ export function WifiSplash() {
             />
           </div>
 
-          <h1 className="font-heading text-brand-ink text-2xl font-bold">أياسوفيا ترحّب بك</h1>
-          <p className="text-text-secondary mt-2 text-sm leading-relaxed">
-            واي فاي مجاني للضيوف — نسبة السكر على مزاجك 🤍
-          </p>
+          <h1 className="font-heading text-brand-ink text-2xl font-bold">{title}</h1>
+          <p className="text-text-secondary mt-2 text-sm leading-relaxed">{subtitle}</p>
 
           <button
             onClick={connect}
@@ -102,10 +108,7 @@ export function WifiSplash() {
             </p>
           )}
 
-          <p className="text-text-secondary mt-6 text-xs leading-relaxed">
-            نستخدم بيانات الجلسة (مجهولة الهوية) لقياس جودة الخدمة فقط. لا نشارك بياناتك مع أي طرف
-            ثالث، ولا نطلب اسمك أو رقمك للاتصال.
-          </p>
+          <p className="text-text-secondary mt-6 text-xs leading-relaxed">{privacyLine}</p>
         </div>
       </div>
     </div>
