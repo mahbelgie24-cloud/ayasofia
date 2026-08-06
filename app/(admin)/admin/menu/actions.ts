@@ -16,6 +16,7 @@ import {
 import { eq, sql, desc } from "drizzle-orm";
 import { toScaledInt, formatPrice } from "@/lib/pricing";
 import { invalidatePublicCatalog } from "@/lib/db/queries";
+import { sanitizeImageUrl } from "@/lib/image-url";
 
 /**
  * Normalise a user-entered price (string) into a canonical
@@ -115,12 +116,16 @@ export async function createProduct(input: {
   if (price === null || toScaledInt(price, 2) <= 0) {
     return { success: false, error: "السعر يجب أن يكون أكبر من صفر" };
   }
+  const imageUrl = sanitizeImageUrl(input.imageUrl);
+  if (input.imageUrl && imageUrl === null) {
+    return { success: false, error: "رابط صورة غير صالح" };
+  }
   await db.insert(products).values({
     categoryId: input.categoryId,
     nameAr: input.nameAr.trim(),
     nameEn: input.nameEn.trim(),
     basePrice: price,
-    imageUrl: input.imageUrl || null,
+    imageUrl,
     isAvailable: true,
     trackInventory: input.trackInventory ?? true,
   });
@@ -150,7 +155,13 @@ export async function updateProduct(input: {
     data.basePrice = price;
   }
   if (input.categoryId !== undefined) data.categoryId = input.categoryId;
-  if (input.imageUrl !== undefined) data.imageUrl = input.imageUrl || null;
+  if (input.imageUrl !== undefined) {
+    const imageUrl = sanitizeImageUrl(input.imageUrl);
+    if (input.imageUrl && imageUrl === null) {
+      return { success: false, error: "رابط صورة غير صالح" };
+    }
+    data.imageUrl = imageUrl;
+  }
   if (input.isAvailable !== undefined) data.isAvailable = input.isAvailable;
   if (input.trackInventory !== undefined) data.trackInventory = input.trackInventory;
   if (Object.keys(data).length === 0) {
