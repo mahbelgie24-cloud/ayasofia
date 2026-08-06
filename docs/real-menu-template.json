@@ -1,0 +1,63 @@
+{
+  "_note": "هذه قالب للقائمة الحقيقية. انسخه إلى docs/real-menu.json واملأ قيم الفرع بالفعل. أصلح الشكل والتحقق في docs/real-menu-guide.md. كل مثال هنا توضيحي فقط — استبدله بقائمة المحل الحقيقية. أنا المنتج/الفئة/الخامة لا يُخترع هنا.",
+  "branch": { "slug": "qalqilya", "name_ar": "أياسوفيا — قلبيلية" },
+  "ingredients": [
+    { "name_ar": "شاي أسود مركز", "unit": "ml", "currentStock": 5000, "reorderAt": 1000 },
+    { "name_ar": "حليب طازج", "unit": "ml", "currentStock": 8000, "reorderAt": 1500 },
+    { "name_ar": "حليب شوفان", "unit": "ml", "currentStock": 3000, "reorderAt": 600 },
+    { "name_ar": "لؤلؤ التابيوكا", "unit": "g", "currentStock": 4000, "reorderAt": 800 },
+    { "name_ar": "كوب عادي", "unit": "piece", "currentStock": 500, "reorderAt": 100 }
+  ],
+  "categories": [{ "key": "bubble_tea", "name_ar": "ميلك تي", "sort": 1 }],
+  "products": [
+    {
+      "name_ar": "ميلك تي كلاسيك",
+      "desc_ar": "شاي أسود مع حليب طازج.",
+      "priceILS": 15,
+      "category": "bubble_tea",
+      "imageFile": "milk-tea-classic.jpg",
+      "modifierGroups": [
+        {
+          "type": "single",
+          "name_ar": "نوع الحليب",
+          "required": true,
+          "max": null,
+          "options": [
+            { "name_ar": "حليب طازج", "deltaILS": 0 },
+            {
+              "name_ar": "حليب شوفان",
+              "deltaILS": 1,
+              "ingredientQty": { "ingredient": "حليب شوفان", "qty": 100 }
+            }
+          ]
+        },
+        {
+          "type": "single",
+          "name_ar": "الحجم",
+          "required": false,
+          "max": null,
+          "options": [
+            { "name_ar": "عادي", "deltaILS": 0 },
+            { "name_ar": "كبير", "deltaILS": 3 }
+          ]
+        },
+        {
+          "type": "multi",
+          "name_ar": "الإضافات",
+          "required": false,
+          "max": 3,
+          "options": [
+            { "name_ar": "لؤلؤ التابيوكا", "deltaILS": 2 },
+            { "name_ar": "بودينغ", "deltaILS": 2 }
+          ]
+        }
+      ],
+      "recipe": [
+        { "ingredient": "شاي أسود مركز", "qty": 200 },
+        { "ingredient": "حليب طازج", "qty": 100 },
+        { "ingredient": "كوب عادي", "qty": 1 }
+      ]
+    }
+  ],
+  "tables": [{ "code": "T1" }, { "code": "T2" }]
+}
