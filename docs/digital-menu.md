@@ -151,6 +151,20 @@ Accessibility: **100/100** Lighthouse (contrast tokens on `bg-brand-red-soft` an
 invalidated on admin settings writes, so the SSR critical path does **not**
 include a Postgres round trip when warm.
 
+**Font pruning (T-C1).** The root layout declares four Google font families for
+the stock brand; the public `/m` and wifi surfaces are Arabic-only, so the Latin
+families and unused weights were trimmed. Static display families (Baloo /
+Baloo_Bhaijaan) were reduced to the heading weight (**700**) and the Arabic body
+(Noto Sans Arabic) to **400/700**; Inter is already a single variable font. Shipped
+woff2 payload fell from **751 KB → 628 KB** (−16%, 20 files) at `next build`, with
+no change to Initial JS (139 KB, already under budget).
+
+**Bundle budget gate (T-C2).** `scripts/bundle-budget.mjs` runs after `next build`
+in CI and fails if the worst-case single client chunk exceeds **150 KB** gzip.
+(Next 16/Turbopack no longer prints per-route First Load JS, so this worst-case-
+chunk bound is the stable proxy for the route's bootstrap.) Measured at authoring:
+`total_gzip=397 KB, worst_gzip=72 KB` → OK.
+
 Measured `next start` (mobile, Lighthouse): **TTFB 14 ms warm** / **4.4 s cold**.
 The cold value is the remote Supabase pooler re-establishing its single
 connection (`connection_limit=1`) from this dev machine — not frontend work.

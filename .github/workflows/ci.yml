@@ -130,6 +130,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
           DATABASE_URL: postgresql://placeholder
 
+      # T-C2: keep the client bundle under budget (worst-case single gzip chunk
+      # &lt;= 150 KB — a proxy for First Load JS, which Turbopack no longer prints).
+      - name: Bundle budget
+        run: node scripts/bundle-budget.mjs 150000
+
   # ── Result Gate ──
   result:
     name: CI Result

@@ -7,14 +7,14 @@ import "./globals.css";
 const baloo = Baloo_2({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["700"],
   display: "swap",
 });
 
 const balooAr = Baloo_Bhaijaan_2({
   variable: "--font-display-ar",
   subsets: ["arabic"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["700"],
   display: "swap",
 });
 
@@ -27,7 +27,7 @@ const inter = Inter({
 const notoAr = Noto_Sans_Arabic({
   variable: "--font-body-ar",
   subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
