@@ -27,6 +27,32 @@ npx drizzle-kit migrate    # apply migrations to the database
 
 Schema source of truth: [`db/schema.ts`](./db/schema.ts), generated from spec §9.
 
+### Local reset recipe
+
+Rebuild the (possibly drifted) local/dev database from scratch — drop the
+`public` schema, re-apply every migration `0000…0011`, then seed the demo
+catalog. Call "reset" before ingesting real-menu data.
+
+```bash
+# 1) Drop the public schema (keeps Supabase's own `auth` schema / roles).
+psql "$DATABASE_URL" -c "DROP SCHEMA public CASCADE;" -c "CREATE SCHEMA public;"
+#    Dev-only (plain Docker Postgres): mint the roles/migrations expect:
+#    node .github/ci-ensure-role.mjs
+
+# 2) Re-apply all migrations from a blank public schema.
+npx drizzle-kit migrate
+
+# 3) Seed the demo catalog (db/seed.ts — refuses to truncate if orders exist).
+npm run db:seed
+
+# 4) Verify the whole suite against the reset DB.
+npx vitest run
+```
+
+> `db:seed` and this reset are **demo-data safe only**: `seed.ts` aborts if any
+> `orders` exist. For the real launch menu, feed `docs/real-menu.json` to
+> `scripts/ingest-real-menu.ts` instead (see `docs/real-menu-guide.md`).
+
 ## Tests & CI seed gate (P2-OPS-1)
 
 The CI `test` job runs the unit **and** integration suites against a **fresh,

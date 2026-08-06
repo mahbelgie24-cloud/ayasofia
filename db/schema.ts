@@ -121,6 +121,8 @@ export const products = pgTable("products", {
   nameEn: text("name_en").notNull(),
   basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
   imageUrl: text("image_url"), // placeholder icons live in /public/icons for now
+  // Short Arabic marketing/copy line on the real menu (real-menu ingest).
+  descriptionAr: text("description_ar"),
   isAvailable: boolean("is_available").notNull().default(true),
   trackInventory: boolean("track_inventory").notNull().default(true),
 }).enableRLS();
