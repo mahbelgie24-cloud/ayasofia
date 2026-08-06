@@ -267,6 +267,10 @@ describe("deleteCategory — blocks when products exist", () => {
       where: () => Promise.resolve(),
     });
 
+    // The admin mutation also resolves all branch slugs to invalidate the
+    // public catalog cache after the delete.
+    mockDbSelect.mockReturnValue({ from: () => Promise.resolve([]) });
+
     const result = await deleteCategory("empty-cat");
     expect(result.success).toBe(true);
   });

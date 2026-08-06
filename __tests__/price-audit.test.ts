@@ -71,6 +71,9 @@ beforeEach(() => {
   mockDbUpdate.mockReturnValue({
     set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
   });
+  // Admin mutations now invalidate the public catalog cache, which queries
+  // branches' slugs for every branch. Default: no branches → no-op.
+  mockDbSelect.mockReturnValue({ from: () => Promise.resolve([]) });
 });
 
 // ── updateProduct: audit on basePrice change ──
@@ -111,9 +114,10 @@ describe("updateProduct — price-change audit log (WEB-SEC-006)", () => {
   });
 
   it("does NOT write an audit row when basePrice is not in the update", async () => {
-    // Only updating name, not price — no select, no audit
+    // Only updating name, not price — no audit row, no transaction.
+    // (db.select IS still called once to resolve branch slugs for cache
+    // invalidation, so we only assert the audit write didn't happen.)
     await updateProduct({ id: "p1", nameAr: " newName " });
-    expect(mockDbSelect).not.toHaveBeenCalled();
     expect(mockTx).not.toHaveBeenCalled();
   });
 
@@ -177,7 +181,8 @@ describe("updateModifier — price-change audit log (WEB-SEC-006)", () => {
 
   it("does NOT write an audit row when priceDelta is not in the update", async () => {
     await updateModifier({ id: "m1", name: "New Name" });
-    expect(mockDbSelect).not.toHaveBeenCalled();
+    // (db.select IS called to resolve branch slugs for cache invalidation —
+    // we only assert the audit write itself never happened.)
     expect(mockTx).not.toHaveBeenCalled();
   });
 });

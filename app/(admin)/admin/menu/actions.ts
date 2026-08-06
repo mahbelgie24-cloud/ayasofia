@@ -11,9 +11,11 @@ import {
   ingredients,
   priceChanges,
   staff,
+  branches,
 } from "@/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { toScaledInt, formatPrice } from "@/lib/pricing";
+import { invalidatePublicCatalog } from "@/lib/db/queries";
 
 /**
  * Normalise a user-entered price (string) into a canonical
@@ -33,6 +35,17 @@ function sanitizePrice(input: string | undefined | null): string | null {
 
 // ── Categories ──
 
+/**
+ * Invalidate the public catalog cache for EVERY branch (C2). Menu mutations
+ * are not scoped to a branch (single-branch shop mid-term), and a product/
+ * modifier change can appear on any branch's catalog, so we clear all slugs.
+ * Safe: invalidating a cache key that isn't present is a no-op.
+ */
+async function invalidateAllPublicCatalogs(): Promise<void> {
+  const rows = await db.select({ slug: branches.slug }).from(branches);
+  for (const b of rows) invalidatePublicCatalog(b.slug);
+}
+
 export async function createCategory(input: {
   nameAr: string;
   nameEn: string;
@@ -47,6 +60,7 @@ export async function createCategory(input: {
     nameEn: input.nameEn.trim(),
     sortOrder: input.sortOrder ?? 0,
   });
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -65,6 +79,7 @@ export async function updateCategory(input: {
     return { success: false, error: "لا توجد تغييرات" };
   }
   await db.update(categories).set(data).where(eq(categories.id, input.id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -78,6 +93,7 @@ export async function deleteCategory(id: string): Promise<{ success: boolean; er
     return { success: false, error: "لا يمكن حذف فئة تحتوي على منتجات. انقل المنتجات أولاً." };
   }
   await db.delete(categories).where(eq(categories.id, id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -108,6 +124,7 @@ export async function createProduct(input: {
     isAvailable: true,
     trackInventory: input.trackInventory ?? true,
   });
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -166,11 +183,13 @@ export async function updateProduct(input: {
           changedBy: staffId,
         });
       });
+      await invalidateAllPublicCatalogs();
       return { success: true };
     }
   }
 
   await db.update(products).set(data).where(eq(products.id, input.id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -180,6 +199,7 @@ export async function toggleProductAvailable(
 ): Promise<{ success: boolean }> {
   await requireStaffSession("manager");
   await db.update(products).set({ isAvailable: available }).where(eq(products.id, id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -202,6 +222,7 @@ export async function createModifierGroup(input: {
       isRequired: input.isRequired,
     })
     .returning({ id: modifierGroups.id });
+  await invalidateAllPublicCatalogs();
   return { success: true, groupId: group!.id };
 }
 
@@ -225,6 +246,7 @@ export async function updateModifierGroup(input: {
   }
   if (Object.keys(data).length === 0) return { success: false, error: "لا توجد تغييرات" };
   await db.update(modifierGroups).set(data).where(eq(modifierGroups.id, input.id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -233,6 +255,7 @@ export async function deleteModifierGroup(
 ): Promise<{ success: boolean; error?: string }> {
   await requireStaffSession("manager");
   await db.delete(modifierGroups).where(eq(modifierGroups.id, id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -261,6 +284,7 @@ export async function createModifier(input: {
     ingredientId: input.ingredientId || null,
     ingredientQty: input.ingredientId && qty !== null ? qty : null,
   });
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -319,17 +343,20 @@ export async function updateModifier(input: {
           changedBy: staffId,
         });
       });
+      await invalidateAllPublicCatalogs();
       return { success: true };
     }
   }
 
   await db.update(modifiers).set(data).where(eq(modifiers.id, input.id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
 export async function deleteModifier(id: string): Promise<{ success: boolean }> {
   await requireStaffSession("manager");
   await db.delete(modifiers).where(eq(modifiers.id, id));
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -368,6 +395,7 @@ export async function saveRecipe(input: {
       quantityUsed: qty,
     });
   }
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 
@@ -379,6 +407,7 @@ export async function deleteRecipe(
   await db
     .delete(recipes)
     .where(sql`${recipes.productId} = ${productId} AND ${recipes.ingredientId} = ${ingredientId}`);
+  await invalidateAllPublicCatalogs();
   return { success: true };
 }
 

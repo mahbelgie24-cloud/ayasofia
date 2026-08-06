@@ -111,11 +111,26 @@ never trusted from the client.
 ## Cache & invalidation (C2)
 
 The public catalog is cached in-memory for 60s per branch (`lib/cache.ts`).
-Admin mutations (tables, suggestion, upsell rules, product/menu edits) call
-`invalidatePublicCatalog(slug)` directly. There is no event bus in this
-codebase, so invalidation is synchronous in-process — a multi-instance
-deployment self-heals within the TTL (documented deviation from event-driven
-invalidation).
+Invalidation is **direct and synchronous** — there is no event bus in this
+codebase, so every admin mutation clears the affected branch cache key
+in-process right after it writes. A multi-instance deployment self-heals
+within the TTL (documented deviation from event-driven invalidation).
+
+The actual behavior differs by surface:
+
+- **Menu/product/modifier/recipe/category mutations** (`admin/menu/actions.ts`)
+  are not scoped to a branch (single-branch shop mid-term), so a change can
+  appear on any branch's catalog. Every one of them calls
+  `invalidateAllPublicCatalogs()`, which clears the cache for **all** branch
+  slugs. This includes price edits, availability toggles, modifier
+  group/modifier CRUD, and recipe saves — nothing a manager can change is
+  served stale from the public menu.
+- **Table, today's-suggestion, and upsell-rule mutations**
+  (`admin/digital-menu/actions.ts`) are scoped to a specific branch and call
+  `invalidatePublicCatalog(slug)` for just that branch.
+
+Both paths are covered by integration tests that edit data through the admin
+action and immediately re-read the public catalog to assert the fresh value.
 
 ## Performance (C3)
 
