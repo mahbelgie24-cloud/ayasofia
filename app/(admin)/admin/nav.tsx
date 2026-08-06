@@ -5,17 +5,20 @@ import { usePathname } from "next/navigation";
 interface AdminNavProps {
   digitalMenuOn: boolean;
   wifiPortalOn: boolean;
+  isOwner: boolean;
 }
 
-export function AdminNav({ digitalMenuOn, wifiPortalOn }: AdminNavProps) {
+export function AdminNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminNavProps) {
   const pathname = usePathname();
 
+  // T-B15: staff management (createStaffMember/updateStaffMember) is owner-only,
+  // so hide the "الموظفين" link from managers — visibility must not imply access.
   const baseLinks = [
     { href: "/admin", label: "لوحة التحكم" },
     { href: "/admin/inventory", label: "المخزون" },
     { href: "/admin/reports", label: "التقارير" },
     { href: "/admin/menu", label: "القائمة" },
-    { href: "/admin/staff", label: "الموظفين" },
+    ...(isOwner ? [{ href: "/admin/staff", label: "الموظفين" }] : []),
   ];
 
   // Feature-gated links — hidden when the feature flag is OFF (C9).

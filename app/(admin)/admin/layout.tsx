@@ -9,8 +9,9 @@ import { isFeatureEnabled, FEATURE_DIGITAL_MENU, FEATURE_WIFI_PORTAL } from "@/l
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  let session;
   try {
-    await requireStaffSession("manager");
+    session = await requireStaffSession("manager");
   } catch {
     notFound();
   }
@@ -25,7 +26,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="bg-brand-cream flex min-h-screen" dir="rtl" lang="ar">
-      <AdminNav digitalMenuOn={digitalMenuOn} wifiPortalOn={wifiPortalOn} />
+      <AdminNav
+        digitalMenuOn={digitalMenuOn}
+        wifiPortalOn={wifiPortalOn}
+        isOwner={session.role === "owner"}
+      />
       <main className="flex-1 p-6">{children}</main>
     </div>
   );
