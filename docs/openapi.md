@@ -47,11 +47,15 @@ modifiers[] }`; modifier: `{ id, nameAr, name, priceDelta }`
 - Recomputes subtotal server-side, evaluates `upsell_rules` via
   `lib/upsell.ts`, returns `{ success:true, suggestions:[{ ruleId, productId }] }`.
 
-### `getOrderStatus(orderId)`
+### `getOrderStatus(orderId, accessToken)`
 
-`app/order/status/[orderId]/actions.ts` (shared with `/order` flow)
+`app/order/status/[orderId]/actions.ts` (shared by `/order/status` and
+`/m/{slug}/status`)
 
-- Returns `{ status }` for the status timeline.
+- Returns `{ status }`. Gated by the per-order access token (P2-SEC-1); a
+  missing/wrong token is indistinguishable from a 404.
+- Rate limit: 90 / 60s per IP per order (T-B1); a malformed `orderId` is
+  rejected before any query.
 
 ## Public — WiFi
 
@@ -66,13 +70,16 @@ modifiers[] }`; modifier: `{ id, nameAr, name, priceDelta }`
 
 ### `endWifiSession({ deviceId, durationSec? })`
 
-- Revokes via adapter, records `duration_sec` (capped 86400).
+- Revokes via adapter, records `duration_sec` (capped 86400), and marks the
+  latest non-revoked session `revoked_at` (T-B3).
+- Rate limit: 60 / 60s per IP.
 - Response `{ success:true }`.
 
 ### `getWifiSuggestion()`
 
 - Returns today's suggestion (shared entity) + owning `branchSlug` for the
   menu CTA.
+- Rate limit: 90 / 60s per IP.
 
 ## Admin (RBAC: `manager`+ unless noted)
 
