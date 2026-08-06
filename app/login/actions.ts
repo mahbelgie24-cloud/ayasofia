@@ -1,6 +1,7 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
 import { verifyPin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { shifts } from "@/db/schema";
@@ -28,8 +29,30 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
     return { success: false, error: "Invalid PIN" };
   }
 
-  // Rate limit check — keyed by anonymous user ID (per-device lockout)
-  const rateCheck = checkRateLimit(anonUserId);
+  // T-B5: derive the target user from the SERVER session, never from the
+  // client-supplied id. A client can pass any GUID for `anonUserId`; if we
+  // blindly called updateUserById(anonUserId, …) a successful PIN would promote
+  // an ARBITRARY user to staff. Identify the caller via their own session cookie.
+  const ssr = await createClient();
+  const {
+    data: { user },
+    error: getUserErr,
+  } = await ssr.auth.getUser();
+  if (getUserErr || !user) {
+    return { success: false, error: "Not authenticated" };
+  }
+  const sessionUserId = user.id;
+
+  // Defense-in-depth: if the client sent a different id, it is forging the
+  // identity the pin-pad minted — reject outright.
+  if (anonUserId && anonUserId !== sessionUserId) {
+    return { success: false, error: "Session mismatch" };
+  }
+
+  // Rate limit check — keyed by the server-derived session user (per-device
+  // lockout), plus an IP-level cap below that cannot be bypassed by minting
+  // fresh anonymous users (review finding C4).
+  const rateCheck = checkRateLimit(sessionUserId);
   if (!rateCheck.allowed) {
     const waitSeconds = Math.ceil(rateCheck.waitMs / 1000);
     return {
@@ -65,7 +88,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   const match = staffRows.find((row) => verifyPin(pin, row.pin_hash));
 
   if (!match) {
-    const { locked, waitMs } = recordFailedAttempt(anonUserId);
+    const { locked, waitMs } = recordFailedAttempt(sessionUserId);
     if (locked) {
       return {
         success: false,
@@ -76,9 +99,9 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   }
 
   // Successful auth — reset attempt counter
-  resetAttempts(anonUserId);
+  resetAttempts(sessionUserId);
 
-  const { error: authErr } = await supabase.auth.admin.updateUserById(anonUserId, {
+  const { error: authErr } = await supabase.auth.admin.updateUserById(sessionUserId, {
     app_metadata: { staff_id: match.id, role: match.role },
   });
 
@@ -86,7 +109,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
     return { success: false, error: "Something went wrong" };
   }
 
-  await supabase.from("staff").update({ auth_user_id: anonUserId }).eq("id", match.id);
+  await supabase.from("staff").update({ auth_user_id: sessionUserId }).eq("id", match.id);
 
   const [openShift] = await db
     .select({ id: shifts.id })
