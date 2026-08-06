@@ -27,6 +27,47 @@ npx drizzle-kit migrate    # apply migrations to the database
 
 Schema source of truth: [`db/schema.ts`](./db/schema.ts), generated from spec §9.
 
+## Tests & CI seed gate (P2-OPS-1)
+
+The CI `test` job runs the unit **and** integration suites against a **fresh,
+migration-only** Postgres 16 service container — no developer's long-lived
+database. This is what keeps `drizzle-kit migrate` and the seed data honest:
+if a change breaks a fresh install, CI catches it.
+
+To make the vanilla `postgres:16-alpine` image Supabase-shaped (so the RLS
+migrations from 0001/0003/0004 can apply), CI runs `.github/ci-ensure-role.mjs`
+**before** migrating. It creates:
+
+- the `authenticated` role the policies grant to, and
+- the `auth` schema + `auth.jwt()` function the policy `USING` clause calls.
+
+The `test` job then:
+
+```bash
+node .github/ci-ensure-role.mjs     # mint role + auth.jwt()
+npx drizzle-kit migrate             # apply migrations on the blank DB
+npm run db:seed                     # seed menu/inventory the suites depend on
+npx vitest run --shard=N/2          # run tests per shard
+```
+
+This is **Option 1** (an explicit seed step in CI) rather than per-test
+self-seeding — a single seed per shard is cheaper than seeding inside every
+integration suite, and it exercises the real `db:seed` path in CI.
+
+To reproduce locally against a blank Docker Postgres:
+
+```bash
+docker run --rm -d --name dev-pg -p 5433:5432 \
+  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=ayasofia_test postgres:16-alpine
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5433/ayasofia_test
+node .github/ci-ensure-role.mjs
+npx drizzle-kit migrate
+npm run db:seed
+# run integration suites without a .env.local present
+npx vitest run __tests__/*.integration.test.ts
+```
+
 ## Project structure
 
 ```

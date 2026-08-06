@@ -1,5 +1,21 @@
 name: CI
 
+# P2-OPS-1 — CI Seed Gate.
+#
+# The `test` job runs the unit + integration suites against a *fresh*,
+# migration-only Postgres 16 (no Supabase). To do that the service container
+# must be made Supabase-shaped before the drizzle migrations can apply:
+#
+#   1. `.github/ci-ensure-role.mjs` mints the `authenticated` role that the RLS
+#      policies reference, plus the `auth` schema + `auth.jwt()` used by the
+#      policy USING clause (0003/0004).
+#   2. `drizzle-kit migrate` applies the schema.
+#   3. `npm run db:seed` seeds product/modifier/inventory data so the
+#      integration suites have rows to work with.
+#
+# This guarantees the migrations AND the seed data are reproducible on a blank
+# database in CI — not just on a developer's long-lived local/Supabase copy.
+
 on:
   push:
     branches: [main, develop]
@@ -67,8 +83,22 @@ jobs:
 
       - run: npm ci
 
+      # P2-OPS-1: make the vanilla service container Supabase-shaped (role +
+      # auth.jwt()) so the drizzle migrations apply on a fresh database.
+      - name: Mint Supabase-shaped auth (role + auth.jwt)
+        run: node .github/ci-ensure-role.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ayasofia_test
+
       - name: Run Drizzle Migrations
         run: npx drizzle-kit migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ayasofia_test
+
+      # P2-OPS-1: seed product/modifier/inventory data the integration
+      # suites rely on. The DB is a fresh, migration-only instance each run.
+      - name: Seed database
+        run: npm run db:seed
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ayasofia_test
 
