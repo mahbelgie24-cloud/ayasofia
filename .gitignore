@@ -65,9 +65,6 @@ yarn-error.log*
 /blob-report
 /test-results
 
-# Drizzle Kit
-/db/migrations/meta/_journal.json
-
 # Sentry
 .sentryclirc
 
