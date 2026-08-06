@@ -84,6 +84,22 @@ The TTFB figures in `docs/digital-menu.md` (14 ms warm / 4.4 s cold) were
 measured from a **dev machine** to a remote pooler, not a production in-region
 host. Treat them as direction, not a production SLA.
 
+## Observability is a lightweight proxy (T-D3)
+
+Throttled and failed checkouts are recorded with Sentry `addBreadcrumb` +
+`captureMessage` (lib/observability.ts). This is functional and PII-safe, but it
+is **not** full metrics/span instrumentation (no custom transaction spans or
+counters). **"Good":** promote to Sentry Metrics / instrumented spans when the
+volume justifies it.
+
+## CI bundle gate is a proxy (T-C2)
+
+`scripts/bundle-budget.mjs` gates on the **worst-case single client chunk**
+(gzip ≤ 150 KB) because Next 16/Turbopack no longer prints per-route First Load
+JS. It catches a runaway per-route import, but it is not a true First-Load-JS
+per-route budget. **"Good":** a trace/measurement of `/m` First Load JS at
+deploy time once Turbopack restores the metric.
+
 ---
 
 More entries are appended as they are found (see the docs wisdom pass).

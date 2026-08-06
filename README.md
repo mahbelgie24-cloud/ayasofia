@@ -29,29 +29,46 @@ Schema source of truth: [`db/schema.ts`](./db/schema.ts), generated from spec §
 
 ### Local reset recipe
 
-Rebuild the (possibly drifted) local/dev database from scratch — drop the
-`public` schema, re-apply every migration `0000…0011`, then seed the demo
-catalog. Call "reset" before ingesting real-menu data.
+Rebuild a (possibly drifted) database from scratch — re-apply every migration
+`0000…0012`, then seed the demo catalog. Call "reset" before ingesting real-menu
+data.
 
 ```bash
-# 1) Drop the public schema (keeps Supabase's own `auth` schema / roles).
+# One command: backup → drop public → migrate → seed.
+# Non-ephemeral DBs require a pre-destructive pg_dump (G3) acknowledged via
+# BACKUP_ALLOWED=true or --ack-backup; the restore command is printed.
+BACKUP_ALLOWED=true npx tsx scripts/reset-db.ts
+
+# Manual equivalent:
 psql "$DATABASE_URL" -c "DROP SCHEMA public CASCADE;" -c "CREATE SCHEMA public;"
-#    Dev-only (plain Docker Postgres): mint the roles/migrations expect:
-#    node .github/ci-ensure-role.mjs
-
-# 2) Re-apply all migrations from a blank public schema.
+node .github/ci-ensure-role.mjs   # plain Docker Postgres only (mints role + auth.jwt)
 npx drizzle-kit migrate
-
-# 3) Seed the demo catalog (db/seed.ts — refuses to truncate if orders exist).
 npm run db:seed
-
-# 4) Verify the whole suite against the reset DB.
-npx vitest run
+npx vitest run                    # verify the whole suite
 ```
 
 > `db:seed` and this reset are **demo-data safe only**: `seed.ts` aborts if any
 > `orders` exist. For the real launch menu, feed `docs/real-menu.json` to
 > `scripts/ingest-real-menu.ts` instead (see `docs/real-menu-guide.md`).
+
+### Ops runbook — destructive database operations (G3)
+
+Any reset/ingest that mutates a **non-ephemeral** database first produces an
+automatic `pg_dump` into the git-ignored `backups/` folder, acknowledged by
+`BACKUP_ALLOWED=true` or `--ack-backup`. The ephemeral CI DB never needs one.
+Intended sequence (operate defensively):
+
+1. **Backup** — `scripts/reset-db.ts` / `scripts/ingest-real-menu.ts` call
+   `ensureBackup()` and refuse to proceed (no DB change) without ack.
+2. **Restore-verify** — before trusting any later step, prove the backup restores:
+   ```bash
+   psql "$TEST_DATABASE_URL" -f backups/dump_<stamp>.sql
+   ```
+   (plain SQL dump → restore is `psql "$DATABASE_URL" -f <file>`).
+3. **Migrate** — re-apply from migration `0000`.
+4. **Ingest** — load the real menu only after backup + migrate.
+
+The restore command is printed on every backup.
 
 ## Tests & CI seed gate (P2-OPS-1)
 

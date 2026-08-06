@@ -171,8 +171,10 @@
 # 2) املأ ملف البيانات:   docs/real-menu.json   (انسخ القالب أولًا)
 
 # 3) نفّذ الاستيراد (يقرأ docs/real-menu.json افتراضيًا، أو حدد المسار):
+#    قاعدة بيانات غير مؤقّتة (ليست CI) تتطلب نسخة احتياطية تلقائية؛ أكّدها بـ --ack-backup
 npx tsx scripts/ingest-real-menu.ts
-npx tsx scripts/ingest-real-menu.ts docs/real-menu.json
+npx tsx scripts/ingest-real-menu.ts --ack-backup
+npx tsx scripts/ingest-real-menu.ts docs/real-menu.json --ack-backup
 
 # 4) تأكد من أن اختبارات المخزون ترى القائمة الحقيقية:
 npx vitest run __tests__/seed-stock-semantics.test.ts

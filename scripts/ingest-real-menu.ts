@@ -19,7 +19,9 @@
  *    to commit (the DB is untouched) and prints the exact errors.
  *
  * Usage:
- *   npx tsx scripts/ingest-real-menu.ts [path-to-json]
+ *   npx tsx scripts/ingest-real-menu.ts [path-to-json] [--ack-backup]
+ *   (BACKUP_ALLOWED=true or --ack-backup acks the automatic pg_dump backup
+ *    that the script takes before replacing a non-ephemeral catalog.)
  * Docs: docs/real-menu-guide.md · Template: docs/real-menu-template.json
  */
 
@@ -46,6 +48,7 @@ import {
   inventoryMoves,
 } from "@/db/schema";
 import { toMinorUnits, formatPrice } from "@/lib/pricing";
+import { ensureBackup, restoreCommand } from "./lib/backup";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
@@ -367,6 +370,19 @@ async function main() {
   const nProd = input.products?.length ?? 0;
   const nTab = input.tables?.length ?? 0;
   console.log(`✅ التحقق نجح: خامات=${nIng} فئات=${nCat} منتجات=${nProd} طاولات=${nTab}`);
+
+  // G3 — backup before the destructive replace (non-ephemeral DBs only).
+  let backupFile: string | null = null;
+  try {
+    backupFile = await ensureBackup(process.env.DATABASE_URL, process.argv);
+  } catch (e) {
+    console.error(`❌ ${(e as Error).message}`);
+    process.exit(1);
+  }
+  if (backupFile) {
+    console.log(`💾 نسخة احتياطية: ${backupFile}`);
+    console.log(`   الاستعادة: ${restoreCommand(process.env.DATABASE_URL, backupFile)}`);
+  }
 
   try {
     const summary = await ingestIntoDb(input, db);

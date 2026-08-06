@@ -66,7 +66,10 @@ yarn-error.log*
 /test-results
 
 # Sentry
-.sentryclirc
+/.sentryclirc
+
+# Pre-destructive database backups (G3) — never commit dumps.
+/backups/
 
 # Real launch menu (filled locally; CI keeps demo seeds). Template stays tracked.
 /docs/real-menu.json
