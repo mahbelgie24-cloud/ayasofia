@@ -12,6 +12,7 @@ export type PlaceOrderResult =
       orderNumber: string;
       total: string;
       accessToken: string;
+      deduped: boolean;
     }
   | { success: false; error: string };
 

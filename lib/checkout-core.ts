@@ -39,6 +39,10 @@ export type SharedCheckoutResult =
       total: string;
       // Per-order bearer for the public status page (P2-SEC-1).
       accessToken: string;
+      // P1-M2: true when this call returned the ALREADY-EXISTING order for the
+      // idempotency key (a retried/identical submit), false when a new order
+      // was created. Clients surface "already submitted" when true.
+      deduped: boolean;
     }
   | { success: false; error: string };
 
@@ -98,6 +102,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           orderNumber: existing.orderNumber,
           total: existing.total,
           accessToken: String(existing.accessToken),
+          deduped: true,
         };
       }
 
@@ -327,6 +332,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
         orderNumber,
         total: totalStr,
         accessToken: String(order.accessToken),
+        deduped: false,
       };
     });
 
@@ -351,6 +357,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           orderNumber: existing.orderNumber,
           total: existing.total,
           accessToken: String(existing.accessToken),
+          deduped: true,
         };
       }
     }

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   calculateLineTotal,
   calculateCartTotal,
   type SelectedModifier as PricingModifier,
 } from "@/lib/pricing";
+import { computeIdempotencyKey, type IdempotencyCartItem } from "@/lib/idempotency";
 import type { POSCategory } from "@/lib/db/queries";
 
 export interface CartItem {
@@ -38,16 +39,28 @@ export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void })
   const [cart, setCart] = useState<CartItem[]>([]);
   const [modifierTarget, setModifierTarget] = useState<ModifierTarget | null>(null);
   const [modifierSelections, setModifierSelections] = useState<Record<string, string[]>>({});
-  const idempotencyKeyRef = useRef<string>("");
 
-  useEffect(() => {
-    if (cart.length > 0 && !idempotencyKeyRef.current) {
-      idempotencyKeyRef.current = crypto.randomUUID();
+  // P1-M2: a stable per-mount session identity. The derived idempotency key is
+  // hash(session + cart fingerprint), so it is deterministic FOR the same cart
+  // (dedupes a retried submit) yet changes when the cart changes. The session
+  // disambiguator stops two different browsers with identical carts colliding.
+  // Minted lazily on the first submit (inside an event handler, not during
+  // render — crypto/Math randomness is allowed there, not in a render pass).
+  const sessionIdRef = useRef<string>("");
+
+  /**
+   * Derive the idempotency key for a submit click from the CURRENT cart
+   * snapshot. Same session + same cart ⇒ same key. Any cart change ⇒ a new key.
+   */
+  const deriveIdempotencyKey = useCallback((cartItems: IdempotencyCartItem[]): Promise<string> => {
+    if (!sessionIdRef.current) {
+      sessionIdRef.current =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `s-${Math.random().toString(36).slice(2)}`;
     }
-    if (cart.length === 0) {
-      idempotencyKeyRef.current = "";
-    }
-  }, [cart.length]);
+    return computeIdempotencyKey(sessionIdRef.current, cartItems);
+  }, []);
 
   const addToCart = useCallback(
     (
@@ -230,7 +243,7 @@ export function usePOSCart(opts?: { onItemAdded?: (productId: string) => void })
     cartTotal,
     modifierTarget,
     modifierSelections,
-    idempotencyKeyRef,
+    deriveIdempotencyKey,
     addToCart,
     openModifiers,
     toggleSingle,

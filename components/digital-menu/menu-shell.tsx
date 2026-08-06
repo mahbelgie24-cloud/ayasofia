@@ -54,8 +54,15 @@ export function MenuShell({
   const [flyPearl, setFlyPearl] = useState<{ top: number; left: number } | null>(null);
   const [upsellItems, setUpsellItems] = useState<PublicProduct[]>([]);
 
-  const { cart, cartTotal, idempotencyKeyRef, addToCart, updateQuantity, removeItem, clearCart } =
-    usePOSCart();
+  const {
+    cart,
+    cartTotal,
+    deriveIdempotencyKey,
+    addToCart,
+    updateQuantity,
+    removeItem,
+    clearCart,
+  } = usePOSCart();
 
   const selectedCat = categories.find((c) => c.id === selectedCatId) ?? categories[0];
 
@@ -193,16 +200,18 @@ export function MenuShell({
       return;
     }
     setOrdering(true);
+    const cartItems = cart.map((item) => ({
+      productId: item.productId,
+      modifierIds: item.selectedModifiers.map((m) => m.id),
+      quantity: item.quantity,
+      notes: item.notes,
+    }));
+    const idempotencyKey = await deriveIdempotencyKey(cartItems);
     try {
       const result = await placeDigitalMenuOrder({
         branchSlug,
-        cartItems: cart.map((item) => ({
-          productId: item.productId,
-          modifierIds: item.selectedModifiers.map((m) => m.id),
-          quantity: item.quantity,
-          notes: item.notes,
-        })),
-        idempotencyKey: idempotencyKeyRef.current,
+        cartItems,
+        idempotencyKey,
         orderType,
         tableId: orderType === "dine_in" ? table?.id : null,
         deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() : undefined,
@@ -211,6 +220,9 @@ export function MenuShell({
       });
       if (result.success) {
         clearCart();
+        if (result.deduped) {
+          toast.warning("تم إرسال هذا الطلب مسبقًا — يتم عرض الطلب الحالي");
+        }
         router.push(
           `/m/${branchSlug}/status/${result.orderId}?accessToken=${encodeURIComponent(result.accessToken)}`,
         );

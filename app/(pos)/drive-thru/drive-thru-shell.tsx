@@ -23,7 +23,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
     cartTotal,
     modifierTarget,
     modifierSelections,
-    idempotencyKeyRef,
+    deriveIdempotencyKey,
     openModifiers,
     toggleSingle,
     toggleMulti,
@@ -47,10 +47,12 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
       modifierIds: item.selectedModifiers.map((m) => m.id),
       quantity: item.quantity,
     }));
+    // P1-M2: deterministic key for THIS cart snapshot (session + fingerprint).
+    const idempotencyKey = await deriveIdempotencyKey(cartItems);
     try {
       const result = await checkout({
         cartItems,
-        idempotencyKey: idempotencyKeyRef.current,
+        idempotencyKey,
         paymentMethod,
         channel: "drive_thru",
         clientTotal: cartTotal,
@@ -59,6 +61,9 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
       if (result.success) {
         clearCart();
         setCartOpen(false);
+        if (result.deduped) {
+          toast.warning("هذا الطلب أُرسل مسبقًا — يتم عرض الطلب الحالي");
+        }
         router.push(`/pos/receipt/${result.orderId}`);
       } else {
         toast.error(result.error);
@@ -70,7 +75,7 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
       try {
         await enqueueOrder(
           JSON.stringify(cartItems),
-          idempotencyKeyRef.current,
+          idempotencyKey,
           paymentMethod,
           "drive_thru",
           customerPhone || undefined,

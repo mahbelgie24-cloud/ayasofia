@@ -14,7 +14,14 @@ export interface CheckoutInput {
 }
 
 export type CheckoutResult =
-  | { success: true; orderId: string; orderNumber: string; total: string }
+  | {
+      success: true;
+      orderId: string;
+      orderNumber: string;
+      total: string;
+      accessToken: string;
+      deduped: boolean;
+    }
   | { success: false; error: string };
 
 export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {

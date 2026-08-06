@@ -29,7 +29,7 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
     cartTotal,
     modifierTarget,
     modifierSelections,
-    idempotencyKeyRef,
+    deriveIdempotencyKey,
     openModifiers,
     toggleSingle,
     toggleMulti,
@@ -45,18 +45,23 @@ export function CustomerOrderShell({ menu }: { menu: POSCategory[] }) {
   const handleSubmit = async () => {
     if (cart.length === 0 || !customerName.trim() || checkingOut) return;
     setCheckingOut(true);
+    const cartItems = cart.map((item) => ({
+      productId: item.productId,
+      modifierIds: item.selectedModifiers.map((m) => m.id),
+      quantity: item.quantity,
+    }));
+    const idempotencyKey = await deriveIdempotencyKey(cartItems);
     try {
       const result = await placeCustomerOrder({
-        cartItems: cart.map((item) => ({
-          productId: item.productId,
-          modifierIds: item.selectedModifiers.map((m) => m.id),
-          quantity: item.quantity,
-        })),
+        cartItems,
         customerName: customerName.trim(),
         customerPhone: customerPhone || undefined,
-        idempotencyKey: idempotencyKeyRef.current,
+        idempotencyKey,
       });
       if (result.success) {
+        if (result.deduped) {
+          toast.warning("تم إرسال هذا الطلب مسبقًا — يتم عرض الطلب الحالي");
+        }
         router.push(
           `/order/status/${result.orderId}?accessToken=${encodeURIComponent(result.accessToken)}`,
         );
