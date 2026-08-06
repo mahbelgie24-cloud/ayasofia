@@ -72,55 +72,53 @@ const realMenuPresent = existsSync(REAL_MENU_PATH);
 describe("ingested real menu (when present) — stock semantics", () => {
   const itWhenPresent = realMenuPresent ? it : it.skip;
 
-  itWhenPresent(
-    "has no recipe/modifier ingredient overlap; swappables live only in single+required groups",
-    () => {
-      const menu = JSON.parse(readFileSync(REAL_MENU_PATH, "utf-8")) as RealMenu;
-      expect(Array.isArray(menu.ingredients)).toBe(true);
-      const ingNames = new Set((menu.ingredients ?? []).map((i) => i.name_ar));
+  itWhenPresent("has no recipe/modifier ingredient overlap (the single hard rule — G1)", () => {
+    const menu = JSON.parse(readFileSync(REAL_MENU_PATH, "utf-8")) as RealMenu;
+    expect(Array.isArray(menu.ingredients)).toBe(true);
+    const ingNames = new Set((menu.ingredients ?? []).map((i) => i.name_ar));
 
-      const violations: Array<{ product: string; issue: string }> = [];
+    const violations: Array<{ product: string; issue: string }> = [];
 
-      for (const product of menu.products ?? []) {
-        const recipeIngs = new Set((product.recipe ?? []).map((r) => r.ingredient));
+    for (const product of menu.products ?? []) {
+      const recipeIngs = new Set((product.recipe ?? []).map((r) => r.ingredient));
 
-        for (const line of product.recipe ?? []) {
-          if (!ingNames.has(line.ingredient)) {
-            violations.push({
-              product: product.name_ar,
-              issue: `وصفة تشير لخامة غير موجودة: ${line.ingredient}`,
-            });
-          }
-        }
-
-        for (const group of product.modifierGroups ?? []) {
-          for (const option of group.options ?? []) {
-            const link = option.ingredientQty;
-            if (!link) continue;
-
-            if (!ingNames.has(link.ingredient)) {
-              violations.push({
-                product: product.name_ar,
-                issue: `خيار يربط خامة غير موجودة: ${link.ingredient}`,
-              });
-            }
-            if (group.type !== "single" || group.required !== true) {
-              violations.push({
-                product: product.name_ar,
-                issue: `خيار "${option.name_ar}" يستهلك خامة لكن مجموعته ليست single+required`,
-              });
-            }
-            if (recipeIngs.has(link.ingredient)) {
-              violations.push({
-                product: product.name_ar,
-                issue: `خامة "${link.ingredient}" موجودة في الوصفة وفي خيار معدِّل (تكرار)`,
-              });
-            }
-          }
+      for (const line of product.recipe ?? []) {
+        if (!ingNames.has(line.ingredient)) {
+          violations.push({
+            product: product.name_ar,
+            issue: `وصفة تشير لخامة غير موجودة: ${line.ingredient}`,
+          });
         }
       }
 
-      expect(violations).toEqual([]);
-    },
-  );
+      // Collect every ingredient an option links, regardless of group type.
+      const linked = new Set<string>();
+      for (const group of product.modifierGroups ?? []) {
+        for (const option of group.options ?? []) {
+          const link = option.ingredientQty;
+          if (!link) continue;
+          if (!ingNames.has(link.ingredient)) {
+            violations.push({
+              product: product.name_ar,
+              issue: `خيار يربط خامة غير موجودة: ${link.ingredient}`,
+            });
+          }
+          linked.add(link.ingredient);
+        }
+      }
+
+      // ZERO-OVERLAP is the only hard rule (G1): no ingredient in both the
+      // base recipe and a modifier option — in ANY group type.
+      for (const ing of linked) {
+        if (recipeIngs.has(ing)) {
+          violations.push({
+            product: product.name_ar,
+            issue: `خامة "${ing}" موجودة في الوصفة وفي خيار معدِّل (تكرار)`,
+          });
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });

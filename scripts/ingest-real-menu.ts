@@ -12,8 +12,8 @@
  * Guarantees:
  *  - every price is validated > 0 and converted to integer minor units
  *    (agorot) via the shared money helpers — no raw float touches a price,
- *  - zero recipe/modifier ingredient overlap is enforced (spec §8.4); an
- *    option that consumes an ingredient must sit in a `single`+`required` group,
+ *  - zero recipe/modifier ingredient overlap is enforced (spec §8.4) — the
+ *    single hard rule, regardless of group type (G1),
  *  - referenced image files must exist under public/menu/,
  *  - all writes run in ONE transaction and are idempotent; ANY violation REFUSES
  *    to commit (the DB is untouched) and prints the exact errors.
@@ -28,6 +28,7 @@ loadEnvConfig(process.cwd());
 
 import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -172,29 +173,11 @@ function qtyString(n: number, label: string, errors: string[]): string | null {
   return n.toFixed(2);
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
-async function main() {
-  const dataPath = process.argv[2] ?? "docs/real-menu.json";
-  const abs = resolve(process.cwd(), dataPath);
-
-  let raw: string;
-  try {
-    raw = readFileSync(abs, "utf-8");
-  } catch {
-    console.error(`❌ لا يوجد ملف بيانات في: ${abs}`);
-    console.error(`   انسخ docs/real-menu-template.json إلى docs/real-menu.json واملأه.`);
-    process.exit(1);
-  }
-
-  let input: RealMenu;
-  try {
-    input = JSON.parse(raw) as RealMenu;
-  } catch (e) {
-    console.error("❌ الملف ليس JSON صالح:", (e as Error).message);
-    process.exit(1);
-  }
-
+// ── Pure validation (exported for tests — no DB access) ────────────────────
+export function validateRealMenu(input: RealMenu): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
+  const warnings: string[] = [];
+
   const ingredientsIn = input.ingredients ?? [];
   const categoriesIn = input.categories ?? [];
   const productsIn = input.products ?? [];
@@ -220,7 +203,7 @@ async function main() {
 
   // unique category keys
   const catKeys = new Set<string>();
-  const catIdByName = new Map<string, string>(); // key -> name_ar
+  const catIdByName = new Map<string, string>();
   for (const cat of categoriesIn) {
     if (!cat.key || !cat.name_ar) {
       errors.push(`فئة غير صالحة: ${JSON.stringify(cat)}`);
@@ -299,17 +282,20 @@ async function main() {
             errors.push(`خيار "${o.name_ar}": خامة غير موجودة "${q.ingredient}"`);
           }
           qtyString(q.qty, `خيار "${o.name_ar}" الكمية`, errors);
-          // Swappable ingredients LIVE ONLY in single+required groups (spec §8.4).
+          // Authoring note (non-blocking): the ONLY hard rule is zero
+          // recipe/modifier overlap. Base/SWAP choices are typically a
+          // single+required group; additive toppings (multi-optional) are
+          // equally valid — just flag for review (G1).
           if (g.type !== "single" || g.required !== true) {
-            errors.push(
-              `خيار "${o.name_ar}" يستهلك خامة ("${q.ingredient}") لكن مجموعته ليست single+required`,
+            warnings.push(
+              `تحذير: خيار "${o.name_ar}" (منتج "${p.name_ar}") يستهلك خامة "${q.ingredient}" في مجموعة ${g.type} ${g.required ? "إلزامية" : "اختيارية"} — تأكد أنه إضافة وليس تبديل قاعدة`,
             );
           }
         }
       }
     }
 
-    // recipe + zero-overlap
+    // recipe + zero-overlap (spec §8.4) — THE hard rule
     const recipeIngs = new Set<string>();
     for (const r of p.recipe ?? []) {
       if (!ingNames.has(r.ingredient)) {
@@ -335,6 +321,33 @@ async function main() {
     else tableCodes.add(t.code);
   }
 
+  return { errors, warnings };
+}
+
+// ── Main ───────────────────────────────────────────────────────────────────
+async function main() {
+  const dataPath = process.argv[2] ?? "docs/real-menu.json";
+  const abs = resolve(process.cwd(), dataPath);
+
+  let raw: string;
+  try {
+    raw = readFileSync(abs, "utf-8");
+  } catch {
+    console.error(`❌ لا يوجد ملف بيانات في: ${abs}`);
+    console.error(`   انسخ docs/real-menu-template.json إلى docs/real-menu.json واملأه.`);
+    process.exit(1);
+  }
+
+  let input: RealMenu;
+  try {
+    input = JSON.parse(raw) as RealMenu;
+  } catch (e) {
+    console.error("❌ الملف ليس JSON صالح:", (e as Error).message);
+    process.exit(1);
+  }
+
+  const { errors, warnings } = validateRealMenu(input);
+
   if (errors.length > 0) {
     console.error(
       `\n❌ رُفض الالتزام — ${errors.length} مخالفة (لم يُغيّر أي شيء في قاعدة البيانات):\n`,
@@ -343,6 +356,16 @@ async function main() {
     console.error(`\nأصلح المشاكل أعلاه ثم أعد التشغيل. الدليل: docs/real-menu-guide.md`);
     process.exit(1);
   }
+
+  if (warnings.length > 0) {
+    console.warn(`\n⚠️  ${warnings.length} ملاحظة تأليف (لا تمنع الالتزام):`);
+    warnings.forEach((w) => console.warn(`  - ${w}`));
+  }
+
+  const ingredientsIn = input.ingredients ?? [];
+  const categoriesIn = input.categories ?? [];
+  const productsIn = input.products ?? [];
+  const tablesIn = input.tables ?? [];
 
   console.log(
     `✅ التحقق نجح: خامات=${ingredientsIn.length} فئات=${categoriesIn.length} منتجات=${productsIn.length} طاولات=${tablesIn.length}`,
@@ -597,4 +620,8 @@ async function main() {
   }
 }
 
-main();
+// Run only when executed directly (not when imported for validateRealMenu tests).
+const entry = process.argv[1];
+if (entry && resolve(entry) === fileURLToPath(import.meta.url)) {
+  main();
+}
