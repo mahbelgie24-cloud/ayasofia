@@ -148,17 +148,21 @@ export async function setTodaySuggestion(
   await requireStaffSession("manager");
   if (!input.productId) return { success: false, error: "اختر منتجًا" };
 
-  // Deactivate any existing suggestion, then insert the new active one.
-  await db
-    .update(todaySuggestion)
-    .set({ isActive: false })
-    .where(eq(todaySuggestion.isActive, true));
+  // P2-DAT-1: deactivate-all + insert must be atomic. If the insert fails,
+  // the deactivation is rolled back so the previously-active suggestion is
+  // NOT lost (the portal never ends up with zero active suggestions).
+  await db.transaction(async (tx) => {
+    await tx
+      .update(todaySuggestion)
+      .set({ isActive: false })
+      .where(eq(todaySuggestion.isActive, true));
 
-  await db.insert(todaySuggestion).values({
-    productId: input.productId,
-    titleAr: input.titleAr?.trim() || null,
-    descriptionAr: input.descriptionAr?.trim() || null,
-    isActive: true,
+    await tx.insert(todaySuggestion).values({
+      productId: input.productId,
+      titleAr: input.titleAr?.trim() || null,
+      descriptionAr: input.descriptionAr?.trim() || null,
+      isActive: true,
+    });
   });
 
   invalidateAllCatalogCache();

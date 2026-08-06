@@ -25,6 +25,14 @@ was introduced, so very old `/order` orders are indistinguishable by data
 alone; a future migration could tag them, but doing so risks mislabeling real
 cashier sales, which is worse than leaving them as POS.
 
+## P2-DAT-1 — today-suggestion deactivate+insert is now transactional
+
+Previously `setTodaySuggestion` deactivated all suggestions and then inserted
+the new one in two separate statements; an insert failure would leave the
+portal with **no** active suggestion. Now both run inside
+`db.transaction(...)`, so a failure rolls back the deactivation and the
+previously-active suggestion survives (`today-suggestion.integration.test.ts`).
+
 ---
 
 More entries are appended as they are found (see the docs wisdom pass).
