@@ -59,29 +59,59 @@ const VARIANT_STYLES: Record<ToastVariant, { bg: string; icon: string; role: str
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastEntry[]>([]);
+  const timersRef = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const remove = React.useCallback((id: string) => {
+    const timer = timersRef.current.get(id);
+    if (timer) clearTimeout(timer);
+    timersRef.current.delete(id);
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const add = React.useCallback(
+  const schedule = React.useCallback(
+    (id: string, duration: number) => {
+      const existing = timersRef.current.get(id);
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(() => remove(id), duration);
+      timersRef.current.set(id, timer);
+    },
+    [remove],
+  );
+
+  const addInternal = React.useCallback(
     (variant: ToastVariant, message: string) => {
       const id = crypto.randomUUID();
       setToasts((prev) => [...prev, { id, variant, message }]);
-      const timeout = 5000;
       const reduced =
         typeof window !== "undefined" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const duration = reduced ? 8000 : timeout;
-      setTimeout(() => remove(id), duration);
+      schedule(id, reduced ? 8000 : 5000);
     },
-    [remove],
+    [schedule],
+  );
+
+  // T-B12: the auto-dismiss timer actually STOPS on hover/focus…
+  const pause = React.useCallback((id: string) => {
+    const timer = timersRef.current.get(id);
+    if (timer) clearTimeout(timer);
+    timersRef.current.delete(id);
+  }, []);
+
+  // …and resumes from the full duration when the pointer/keyboard leaves.
+  const resume = React.useCallback(
+    (id: string) => {
+      const reduced =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      schedule(id, reduced ? 8000 : 5000);
+    },
+    [schedule],
   );
 
   React.useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ variant: ToastVariant; message: string }>).detail;
-      if (detail?.message) add(detail.variant || "error", detail.message);
+      if (detail?.message) addInternal(detail.variant || "error", detail.message);
     };
     window.addEventListener("ayasofia-toast" as keyof WindowEventMap, handler as EventListener);
     return () =>
@@ -89,25 +119,44 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         "ayasofia-toast" as keyof WindowEventMap,
         handler as EventListener,
       );
-  }, [add]);
+  }, [addInternal]);
+
+  // Clear all pending timers on unmount.
+  React.useEffect(
+    () => () => {
+      for (const t of timersRef.current.values()) clearTimeout(t);
+      timersRef.current.clear();
+    },
+    [],
+  );
 
   const ctx = React.useMemo(
     () => ({
-      error: (message: string) => add("error", message),
-      warning: (message: string) => add("warning", message),
+      error: (message: string) => addInternal("error", message),
+      warning: (message: string) => addInternal("warning", message),
     }),
-    [add],
+    [addInternal],
   );
 
   return (
     <ToastContext.Provider value={ctx}>
       {children}
-      <ToastRegion toasts={toasts} onClose={remove} />
+      <ToastRegion toasts={toasts} onClose={remove} onPause={pause} onResume={resume} />
     </ToastContext.Provider>
   );
 }
 
-function ToastRegion({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: string) => void }) {
+function ToastRegion({
+  toasts,
+  onClose,
+  onPause,
+  onResume,
+}: {
+  toasts: ToastEntry[];
+  onClose: (id: string) => void;
+  onPause: (id: string) => void;
+  onResume: (id: string) => void;
+}) {
   if (toasts.length === 0) return null;
 
   return (
@@ -129,20 +178,24 @@ function ToastRegion({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: 
               "animate-[toast-in_0.3s_ease-spring]",
               style.bg,
             )}
-            onMouseEnter={() => {
-              /* Pause — the auto-dismiss timer is in the parent.
-                 We pause by not removing on hover. The parent's
-                 setTimeout will fire regardless, but the user has
-                 visual feedback and can read the message. */
+            onMouseEnter={() => onPause(toast.id)}
+            onMouseLeave={() => onResume(toast.id)}
+            onFocusCapture={() => onPause(toast.id)}
+            onBlurCapture={() => onResume(toast.id)}
+            onKeyDown={(e) => {
+              // Escape dismisses the focused toast (T-B12).
+              if (e.key === "Escape") onClose(toast.id);
             }}
+            tabIndex={-1}
           >
             <span className="text-lg leading-none" aria-hidden="true">
               {style.icon}
             </span>
             <p className="flex-1 text-sm leading-relaxed font-medium">{toast.message}</p>
+            {/* aria-pressed + pause acts as a11y-visible "holding" hint */}
             <button
               onClick={() => onClose(toast.id)}
-              className="ease-spring shrink-0 rounded-lg p-1 text-current opacity-70 transition-opacity hover:opacity-100"
+              className="ease-spring flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg p-1 text-current opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100"
               aria-label="إغلاق"
             >
               ✕
