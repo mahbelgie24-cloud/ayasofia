@@ -313,11 +313,15 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     now.toISOString().slice(0, 10),
   );
 
+  // T-B9: average in minor units (agorot) with integer-scaled division — no
+  // float `revenue / count / 100` that loses precision at scale.
+  const averageOrderAgorot =
+    todayOrders.length > 0 ? Math.round((revenueAgorot * 100) / todayOrders.length) / 100 : 0;
+
   return {
     todayRevenue: formatPrice(revenueAgorot),
     todayOrderCount: todayOrders.length,
-    averageOrder:
-      todayOrders.length > 0 ? (revenueAgorot / todayOrders.length / 100).toFixed(2) : "0.00",
+    averageOrder: formatPrice(averageOrderAgorot),
     lowStockCount: lowStock?.count ?? 0,
     openShiftCount: openShifts?.count ?? 0,
     topSellers: topSellers.slice(0, 5),
