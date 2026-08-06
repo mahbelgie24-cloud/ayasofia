@@ -58,33 +58,41 @@ export async function closeShift(closingCash: number): Promise<CloseShiftResult>
     return { success: false, error: "لا توجد وردية مفتوحة" };
   }
 
-  const salesRows = await db
-    .select({ sum: sql<string>`COALESCE(SUM(${orders.total}::numeric), 0)` })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.staffId, staffId),
-        ne(orders.status, "cancelled"),
-        gte(orders.createdAt, current.openedAt),
-        lte(orders.createdAt, new Date()),
-      ),
-    );
+  // T-B7: compute the shift's sales total and close the shift atomically.
+  // If either step fails, nothing is committed — no half-closed shift where
+  // totalSales disagrees with the orders it was derived from.
+  const closed = await db.transaction(async (tx) => {
+    const salesRows = await tx
+      .select({ sum: sql<string>`COALESCE(SUM(${orders.total}::numeric), 0)` })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.staffId, staffId),
+          ne(orders.status, "cancelled"),
+          gte(orders.createdAt, current.openedAt),
+          lte(orders.createdAt, new Date()),
+        ),
+      );
 
-  const totalSales = salesRows[0]?.sum ?? "0.00";
+    const totalSales = salesRows[0]?.sum ?? "0.00";
 
-  const [closed] = await db
-    .update(shifts)
-    .set({
-      closedAt: new Date(),
-      closingCash: closingCashNum.toFixed(2),
-      totalSales,
-    })
-    .where(eq(shifts.id, current.id))
-    .returning({ id: shifts.id });
+    const [row] = await tx
+      .update(shifts)
+      .set({
+        closedAt: new Date(),
+        closingCash: closingCashNum.toFixed(2),
+        totalSales,
+      })
+      .where(eq(shifts.id, current.id))
+      .returning({ id: shifts.id, totalSales: shifts.totalSales });
+
+    return row ?? null;
+  });
 
   if (!closed) {
     return { success: false, error: "Failed to close shift" };
   }
+  const totalSales = closed.totalSales ?? "0.00";
 
   const closingAgorot = toMinorUnits(closingCashNum.toFixed(2));
   const openingAgorot = toMinorUnits(current.openingCash);

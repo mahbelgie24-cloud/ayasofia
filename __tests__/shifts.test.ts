@@ -112,40 +112,37 @@ describe("closeShift", () => {
   });
 
   it("computes totalSales and discrepancy correctly", async () => {
-    mockDbSelect
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () =>
-            q([
-              {
-                id: "shift-1",
-                staffId: "staff-001",
-                openedAt: new Date("2026-08-04T08:00:00Z"),
-                openingCash: "100.00",
-                closedAt: null,
-                closingCash: null,
-                totalSales: null,
-              },
-            ]),
-        }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => q([{ sum: "450.00" }]),
-        }),
-      });
-
-    const update = vi.fn().mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: "shift-1" }]),
-        }),
+    mockDbSelect.mockReturnValueOnce({
+      from: () => ({
+        where: () =>
+          q([
+            {
+              id: "shift-1",
+              staffId: "staff-001",
+              openedAt: new Date("2026-08-04T08:00:00Z"),
+              openingCash: "100.00",
+              closedAt: null,
+              closingCash: null,
+              totalSales: null,
+            },
+          ]),
       }),
     });
 
-    vi.mocked((await import("@/lib/db")).db.update).mockImplementation(
-      () => update() as unknown as ReturnType<typeof import("@/lib/db").db.update>,
-    );
+    // closeShift now runs the sales sum + close update inside one transaction.
+    const tx = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue(q([{ sum: "450.00" }])) }),
+      }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: "shift-1", totalSales: "450.00" }]),
+          }),
+        }),
+      }),
+    };
+    mockTx.mockImplementation(async (fn: (t: unknown) => Promise<unknown>) => fn(tx));
 
     const result = await closeShift(555);
     expect(result.success).toBe(true);
