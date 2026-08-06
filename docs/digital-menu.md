@@ -131,6 +131,15 @@ connection (`connection_limit=1`) from this dev machine — not frontend work.
 On the production topology (in-region Supabase, warm pool) Perf ≥ 90 is
 expected; the frontend itself is fast and within budget.
 
+**Pooling recommendation (P2-PERF-3):** raise `connection_limit` from `1` to
+`10` in the production `DATABASE_URL`. The concurrency floor is the tablefront
+(a distinct pooled connection per guest), added to the kitchen's live-order
+polls (~15 s interval) and the admin report queries. A single connection
+serializes all of these across guests and pages. `10` absorbs the tablefront +
+polls + admin reports together while staying comfortably under the pooler's
+per-project cap. Migration and seed jobs open a single short-lived connection,
+so they are unaffected by this change.
+
 ## Testing
 
 - Unit: `__tests__/upsell.test.ts`, `delivery.test.ts`, `modifier-validation.test.ts`,
