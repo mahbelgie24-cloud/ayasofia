@@ -22,6 +22,7 @@ import {
   getActiveUpsellRules,
 } from "@/lib/db/queries";
 import { evaluateUpsell, type UpsellCartContext } from "@/lib/upsell";
+import { captureThrottled } from "@/lib/observability";
 import { db } from "@/lib/db";
 import { products, tables } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
@@ -141,10 +142,10 @@ export async function placeDigitalMenuOrder(input: {
     return { success: false, error: "طاولة غير صالحة" };
   }
 
-  // Rate limit — public, unauthenticated.
   const ip = await callerIp();
   const throttle = checkThrottle(`dm-order:${ip}`, PLACE_ORDER_RATE_LIMIT);
   if (!throttle.allowed) {
+    captureThrottled("placeDigitalMenuOrder", `dm-order:${ip}`);
     const secs = Math.ceil(throttle.retryAfterMs / 1000);
     return {
       success: false,

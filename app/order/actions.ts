@@ -3,6 +3,7 @@
 import { executeCheckout } from "@/lib/checkout-core";
 import { checkThrottle } from "@/lib/rate-limit";
 import { callerIp } from "@/lib/ip";
+import { captureThrottled } from "@/lib/observability";
 import type { CartItemForServer } from "@/lib/pricing";
 
 export type PlaceOrderResult =
@@ -44,6 +45,7 @@ export async function placeCustomerOrder(input: {
   const ip = await callerIp();
   const throttle = checkThrottle(`order:${ip}`, ORDER_RATE_LIMIT);
   if (!throttle.allowed) {
+    captureThrottled("placeCustomerOrder", `order:${ip}`);
     const secs = Math.ceil(throttle.retryAfterMs / 1000);
     return {
       success: false,

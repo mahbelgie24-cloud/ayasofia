@@ -5,6 +5,7 @@ import { orders } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { callerIp } from "@/lib/ip";
 import { checkThrottle } from "@/lib/rate-limit";
+import { captureThrottled } from "@/lib/observability";
 
 // P2-SEC-1: the polling endpoint must prove ownership via the access token
 // before returning status. A missing/wrong token behaves identically to a
@@ -25,7 +26,10 @@ export async function getOrderStatus(
 
   const ip = await callerIp();
   const throttle = checkThrottle(`order-status:${ip}:${orderId}`, STATUS_THROTTLE);
-  if (!throttle.allowed) return null;
+  if (!throttle.allowed) {
+    captureThrottled("getOrderStatus", `order-status:${ip}:${orderId}`);
+    return null;
+  }
 
   const [order] = await db
     .select({ status: orders.status })

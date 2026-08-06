@@ -15,6 +15,7 @@ import { toMinorUnits } from "@/lib/pricing";
 import { eq, inArray, sql } from "drizzle-orm";
 import { getDeliveryFeeRules, computeDeliveryFee, validateMinimumOrder } from "@/lib/delivery";
 import { validateModifierSelection } from "@/lib/modifier-validation";
+import { captureCheckoutFailure } from "@/lib/observability";
 
 export interface SharedCheckoutParams {
   cartItems: CartItemForServer[];
@@ -367,6 +368,7 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
       }
     }
     console.error("Checkout transaction failed:", err);
+    captureCheckoutFailure(`transaction failed: ${String(err)}`);
     return { success: false, error: "Transaction failed — nothing was charged" };
   }
 }
