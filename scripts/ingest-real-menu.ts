@@ -362,16 +362,40 @@ async function main() {
     warnings.forEach((w) => console.warn(`  - ${w}`));
   }
 
-  const ingredientsIn = input.ingredients ?? [];
-  const categoriesIn = input.categories ?? [];
-  const productsIn = input.products ?? [];
-  const tablesIn = input.tables ?? [];
+  const nIng = input.ingredients?.length ?? 0;
+  const nCat = input.categories?.length ?? 0;
+  const nProd = input.products?.length ?? 0;
+  const nTab = input.tables?.length ?? 0;
+  console.log(`✅ التحقق نجح: خامات=${nIng} فئات=${nCat} منتجات=${nProd} طاولات=${nTab}`);
 
-  console.log(
-    `✅ التحقق نجح: خامات=${ingredientsIn.length} فئات=${categoriesIn.length} منتجات=${productsIn.length} طاولات=${tablesIn.length}`,
-  );
+  try {
+    const summary = await ingestIntoDb(input, db);
+    await printSummary(summary);
+  } catch (err) {
+    console.error("\n❌ فشل الالتزام — تم تراجع المعاملة بالكامل (لم تُحفظ أي تغييرات):");
+    console.error("   ", (err as Error).message);
+    process.exit(1);
+  } finally {
+    await pool.end();
+  }
+}
 
-  const summary = {
+// ── The transactional ingest core (exported for integration tests) ──────────
+export interface IngestSummary {
+  ingredientsInserted: number;
+  categoriesInserted: number;
+  productsInserted: number;
+  groupsInserted: number;
+  optionsInserted: number;
+  recipesInserted: number;
+  tablesInserted: number;
+  archivedProducts: number;
+}
+
+type DbClient = { transaction: typeof db.transaction };
+
+export async function ingestIntoDb(input: RealMenu, dbHost: DbClient): Promise<IngestSummary> {
+  const summary: IngestSummary = {
     ingredientsInserted: 0,
     categoriesInserted: 0,
     productsInserted: 0,
@@ -382,243 +406,242 @@ async function main() {
     archivedProducts: 0,
   };
 
-  try {
-    await db.transaction(async (tx) => {
-      // Which catalog rows are still referenced by historical orders?
-      const refProductRows = await tx
-        .select({ id: orderItems.productId })
-        .from(orderItems)
-        .groupBy(orderItems.productId);
-      const refIngredientRows = await tx
-        .select({ id: inventoryMoves.ingredientId })
-        .from(inventoryMoves)
-        .where(sql`${inventoryMoves.refOrderId} is not null`)
-        .groupBy(inventoryMoves.ingredientId);
-      const refProductIds = new Set(refProductRows.map((r) => r.id));
-      const refIngredientIds = new Set(refIngredientRows.map((r) => r.id));
+  const ingredientsIn = input.ingredients ?? [];
+  const categoriesIn = input.categories ?? [];
+  const productsIn = input.products ?? [];
+  const tablesIn = input.tables ?? [];
 
-      // ── Replace the demo catalog ───────────────────────────────────────
-      await tx.delete(modifiers);
-      await tx.delete(modifierGroups);
-      // Recipes that reference anything we are about to delete are dropped.
-      if (refProductIds.size === 0 && refIngredientIds.size === 0) {
-        await tx.delete(recipes);
-      } else {
-        const allRecipes = await tx.select().from(recipes);
-        for (const r of allRecipes) {
-          const keep = refProductIds.has(r.productId) || refIngredientIds.has(r.ingredientId);
-          if (!keep) {
-            await tx
-              .delete(recipes)
-              .where(
-                sql`${recipes.productId}=${r.productId} AND ${recipes.ingredientId}=${r.ingredientId}`,
-              );
-          }
+  await dbHost.transaction(async (tx) => {
+    // Which catalog rows historical orders still reference.
+    const refProductRows = await tx
+      .select({ id: orderItems.productId })
+      .from(orderItems)
+      .groupBy(orderItems.productId);
+    const refIngredientRows = await tx
+      .select({ id: inventoryMoves.ingredientId })
+      .from(inventoryMoves)
+      .where(sql`${inventoryMoves.refOrderId} is not null`)
+      .groupBy(inventoryMoves.ingredientId);
+    const refProductIds = new Set(refProductRows.map((r) => r.id));
+    const refIngredientIds = new Set(refIngredientRows.map((r) => r.id));
+
+    // ── Replace the demo catalog ───────────────────────────────────────────
+    await tx.delete(modifiers);
+    await tx.delete(modifierGroups);
+    // Drop recipes unless BOTH product and ingredient survive the replace
+    // (keeps FK integrity when only referencedProducts/ingredients stay).
+    if (refProductIds.size === 0 && refIngredientIds.size === 0) {
+      await tx.delete(recipes);
+    } else {
+      const allRecipes = await tx.select().from(recipes);
+      for (const r of allRecipes) {
+        const keep = refProductIds.has(r.productId) && refIngredientIds.has(r.ingredientId);
+        if (!keep) {
+          await tx
+            .delete(recipes)
+            .where(
+              sql`${recipes.productId}=${r.productId} AND ${recipes.ingredientId}=${r.ingredientId}`,
+            );
         }
       }
+    }
 
-      if (refProductIds.size === 0) {
-        await tx.delete(products);
-      } else {
-        // Archive (hide) products referenced by history; delete the rest.
-        const allProds = await tx.select({ id: products.id }).from(products);
-        for (const pp of allProds) {
-          if (refProductIds.has(pp.id)) {
-            await tx
-              .update(products)
-              .set({ isAvailable: false })
-              .where(sql`${products.id}=${pp.id}`);
-            summary.archivedProducts++;
-          } else {
-            await tx.delete(products).where(sql`${products.id}=${pp.id}`);
-          }
+    if (refProductIds.size === 0) {
+      await tx.delete(products);
+    } else {
+      // Archive (hide) products referenced by history; delete the rest.
+      const allProds = await tx.select({ id: products.id }).from(products);
+      for (const pp of allProds) {
+        if (refProductIds.has(pp.id)) {
+          await tx
+            .update(products)
+            .set({ isAvailable: false })
+            .where(sql`${products.id}=${pp.id}`);
+          summary.archivedProducts++;
+        } else {
+          await tx.delete(products).where(sql`${products.id}=${pp.id}`);
         }
       }
+    }
 
-      if (refIngredientIds.size === 0) {
-        await tx.delete(ingredients);
-      } else {
-        const allIngs = await tx.select({ id: ingredients.id }).from(ingredients);
-        for (const ig of allIngs) {
-          if (!refIngredientIds.has(ig.id)) {
-            await tx.delete(ingredients).where(sql`${ingredients.id}=${ig.id}`);
-          }
+    if (refIngredientIds.size === 0) {
+      await tx.delete(ingredients);
+    } else {
+      const allIngs = await tx.select({ id: ingredients.id }).from(ingredients);
+      for (const ig of allIngs) {
+        if (!refIngredientIds.has(ig.id)) {
+          await tx.delete(ingredients).where(sql`${ingredients.id}=${ig.id}`);
         }
       }
+    }
 
-      // Drop demo categories that are now empty (keep ones still used).
-      const usedCatIds = await tx
-        .select({ categoryId: products.categoryId })
-        .from(products)
-        .groupBy(products.categoryId);
-      const usedCatSet = new Set(usedCatIds.map((c) => c.categoryId));
-      const allCats = await tx.select({ id: categories.id }).from(categories);
-      for (const c of allCats) {
-        if (!usedCatSet.has(c.id)) await tx.delete(categories).where(sql`${categories.id}=${c.id}`);
-      }
+    // Drop demo categories that are now empty (keep ones still used).
+    const usedCatIds = await tx
+      .select({ categoryId: products.categoryId })
+      .from(products)
+      .groupBy(products.categoryId);
+    const usedCatSet = new Set(usedCatIds.map((c) => c.categoryId));
+    const allCats = await tx.select({ id: categories.id }).from(categories);
+    for (const c of allCats) {
+      if (!usedCatSet.has(c.id)) await tx.delete(categories).where(sql`${categories.id}=${c.id}`);
+    }
 
-      // ── Branch ─────────────────────────────────────────────────────────
-      const slug = input.branch?.slug?.trim() || "qalqilya";
-      let branchRows = await tx
+    // ── Branch ─────────────────────────────────────────────────────────
+    const slug = input.branch?.slug?.trim() || "qalqilya";
+    let branchRows = await tx
+      .select()
+      .from(branches)
+      .where(sql`${branches.slug}=${slug}`)
+      .limit(1);
+    if (branchRows.length === 0) {
+      await tx.insert(branches).values({ name: input.branch?.name_ar?.trim() || slug, slug });
+      branchRows = await tx
         .select()
         .from(branches)
         .where(sql`${branches.slug}=${slug}`)
         .limit(1);
-      if (branchRows.length === 0) {
-        await tx.insert(branches).values({
-          name: input.branch?.name_ar?.trim() || slug,
-          slug,
-        });
-        branchRows = await tx
-          .select()
-          .from(branches)
-          .where(sql`${branches.slug}=${slug}`)
-          .limit(1);
-      }
-      const branchId = branchRows[0]!.id;
-
-      // ── Categories ─────────────────────────────────────────────────────
-      const catIdMap = new Map<string, string>();
-      for (const cat of categoriesIn) {
-        const [ins] = await tx
-          .insert(categories)
-          .values({ nameAr: cat.name_ar, nameEn: cat.key, sortOrder: cat.sort ?? 0 })
-          .returning({ id: categories.id });
-        catIdMap.set(cat.key, ins.id);
-        summary.categoriesInserted++;
-      }
-
-      // ── Ingredients ────────────────────────────────────────────────────
-      const ingIdMap = new Map<string, string>();
-      for (const ing of ingredientsIn) {
-        // idempotent: re-use an existing ingredient with the same name_ar
-        const existing = await tx
-          .select({ id: ingredients.id })
-          .from(ingredients)
-          .where(sql`${ingredients.name}=${ing.name_ar}`)
-          .limit(1);
-        if (existing.length > 0) {
-          ingIdMap.set(ing.name_ar, existing[0].id);
-          continue;
-        }
-        const [ins] = await tx
-          .insert(ingredients)
-          .values({
-            name: ing.name_ar,
-            unit: ing.unit,
-            currentStock: String(ing.currentStock ?? 0),
-            reorderThreshold: String(ing.reorderAt ?? 0),
-            costPerUnit: "0",
-          })
-          .returning({ id: ingredients.id });
-        ingIdMap.set(ing.name_ar, ins.id);
-        summary.ingredientsInserted++;
-      }
-
-      // ── Products + modifier groups/options + recipes ───────────────────
-      for (const p of productsIn) {
-        const categoryId = catIdMap.get(p.category)!;
-        const priceStr = formatPrice(toMinorUnits(String(p.priceILS)));
-
-        // idempotent: skip if an active product with this name already exists
-        const dup = await tx
-          .select({ id: products.id, isAvailable: products.isAvailable })
-          .from(products)
-          .where(sql`${products.nameAr}=${p.name_ar}`)
-          .limit(1);
-        if (dup.length > 0 && dup[0].isAvailable) continue;
-
-        const [prod] = await tx
-          .insert(products)
-          .values({
-            nameAr: p.name_ar,
-            nameEn: enName(p.name_ar, "product"),
-            categoryId,
-            basePrice: priceStr,
-            imageUrl: p.imageFile ? `/menu/${p.imageFile}` : null,
-            descriptionAr: p.desc_ar?.trim() || null,
-            isAvailable: true,
-            trackInventory: true,
-          })
-          .returning({ id: products.id });
-        summary.productsInserted++;
-
-        for (const g of p.modifierGroups ?? []) {
-          const [group] = await tx
-            .insert(modifierGroups)
-            .values({
-              productId: prod.id,
-              name: enName(g.name_ar, "group"),
-              type: g.type,
-              isRequired: g.required === true,
-              maxSelections: g.type === "multi" ? (g.max ?? null) : null,
-            })
-            .returning({ id: modifierGroups.id });
-          summary.groupsInserted++;
-
-          for (const o of g.options ?? []) {
-            const linked = o.ingredientQty;
-            await tx.insert(modifiers).values({
-              groupId: group.id,
-              nameAr: o.name_ar,
-              name: enName(o.name_ar, "opt"),
-              priceDelta: formatPrice(toMinorUnits(String(o.deltaILS ?? 0))),
-              ingredientId:
-                linked && ingIdMap.has(linked.ingredient) ? ingIdMap.get(linked.ingredient)! : null,
-              ingredientQty:
-                linked && ingIdMap.has(linked.ingredient) ? linked.qty.toFixed(2) : null,
-            });
-            summary.optionsInserted++;
-          }
-        }
-
-        for (const r of p.recipe ?? []) {
-          await tx
-            .insert(recipes)
-            .values({
-              productId: prod.id,
-              ingredientId: ingIdMap.get(r.ingredient)!,
-              quantityUsed: r.qty.toFixed(2),
-            })
-            .onConflictDoNothing();
-          summary.recipesInserted++;
-        }
-      }
-
-      // ── Tables (get-or-create by code) ────────────────────────────────
-      for (const t of tablesIn) {
-        const existing = await tx
-          .select()
-          .from(tables)
-          .where(sql`${tables.code}=${t.code}`)
-          .limit(1);
-        if (existing.length === 0) {
-          await tx.insert(tables).values({ branchId, code: t.code, qrToken: randomUUID() });
-          summary.tablesInserted++;
-        }
-      }
-    });
-
-    console.log(`\n✅ تم استيراد القائمة الحقيقية بنجاح والالتزام بها:\n`);
-    console.log(`  الخامات:        ${summary.ingredientsInserted}`);
-    console.log(`  الفئات:         ${summary.categoriesInserted}`);
-    console.log(`  المنتجات:       ${summary.productsInserted}`);
-    console.log(`  مجموعات معدِّل: ${summary.groupsInserted}`);
-    console.log(`  خيارات معدِّل:  ${summary.optionsInserted}`);
-    console.log(`  الوصفات:        ${summary.recipesInserted}`);
-    console.log(`  الطاولات:       ${summary.tablesInserted}`);
-    if (summary.archivedProducts > 0) {
-      console.log(`  منتجات مؤرشفة (مرتبطة بطلبات): ${summary.archivedProducts}`);
     }
-    console.log(`\nتم الحفاظ على: الموظفين، الإعدادات، الطاولات الحالية، سجلّ الطلبات.`);
-  } catch (err) {
-    console.error("\n❌ فشل الالتزام — تم تراجع المعاملة بالكامل (لم تُحفظ أي تغييرات):");
-    console.error("   ", (err as Error).message);
-    process.exit(1);
-  } finally {
-    await pool.end();
-  }
+    const branchId = branchRows[0]!.id;
+
+    // ── Categories ─────────────────────────────────────────────────────
+    const catIdMap = new Map<string, string>();
+    for (const cat of categoriesIn) {
+      const [ins] = await tx
+        .insert(categories)
+        .values({ nameAr: cat.name_ar, nameEn: cat.key, sortOrder: cat.sort ?? 0 })
+        .returning({ id: categories.id });
+      catIdMap.set(cat.key, ins.id);
+      summary.categoriesInserted++;
+    }
+
+    // ── Ingredients ────────────────────────────────────────────────────
+    const ingIdMap = new Map<string, string>();
+    for (const ing of ingredientsIn) {
+      const existing = await tx
+        .select({ id: ingredients.id })
+        .from(ingredients)
+        .where(sql`${ingredients.name}=${ing.name_ar}`)
+        .limit(1);
+      if (existing.length > 0) {
+        ingIdMap.set(ing.name_ar, existing[0].id);
+        continue;
+      }
+      const [ins] = await tx
+        .insert(ingredients)
+        .values({
+          name: ing.name_ar,
+          unit: ing.unit,
+          currentStock: String(ing.currentStock ?? 0),
+          reorderThreshold: String(ing.reorderAt ?? 0),
+          costPerUnit: "0",
+        })
+        .returning({ id: ingredients.id });
+      ingIdMap.set(ing.name_ar, ins.id);
+      summary.ingredientsInserted++;
+    }
+
+    // ── Products + modifier groups/options + recipes ───────────────────
+    for (const p of productsIn) {
+      const categoryId = catIdMap.get(p.category)!;
+      const priceStr = formatPrice(toMinorUnits(String(p.priceILS)));
+
+      // idempotent: skip if an active product with this name already exists
+      const dup = await tx
+        .select({ id: products.id, isAvailable: products.isAvailable })
+        .from(products)
+        .where(sql`${products.nameAr}=${p.name_ar}`)
+        .limit(1);
+      if (dup.length > 0 && dup[0].isAvailable) continue;
+
+      const [prod] = await tx
+        .insert(products)
+        .values({
+          nameAr: p.name_ar,
+          nameEn: enName(p.name_ar, "product"),
+          categoryId,
+          basePrice: priceStr,
+          imageUrl: p.imageFile ? `/menu/${p.imageFile}` : null,
+          descriptionAr: p.desc_ar?.trim() || null,
+          isAvailable: true,
+          trackInventory: true,
+        })
+        .returning({ id: products.id });
+      summary.productsInserted++;
+
+      for (const g of p.modifierGroups ?? []) {
+        const [group] = await tx
+          .insert(modifierGroups)
+          .values({
+            productId: prod.id,
+            name: enName(g.name_ar, "group"),
+            type: g.type,
+            isRequired: g.required === true,
+            maxSelections: g.type === "multi" ? (g.max ?? null) : null,
+          })
+          .returning({ id: modifierGroups.id });
+        summary.groupsInserted++;
+
+        for (const o of g.options ?? []) {
+          const linked = o.ingredientQty;
+          await tx.insert(modifiers).values({
+            groupId: group.id,
+            nameAr: o.name_ar,
+            name: enName(o.name_ar, "opt"),
+            priceDelta: formatPrice(toMinorUnits(String(o.deltaILS ?? 0))),
+            ingredientId:
+              linked && ingIdMap.has(linked.ingredient) ? ingIdMap.get(linked.ingredient)! : null,
+            ingredientQty: linked && ingIdMap.has(linked.ingredient) ? linked.qty.toFixed(2) : null,
+          });
+          summary.optionsInserted++;
+        }
+      }
+
+      for (const r of p.recipe ?? []) {
+        await tx
+          .insert(recipes)
+          .values({
+            productId: prod.id,
+            ingredientId: ingIdMap.get(r.ingredient)!,
+            quantityUsed: r.qty.toFixed(2),
+          })
+          .onConflictDoNothing();
+        summary.recipesInserted++;
+      }
+    }
+
+    // ── Tables (get-or-create by code) ────────────────────────────────
+    for (const t of tablesIn) {
+      const existing = await tx
+        .select()
+        .from(tables)
+        .where(sql`${tables.code}=${t.code}`)
+        .limit(1);
+      if (existing.length === 0) {
+        await tx.insert(tables).values({ branchId, code: t.code, qrToken: randomUUID() });
+        summary.tablesInserted++;
+      }
+    }
+  });
+
+  return summary;
 }
+
+async function printSummary(summary: IngestSummary): Promise<void> {
+  console.log(`\n✅ تم استيراد القائمة الحقيقية بنجاح والالتزام بها:\n`);
+  console.log(`  الخامات:        ${summary.ingredientsInserted}`);
+  console.log(`  الفئات:         ${summary.categoriesInserted}`);
+  console.log(`  المنتجات:       ${summary.productsInserted}`);
+  console.log(`  مجموعات معدِّل: ${summary.groupsInserted}`);
+  console.log(`  خيارات معدِّل:  ${summary.optionsInserted}`);
+  console.log(`  الوصفات:        ${summary.recipesInserted}`);
+  console.log(`  الطاولات:       ${summary.tablesInserted}`);
+  if (summary.archivedProducts > 0) {
+    console.log(`  منتجات مؤرشفة (مرتبطة بطلبات): ${summary.archivedProducts}`);
+  }
+  console.log(`\nتم الحفاظ على: الموظفين، الإعدادات، الطاولات الحالية، سجلّ الطلبات.`);
+}
+
+// ── Main ───────────────────────────────────────────────────────────────────
 
 // Run only when executed directly (not when imported for validateRealMenu tests).
 const entry = process.argv[1];
