@@ -115,6 +115,42 @@ nanoid** advisory (GHSA-2v37-7h3g-55p8) was fixed by `npm audit fix` → nanoid
 3.3.18. **"Good":** a future drizzle-kit release that drops the
 `@esbuild-kit/esm-loader` loader (or upstream esbuild bump) clears all 4.
 
+## H6 — in-memory rate limiting on a multi-instance (Vercel) deployment
+
+`lib/rate-limit.ts` keeps the PIN-login lockout and the public-endpoint abuse
+throttle in **process memory** (`Map`s, no shared store). On Vercel's
+serverless model each cold instance holds its own counters, so a spray across
+instances can exceed the per-instance cap. This is the documented P0
+mitigation (WEB-SEC-001); a durable Postgres/Upstash-backed limiter is tracked
+as WEB-SEC-004 and is **not** yet implemented. **"Good":** move the counters to
+a Postgres table (or Upstash) so the caps are global across instances.
+
+## H6 — single shared Supabase project (no staging/prod split)
+
+All environments — local dev, the e2e suite, and any future production — share
+**one** Supabase project (`hdptsbfzjhmzvfyouhlg`, per `.env.local`). The e2e
+suite creates real orders/anon users against it, and the long-lived dev DB is
+drifted (e.g. product prices no longer match `db/seed-data.ts`). This is why
+the e2e exact-total and anonymous-sign-in tests are flaky/red in a long run.
+**"Good":** provision a second, disposable **staging** Supabase project for
+e2e/CI and keep the shared project for production only (spec §16 / D8).
+
+## H6 — missing coverage tooling
+
+`npx vitest run --coverage` fails with `MISSING DEPENDENCY
+@vitest/coverage-v8`; `vitest.config.mts` defines no `coverage` block. There are
+no branch/line coverage numbers to report. **"Good":** add
+`@vitest/coverage-v8` as a devDependency and a `coverage` config when coverage
+is needed.
+
+## H6 — tax_rate currently 0 (pending owner decision)
+
+The live DB and seed both store `settings.tax_rate = "0"`
+(`db/seed-data.ts:1073`), so every sale under-charges tax until a real rate is
+set. The 17% figure appears only as a documentation note in
+`docs/reports/phase4-closure-addendum.md:95` (spec §15 says confirm with the
+owner). **Owner action:** set the real VAT rate before go-live.
+
 ---
 
 More entries are appended as they are found (see the docs wisdom pass).
