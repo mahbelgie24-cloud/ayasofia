@@ -92,6 +92,13 @@
       "when": 1786023427893,
       "tag": "0012_products_description_ar",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786139640950,
+      "tag": "0013_rls_force",
+      "breakpoints": true
     }
   ]
 }
