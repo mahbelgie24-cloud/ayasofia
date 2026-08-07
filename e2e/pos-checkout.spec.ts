@@ -148,7 +148,12 @@ test.describe("Phase 1 DoD — 20 sales", () => {
       }
 
       await checkout(page);
-      await page.goBack();
+      // Navigate back to /pos directly (not goBack). The SW is network-first
+      // for navigations, so this fetches a fresh shell — the previous
+      // stale-while-revalidate cache trap that this workaround existed for is
+      // gone (H3). A fresh navigation also asserts the shell is not stale.
+      await page.goto("/pos", { waitUntil: "networkidle" });
+      await page.waitForSelector("text=بابل تي", { timeout: 30000 });
       await page.waitForTimeout(500);
     }
   });
