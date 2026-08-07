@@ -22,17 +22,23 @@ test.describe("Customer customer-flow (T-D2)", () => {
     await product.click();
     await page.waitForTimeout(400);
 
+    // The modifier builder sheet opens. Confirm it to add the item to the cart
+    // (selecting any required group is handled by the sheet's pre-selection).
+    const addBtn = page.getByRole("button", { name: /أضف إلى السلة/ }).first();
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+    await addBtn.click();
+    await page.waitForTimeout(400);
+
     // Open the cart and place a takeaway order.
     const cart = page
-      .getByRole("button", { name: /السلة/ })
-      .or(page.getByRole("button", { name: /سلعة/ }))
+      .getByRole("button", { name: /سلعة/ })
+      .or(page.getByRole("button", { name: /السلة/ }))
       .first();
-    if (await cart.isVisible()) {
-      await cart.click();
-      await page.waitForTimeout(300);
-    }
+    await expect(cart).toBeVisible({ timeout: 10000 });
+    await cart.click();
+    await page.waitForTimeout(300);
     await page
-      .getByRole("button", { name: /إتمام|اطلب|تأكيد الطلب/ })
+      .getByRole("button", { name: /أكد الطلب|إتمام|اطلب|تأكيد الطلب/ })
       .first()
       .click();
 

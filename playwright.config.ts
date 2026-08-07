@@ -9,6 +9,12 @@ const baseURL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export default defineConfig({
   testDir: "./e2e",
   retries: 0,
+  // H4: run workers serially. The e2e suite places real orders and mutates a
+  // shared live Supabase project; parallel workers contend on one dev server
+  // and the shared DB, producing intermittent failures that do not reproduce
+  // in isolation. A deterministic single-worker launch gate is more valuable
+  // than speed.
+  workers: 1,
   projects: [
     {
       name: "chromium",

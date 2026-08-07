@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { verifyPin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { shifts } from "@/db/schema";
+import { shifts, staff as staffTable } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import {
   checkRateLimit,
@@ -76,16 +76,19 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
 
   const supabase = createServiceClient();
 
-  const { data: staffRows, error: fetchErr } = await supabase
-    .from("staff")
-    .select("id, pin_hash, role")
-    .eq("active", true);
+  // H4: read the staff directory through the direct DATABASE_URL pool (the
+  // app's standard data path) rather than the service-role PostgREST client.
+  // In this Supabase project the public schema grants were never applied to
+  // `service_role` (USAGE = false, 0 table grants), so a service-role
+  // `select from staff` fails with "permission denied for schema public" and
+  // every PIN login returned "Something went wrong". The direct pool connects
+  // as `postgres` (table owner), which can always read the staff rows.
+  const staffRows = await db
+    .select({ id: staffTable.id, pinHash: staffTable.pinHash, role: staffTable.role })
+    .from(staffTable)
+    .where(eq(staffTable.active, true));
 
-  if (fetchErr || !staffRows) {
-    return { success: false, error: "Something went wrong" };
-  }
-
-  const match = staffRows.find((row) => verifyPin(pin, row.pin_hash));
+  const match = staffRows.find((row) => verifyPin(pin, row.pinHash));
 
   if (!match) {
     const { locked, waitMs } = recordFailedAttempt(sessionUserId);
@@ -109,7 +112,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
     return { success: false, error: "Something went wrong" };
   }
 
-  await supabase.from("staff").update({ auth_user_id: sessionUserId }).eq("id", match.id);
+  await db.update(staffTable).set({ authUserId: sessionUserId }).where(eq(staffTable.id, match.id));
 
   const [openShift] = await db
     .select({ id: shifts.id })

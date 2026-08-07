@@ -109,12 +109,21 @@ test.describe("Design review — baseline screenshots", () => {
   });
 
   test("order — browsing", async ({ page }) => {
-    await captureSurface(page, "order", "/order", VIEWPORTS.mobile);
+    await captureSurface(page, "order", "/m/qalqilya", VIEWPORTS.mobile);
   });
 
   test("order — cart open", async ({ page }) => {
-    await page.goto("/order", { waitUntil: "networkidle" });
-    await addItemToCart(page, "ميلك تي كلاسيك", []);
+    await page.goto("/m/qalqilya", { waitUntil: "networkidle" });
+    await page
+      .getByRole("button", { name: /ميلك تي كلاسيك/ })
+      .first()
+      .click();
+    await page.waitForTimeout(400);
+    await page
+      .getByRole("button", { name: /أضف إلى السلة/ })
+      .first()
+      .click();
+    await page.waitForTimeout(400);
     await page.getByRole("button", { name: /سلعة/ }).click();
     await page.waitForTimeout(300);
     await page.screenshot({
@@ -124,16 +133,28 @@ test.describe("Design review — baseline screenshots", () => {
   });
 
   test("order status", async ({ page }) => {
-    await page.goto("/order", { waitUntil: "networkidle" });
-    await addItemToCart(page, "ميلك تي كلاسيك", []);
+    await page.goto("/m/qalqilya", { waitUntil: "networkidle" });
+    await page
+      .getByRole("button", { name: /ميلك تي كلاسيك/ })
+      .first()
+      .click();
+    await page.waitForTimeout(400);
+    await page
+      .getByRole("button", { name: /أضف إلى السلة/ })
+      .first()
+      .click();
+    await page.waitForTimeout(400);
     await page.getByRole("button", { name: /سلعة/ }).click();
     await page.waitForTimeout(300);
-    await page.getByPlaceholder("الاسم (مطلوب)").fill("Test Customer");
-    await page.getByPlaceholder("رقم الجوال (اختياري)").fill("0566458003");
-    await page.getByRole("button", { name: "اطلب الآن" }).click();
-    await page.waitForURL(/\/order\/status\//, { timeout: 20000 });
+    await page
+      .getByRole("button", { name: /أكد الطلب/ })
+      .first()
+      .click();
+    await page.waitForURL(/\/m\/qalqilya\/status\//, { timeout: 20000 });
     await page.waitForTimeout(3000);
-    const orderId = page.url().split("/").pop();
+    // Strip the ?accessToken= query from the filename — the token is a per-order
+    // capability secret and must not be written into a tracked screenshot name.
+    const orderId = page.url().split("/").pop()?.split("?")[0] ?? "unknown";
     await page.screenshot({
       path: `docs/design-review/before/order-status-${orderId}-390x844.png`,
       fullPage: true,

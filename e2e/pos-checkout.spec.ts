@@ -133,7 +133,7 @@ test.describe("Phase 1 DoD — 20 sales", () => {
 
     for (let i = 0; i < 20; i++) {
       const v = VARIANTS[i % VARIANTS.length];
-      await page.getByRole("button", { name: v.category }).click();
+      await page.getByRole("button", { name: v.category, exact: true }).click();
       await page.waitForTimeout(200);
 
       await addItemToCart(page, v.product, v.modifiers);
