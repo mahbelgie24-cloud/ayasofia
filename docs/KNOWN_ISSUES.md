@@ -100,6 +100,21 @@ JS. It catches a runaway per-route import, but it is not a true First-Load-JS
 per-route budget. **"Good":** a trace/measurement of `/m` First Load JS at
 deploy time once Turbopack restores the metric.
 
+## H5 — esbuild dev-tooling advisory accepted (GHSA-67mh-4wv8-2f99)
+
+`npm audit` reports 4 moderate vulnerabilities via the **dev-only** esbuild
+chain pulled by `drizzle-kit` → `@esbuild-kit/esm-loader` →
+`@esbuild-kit/core-utils` → `esbuild@0.18.20` (GHSA-67mh-4wv8-2f99: a malicious
+website could read responses from a local dev server). The fix that `npm audit`
+suggests (`--force`) **downgrades drizzle-kit 0.31.10 → 0.18.1**, a breaking
+change, so it was **not** applied. `@esbuild-kit` is abandoned and pins
+`~0.18.20`, so an npm `overrides` bump to esbuild 0.25 does not resolve and was
+reverted. The vulnerable esbuild is only used by the drizzle-kit CLI at
+developer time (never in the shipped Next.js runtime). The **high-severity
+nanoid** advisory (GHSA-2v37-7h3g-55p8) was fixed by `npm audit fix` → nanoid
+3.3.18. **"Good":** a future drizzle-kit release that drops the
+`@esbuild-kit/esm-loader` loader (or upstream esbuild bump) clears all 4.
+
 ---
 
 More entries are appended as they are found (see the docs wisdom pass).
