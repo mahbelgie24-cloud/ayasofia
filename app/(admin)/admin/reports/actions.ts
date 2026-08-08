@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { orders, orderItems, products, recipes, ingredients, shifts, staff } from "@/db/schema";
 import { and, gte, lte, desc, inArray, ne, isNull, sql } from "drizzle-orm";
 import { toMinorUnits, toScaledInt, formatPrice, addMinor, multiplyMinor } from "@/lib/pricing";
+import { rowsToCsv } from "@/lib/security/csv-escape";
 
 export interface SalesSummary {
   totalRevenue: string;
@@ -325,5 +326,77 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     lowStockCount: lowStock?.count ?? 0,
     openShiftCount: openShifts?.count ?? 0,
     topSellers: topSellers.slice(0, 5),
+  };
+}
+
+/**
+ * One row per order, with the customer name + phone (PII) included so
+ * the owner can reconcile against the POS receipts. Every user-text
+ * column is escaped for CSV formula injection at the cell level
+ * (lib/security/csv-escape.ts); pure numeric columns are passed through
+ * unescaped so Excel sorts them as numbers.
+ *
+ * No temp file is created server-side. The caller (reports-shell) hands
+ * the string to a Blob + anchor.click() download, which the browser
+ * owns end-to-end. This sidesteps the "plaintext CSV lingering in
+ * getTemporaryDirectory()" concern: the only plaintext is the network
+ * response, the in-memory string, and the user's chosen download folder.
+ */
+export interface ExportSalesCsvResult {
+  csv: string;
+  filename: string;
+  rowCount: number;
+  dateRange: { startDate: string; endDate: string };
+}
+
+export async function exportSalesCsv(
+  startDate: string,
+  endDate: string,
+): Promise<ExportSalesCsvResult> {
+  await requireStaffSession("manager");
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  const rows = await db
+    .select({
+      orderNumber: orders.orderNumber,
+      createdAt: orders.createdAt,
+      channel: orders.channel,
+      source: orders.source,
+      paymentMethod: orders.paymentMethod,
+      total: orders.total,
+      status: orders.status,
+      customerName: orders.customerName,
+      customerPhone: orders.customerPhone,
+    })
+    .from(orders)
+    .where(and(gte(orders.createdAt, start), lte(orders.createdAt, end)))
+    .orderBy(desc(orders.createdAt))
+    .limit(10000); // cap to keep a single response under 1MB and prevent DoS
+
+  const csv = rowsToCsv(rows, [
+    { key: "orderNumber", header: "Order Number" },
+    { key: "createdAt", header: "Created At (UTC)" },
+    { key: "channel", header: "Channel" },
+    { key: "source", header: "Source" },
+    { key: "status", header: "Status" },
+    { key: "paymentMethod", header: "Payment Method" },
+    { key: "total", header: "Total (₪)", numeric: true },
+    { key: "customerName", header: "Customer Name" },
+    { key: "customerPhone", header: "Customer Phone" },
+  ]);
+
+  // ISO date-stamp the filename so the owner can keep multiple exports
+  // side-by-side. No PII in the filename.
+  const stamp = new Date().toISOString().slice(0, 10);
+  const filename = `ayasofia-sales-${startDate}_to_${endDate}-exported-${stamp}.csv`;
+
+  return {
+    csv,
+    filename,
+    rowCount: rows.length,
+    dateRange: { startDate, endDate },
   };
 }

@@ -10,12 +10,15 @@ import {
   ClipboardList,
   AlertTriangle,
   CheckCircle2,
+  Download,
+  Loader2,
 } from "lucide-react";
 import {
   getSalesSummary,
   getBestSellers,
   getProductMargins,
   getZReport,
+  exportSalesCsv,
   type SalesSummary,
   type BestSeller,
   type ProductMargin,
@@ -23,6 +26,7 @@ import {
 } from "./actions";
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { Card, CardBody } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import { Stat } from "@/components/ui/stat";
 import { Tabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -409,9 +413,11 @@ function ReportsContent({
 }
 
 export function ReportsShell() {
+  const toast = useToast();
   const [tab, setTab] = useState<"sales" | "bestsellers" | "margins" | "zreport">("sales");
   const [startDate, setStartDate] = useState(weekAgoStr());
   const [endDate, setEndDate] = useState(todayStr());
+  const [exporting, setExporting] = useState(false);
 
   const handleStartDate = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -431,12 +437,59 @@ export function ReportsShell() {
     }
   };
 
+  // CSV export is a Blob + anchor.click() download. No server-side temp
+  // file is created — the response body is the only plaintext copy,
+  // and the user's browser owns it after that. The cell-level escaping
+  // for formula injection is applied server-side in lib/security/csv-escape.ts.
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const result = await exportSalesCsv(startDate, endDate);
+      // BOM so Excel auto-detects UTF-8 (Arabic + Latin columns).
+      const blob = new Blob(["\uFEFF" + result.csv], {
+        type: "text/csv;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Revoke the object URL on the next tick so the download has time
+      // to start. Forgetting to revoke leaks the blob until the page
+      // unloads.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.warning(`تم تصدير ${result.rowCount} طلب`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "فشل التصدير");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="التقارير"
         title="أداء المحل"
         subtitle="مبيعات، هوامش، وتقرير Z لمتابعة الأداء واتخاذ القرار."
+        actions={
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting}
+            aria-label="تصدير المبيعات كملف CSV"
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {exporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            <span>{exporting ? "جاري التصدير…" : "تصدير CSV"}</span>
+          </button>
+        }
       />
 
       <Tabs
