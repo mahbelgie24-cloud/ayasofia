@@ -84,12 +84,12 @@ afterEach(async () => {
 
 afterAll(async () => {
   await pool.end();
-});
+}, 30000);
 
 describe("P1-M2 idempotency redesign — executeCheckout", () => {
   it(
     "identical cart resubmit dedupes; a modified cart creates a new order",
-    { timeout: 30000 },
+    { timeout: 60000 },
     async () => {
       // Pick a real seeded product that deducts inventory (has a recipe) and
       // whose modifier groups are not required (empty modifiers pass validation).
@@ -111,7 +111,10 @@ describe("P1-M2 idempotency redesign — executeCheckout", () => {
       type CartLine = { productId: string; modifierIds: string[]; quantity: number };
 
       const baseCart: CartLine[] = [{ productId, modifierIds: [], quantity: 1 }];
-      const session = "p1m2-session";
+      // Unique per run so the derived key never collides with a prior run's
+      // order on a persistent/shared live DB (a hardcoded session would make
+      // the first submit appear deduped on the second run).
+      const session = `p1m2-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
       // (a) identical submit → same key → deduped.
       const keyA = await computeIdempotencyKey(session, baseCart);

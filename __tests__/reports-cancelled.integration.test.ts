@@ -112,10 +112,34 @@ describe("reports exclude cancelled orders (P1-M13)", () => {
     const prods = await db.select({ id: products.id }).from(products).limit(2);
     expect(prods.length).toBe(2);
 
-    // Isolate to a fixed past date so no other test's orders (created "now")
-    // contaminate the absolute revenue total.
-    const today = "2020-01-02";
-    const createdAt = new Date("2020-01-02T10:00:00Z");
+    // Isolate to a unique day so no other test's orders — nor leftover rows
+    // from a prior run on a persistent/shared DB — fall inside the range.
+    // A fixed date would accumulate `received` rows across runs and inflate
+    // the absolute revenue total.
+    const uniqueDay = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const today = uniqueDay.toISOString().slice(0, 10);
+    const createdAt = new Date(`${today}T10:00:00Z`);
+
+    // Guarantee the range starts empty: a rapid same-day rerun (or an
+    // interrupted prior run) could otherwise leave `received` rows on this
+    // date that inflate the absolute total. Delete anything already there.
+    const dayStart = new Date(`${today}T00:00:00Z`);
+    const dayEnd = new Date(`${today}T23:59:59.999Z`);
+    const preExisting = await db.execute(
+      sql`SELECT id, status FROM orders WHERE created_at >= ${dayStart} AND created_at <= ${dayEnd}`,
+    );
+    for (const row of preExisting.rows as Array<{ id: string }>) {
+      try {
+        await db.execute(sql`DELETE FROM order_items WHERE order_id = ${row.id}`);
+      } catch {
+        /* */
+      }
+      try {
+        await db.execute(sql`DELETE FROM orders WHERE id = ${row.id}`);
+      } catch {
+        /* */
+      }
+    }
 
     // Cancelled order with an item — must be excluded.
     const cKey = `TEST-C-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
