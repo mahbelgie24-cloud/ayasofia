@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Wifi, Shield } from "lucide-react";
 import { authorizeGuest } from "@/app/wifi/actions";
 import { PearlsField } from "@/components/digital-menu/pearls-field";
 import { PearlsLoader } from "@/components/digital-menu/pearls-loader";
+import { Card } from "@/components/ui/card";
+import { IconBadge } from "@/components/ui/icon-badge";
 
 /**
  * Branded wifi splash (WF-01). ONE-TAP "اتصال بالإنترنت" — zero-field guest
@@ -68,48 +70,54 @@ export function WifiSplash({
 
   return (
     <div
-      className="bg-brand-red-bg flex min-h-dvh flex-col items-center justify-center px-6 text-center"
+      className="bg-brand-red-bg relative flex min-h-dvh flex-col items-center justify-center px-6 py-10"
       dir="rtl"
       lang="ar"
     >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="bg-brand-red/[0.06] absolute start-1/2 -top-24 size-[32rem] -translate-x-1/2 rounded-full blur-3xl" />
+      </div>
+
       <div className="relative w-full max-w-sm">
         <PearlsField className="opacity-50" />
 
-        <div className="relative rounded-[1.5rem] bg-white p-8 shadow-lg">
-          <div className="bg-brand-red relative mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full">
-            <PearlsField />
-            <Image
-              src="/icons/logo-mono.svg"
-              alt="شعار أياسوفيا"
-              width={44}
-              height={44}
-              className="relative z-10 h-11 w-11 invert"
-            />
+        <Card variant="pop" className="relative p-7 sm:p-8">
+          <div className="mb-5 flex justify-center">
+            <IconBadge icon={<Wifi />} variant="brand" size="xl" aria-label="Wi-Fi" />
           </div>
 
-          <h1 className="font-heading text-brand-ink text-2xl font-bold">{title}</h1>
-          <p className="text-text-secondary mt-2 text-sm leading-relaxed">{subtitle}</p>
+          <h1 className="heading-1 text-brand-ink text-center">{title}</h1>
+          <p className="body text-text-secondary mt-2 text-center leading-relaxed">{subtitle}</p>
 
           <button
             onClick={connect}
             disabled={busy}
-            className="bg-brand-red hover:bg-brand-red-dark ease-spring mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 text-base font-bold text-white transition-colors disabled:opacity-60"
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 text-base font-bold text-white shadow-md transition-all disabled:opacity-60"
           >
             {busy ? (
-              <PearlsLoader label="جاري تأمين الاتصال…" className="!flex-row gap-3" />
+              <PearlsLoader
+                label="جاري تأمين الاتصال…"
+                className="!flex-row gap-3 text-white [&_span]:bg-white"
+              />
             ) : (
-              "اتصال بالإنترنت"
+              <>
+                <Wifi className="size-5" />
+                <span>اتصال بالإنترنت</span>
+              </>
             )}
           </button>
 
           {error && (
-            <p role="alert" className="text-status-error mt-3 text-sm">
+            <p role="alert" className="text-status-error mt-3 text-center text-sm">
               {error}
             </p>
           )}
 
-          <p className="text-text-secondary mt-6 text-xs leading-relaxed">{privacyLine}</p>
-        </div>
+          <div className="border-border-subtle mt-6 flex items-start gap-2 border-t pt-4">
+            <Shield className="text-text-secondary/70 mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <p className="caption text-text-secondary leading-relaxed">{privacyLine}</p>
+          </div>
+        </Card>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { LogOut, ClipboardList, X, Plus, Minus, ArrowRight, Car, ShoppingCart } from "lucide-react";
 import type { POSCategory } from "@/lib/db/queries";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
@@ -11,6 +13,12 @@ import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { endStaffSession } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/ui/logo";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Tabs } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 
 interface POSShellProps {
   menu: POSCategory[];
@@ -125,199 +133,203 @@ export function POSShell({ menu }: POSShellProps) {
   };
 
   const selectedCat = menu.find((c) => c.id === selectedCatId) ?? menu[0];
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
-    <div className="bg-brand-cream flex h-screen flex-col" dir="rtl" lang="ar">
-      {/* Shift control bar */}
-      <div className="border-border-subtle flex shrink-0 items-center justify-between border-b bg-white px-3 py-1.5">
-        <span className="text-text-secondary text-xs font-medium">POS</span>
-        <button
-          onClick={() => {
-            setShiftResult(null);
-            setClosingCash("");
-            setShiftModal(true);
-          }}
-          className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 ease-spring rounded-full border px-3 py-1 text-xs font-medium transition-colors"
-        >
-          إنهاء الوردية
-        </button>
-      </div>
-
-      {/* Category tabs */}
-      <div className="border-border-subtle flex shrink-0 gap-1 overflow-x-auto border-b bg-white px-3 py-2">
-        {menu.map((cat) => (
+    <div className="bg-brand-cream flex h-dvh flex-col" dir="rtl" lang="ar">
+      {/* ── Top bar ── */}
+      <header className="border-border-subtle flex shrink-0 items-center justify-between gap-3 border-b bg-white px-4 py-2.5 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <Logo size="sm" surface="tile" />
+          <div className="hidden sm:block">
+            <p className="heading-3 text-brand-ink text-sm leading-tight">Ayasofia POS</p>
+            <p className="caption text-text-secondary">حلويات آيا صوفيا</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
           <button
-            key={cat.id}
-            onClick={() => setSelectedCatId(cat.id)}
-            className={`ease-spring shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-              cat.id === selectedCatId
-                ? "bg-brand-red text-white"
-                : "bg-muted text-brand-ink hover:bg-muted/80"
-            }`}
+            onClick={() => router.push("/drive-thru")}
+            className="border-border-subtle text-text-secondary hover:border-brand-red hover:text-brand-red flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+            title="Drive-Thru"
           >
-            {cat.nameAr}
+            <Car className="size-3.5" />
+            <span className="hidden sm:inline">Drive-Thru</span>
           </button>
-        ))}
+          <button
+            onClick={() => {
+              setShiftResult(null);
+              setClosingCash("");
+              setShiftModal(true);
+            }}
+            className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+          >
+            <ClipboardList className="size-3.5" />
+            <span>إنهاء الوردية</span>
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="border-border-subtle text-text-secondary hover:border-status-error hover:text-status-error flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+            title="تسجيل الخروج"
+          >
+            <LogOut className="size-3.5" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Category tabs ── */}
+      <div className="border-border-subtle bg-card flex shrink-0 border-b px-3 py-2">
+        <div className="overflow-x-auto">
+          <Tabs
+            value={selectedCatId}
+            onValueChange={setSelectedCatId}
+            size="sm"
+            items={menu.map((cat) => ({ value: cat.id, label: cat.nameAr }))}
+            aria-label="فئات المنتجات"
+          />
+        </div>
       </div>
 
-      {/* Product grid */}
+      {/* ── Product grid ── */}
       <div className="flex-1 overflow-y-auto p-3">
         {!selectedCat || selectedCat.products.length === 0 ? (
-          <p className="text-text-secondary p-8 text-center">لا توجد منتجات</p>
+          <EmptyState title="لا توجد منتجات" description="اختر فئة أخرى أو تواصل مع المدير." />
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {selectedCat.products.map((product) => (
-              <button
+              <ProductCard
                 key={product.id}
+                product={product}
                 onClick={() => openModifiers(product)}
-                disabled={!product.isAvailable}
-                className={`border-border-subtle ease-spring flex flex-col items-center rounded-2xl border bg-white p-3 text-center transition-shadow hover:shadow-md disabled:opacity-40 ${
-                  product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
-                }`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
-                  alt={product.nameAr}
-                  className="mb-2 h-16 w-16 object-contain"
-                />
-                <span className="font-heading text-brand-ink text-sm font-semibold">
-                  {product.nameAr}
-                </span>
-                <span className="text-brand-red mt-1 text-sm font-medium">
-                  {formatPrice(toMinorUnits(product.basePrice))} ₪
-                </span>
-                {product.modifierGroups.length > 0 && (
-                  <span className="text-text-secondary mt-1 text-xs">تخصيص</span>
-                )}
-              </button>
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* Cart bar */}
-      <div className="border-border-subtle shrink-0 border-t bg-white px-4 py-3">
+      {/* ── Cart bar ── */}
+      <div className="border-border-subtle shrink-0 border-t bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(43,29,29,0.04)]">
         <button
-          onClick={() => setCartOpen(!cartOpen)}
-          className="bg-brand-red hover:bg-brand-red/90 ease-spring flex w-full items-center justify-between rounded-full px-5 py-3 text-white transition-colors"
+          onClick={() => setCartOpen(true)}
+          className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-between gap-3 rounded-full px-5 py-3 text-white shadow-md transition-all"
         >
-          <span className="font-heading text-lg font-bold">
-            {cart.length > 0 ? `${cart.length} سلعة — ${formatPrice(cartTotal)} ₪` : "السلة فارغة"}
+          <span className="flex items-center gap-2.5">
+            <ShoppingCart className="size-5" />
+            <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/20 px-2 text-sm font-bold tabular-nums">
+              {cartCount}
+            </span>
+            <span className="body-sm text-white/85">سلعة</span>
           </span>
-          <svg
-            className={`ease-spring size-5 transition-transform ${cartOpen ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
+          <span className="heading-3 text-white">{`${formatPrice(cartTotal)} ₪`}</span>
+          <span className="body-sm flex items-center gap-1 font-semibold text-white/95">
+            <span>السلة</span>
+            <ArrowRight className="size-4 rtl:rotate-180" />
+          </span>
         </button>
       </div>
 
-      {/* Cart panel */}
-      {cartOpen && (
-        <div className="border-border-subtle shrink-0 border-t bg-white">
-          <div className="max-h-64 overflow-y-auto p-3">
-            {cart.length === 0 ? (
-              <p className="text-text-secondary py-6 text-center">لم تتم إضافة أي سلع بعد</p>
-            ) : (
-              <ul className="space-y-2">
-                {cart.map((item, idx) => (
-                  <li
-                    key={idx}
-                    className="border-border-subtle flex items-start justify-between rounded-xl border p-2"
+      {/* ── Cart panel ── */}
+      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+        <SheetTitle>سلة الطلب</SheetTitle>
+        <p className="body-sm text-text-secondary -mt-3 mb-4">
+          {cart.length === 0
+            ? "أضف منتجات من القائمة لبدء الطلب"
+            : `${cartCount} سلعة • ${cart.length} نوع`}
+        </p>
+        <div className="max-h-72 space-y-2 overflow-y-auto pe-1">
+          {cart.length === 0 ? (
+            <EmptyState title="السلة فارغة" />
+          ) : (
+            cart.map((item, idx) => (
+              <Card key={idx} variant="flat" className="p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="heading-3 text-brand-ink text-sm">{item.productNameAr}</p>
+                    {item.selectedModifiers.length > 0 && (
+                      <p className="text-text-secondary mt-1 text-xs">
+                        {item.selectedModifiers.map((m) => m.nameAr).join("، ")}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-brand-red numeric shrink-0 text-sm font-bold">
+                    {formatPrice(item.lineTotal)} ₪
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    onClick={() => updateQuantity(idx, -1)}
+                    aria-label="تقليل"
+                    className="bg-muted hover:bg-muted/80 flex size-10 items-center justify-center rounded-full text-sm font-bold transition-colors"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-brand-ink text-sm font-semibold">{item.productNameAr}</p>
-                      {item.selectedModifiers.length > 0 && (
-                        <p className="text-text-secondary mt-0.5 text-xs">
-                          {item.selectedModifiers.map((m) => m.nameAr).join("، ")}
-                        </p>
-                      )}
-                      <div className="mt-1 flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(idx, -1)}
-                          className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold"
-                        >
-                          −
-                        </button>
-                        <span className="text-sm">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(idx, 1)}
-                          className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => removeItem(idx)}
-                        className="text-text-secondary hover:text-status-error flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
-                        aria-label="حذف"
-                      >
-                        ✕
-                      </button>
-                      <span className="text-brand-red text-sm font-bold">
-                        {formatPrice(item.lineTotal)} ₪
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          {cart.length > 0 && (
-            <div className="border-border-subtle border-t p-3">
-              <p className="text-brand-ink mb-2 text-sm font-medium">طريقة الدفع</p>
-              <div className="mb-3 flex gap-2">
-                <button
-                  onClick={() => setPaymentMethod("cash")}
-                  className={`ease-spring flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-                    paymentMethod === "cash"
-                      ? "bg-brand-red text-white"
-                      : "bg-muted text-brand-ink hover:bg-muted/80"
-                  }`}
-                >
-                  نقدي
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("card")}
-                  className={`ease-spring flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-                    paymentMethod === "card"
-                      ? "bg-brand-red text-white"
-                      : "bg-muted text-brand-ink hover:bg-muted/80"
-                  }`}
-                >
-                  بطاقة
-                </button>
-              </div>
-              <div className="mb-3">
-                <input
+                    <Minus className="size-4" />
+                  </button>
+                  <span
+                    aria-live="polite"
+                    className="numeric w-6 text-center text-sm font-semibold"
+                  >
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => updateQuantity(idx, 1)}
+                    aria-label="زيادة"
+                    className="bg-muted hover:bg-muted/80 flex size-10 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => removeItem(idx)}
+                    aria-label="حذف"
+                    className="text-text-secondary hover:bg-status-error/10 hover:text-status-error ms-auto flex size-10 items-center justify-center rounded-full transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {cart.length > 0 && (
+          <>
+            <div className="mt-5 space-y-4">
+              <FormField label="طريقة الدفع">
+                <Tabs
+                  value={paymentMethod}
+                  onValueChange={(v) => setPaymentMethod(v as "cash" | "card")}
+                  size="sm"
+                  items={[
+                    { value: "cash", label: "نقدي" },
+                    { value: "card", label: "بطاقة" },
+                  ]}
+                />
+              </FormField>
+
+              <FormField label="رقم الزبون" hint="اختياري — لإرسال الفاتورة عبر واتساب">
+                <Input
                   type="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="رقم الزبون (اختياري — لإرسال الفاتورة عبر واتساب)"
-                  className="border-border-subtle bg-muted text-brand-ink placeholder:text-text-secondary focus:border-brand-red/50 ease-spring w-full rounded-full border px-4 py-2 text-sm text-xs transition-colors outline-none placeholder:text-xs"
+                  placeholder="05XXXXXXXX"
                   dir="ltr"
                 />
-              </div>
+              </FormField>
+
               <button
                 onClick={handleCheckout}
                 disabled={checkingOut}
-                className="bg-brand-red hover:bg-brand-red/90 ease-spring w-full rounded-full px-5 py-3 text-sm font-bold text-white transition-colors disabled:opacity-50"
+                className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-base font-bold text-white shadow-md transition-all disabled:opacity-50"
               >
                 {checkingOut ? "جاري الدفع..." : `دفع ${formatPrice(cartTotal)} ₪`}
               </button>
             </div>
-          )}
-        </div>
-      )}
+          </>
+        )}
 
-      {/* Modifier sheet — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+        <div className="mt-3 flex justify-end">
+          <SheetClose onClick={() => setCartOpen(false)}>متابعة الإضافة</SheetClose>
+        </div>
+      </Sheet>
+
+      {/* ── Modifier sheet ── */}
       <Sheet
         open={!!modifierTarget}
         onOpenChange={(open) => {
@@ -325,17 +337,22 @@ export function POSShell({ menu }: POSShellProps) {
         }}
       >
         <SheetTitle>{modifierTarget?.productNameAr ?? ""}</SheetTitle>
-        <p className="text-text-secondary mb-4 text-sm">
+        <p className="text-text-secondary -mt-3 mb-1 text-sm">السعر الأساسي</p>
+        <p className="heading-2 text-brand-ink numeric text-lg">
           {formatPrice(toMinorUnits(modifierTarget?.basePrice ?? "0"))} ₪
         </p>
 
-        <div className="mb-4 max-h-96 space-y-4 overflow-y-auto">
+        <div className="mt-4 mb-4 max-h-96 space-y-5 overflow-y-auto pe-1">
           {modifierTarget?.groups.map((group) => (
             <div key={group.id}>
-              <p className="text-brand-ink mb-1.5 text-sm font-medium">
-                {group.name}
-                {group.isRequired && <span className="text-status-error ms-1 text-xs">*</span>}
-              </p>
+              <div className="mb-2 flex items-center gap-2">
+                <p className="heading-3 text-brand-ink text-sm">{group.name}</p>
+                {group.isRequired && (
+                  <span className="text-status-error text-[10px] font-semibold tracking-wider uppercase">
+                    مطلوب
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {group.modifiers.map((mod) => {
                   const isSelected = (modifierSelections[group.id] ?? []).includes(mod.id);
@@ -348,14 +365,20 @@ export function POSShell({ menu }: POSShellProps) {
                           : toggleMulti(group.id, mod.id)
                       }
                       aria-pressed={isSelected}
-                      className={`ease-spring rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`ease-spring rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
                         isSelected
-                          ? "border-brand-red bg-brand-red text-white"
-                          : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/50"
+                          ? "border-brand-red bg-brand-red shadow-brand-red/20 text-white shadow-sm"
+                          : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/40"
                       }`}
                     >
                       {mod.nameAr}
-                      {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta} ₪)`}
+                      {toMinorUnits(mod.priceDelta) > 0 && (
+                        <span
+                          className={isSelected ? "ms-1 text-white/85" : "text-text-secondary ms-1"}
+                        >
+                          +{mod.priceDelta} ₪
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -364,39 +387,42 @@ export function POSShell({ menu }: POSShellProps) {
           ))}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-2">
           <SheetClose onClick={() => setModifierTarget(null)}>إلغاء</SheetClose>
           <button
             onClick={confirmModifiers}
-            className="bg-brand-red hover:bg-brand-red/90 ease-spring flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex-1 rounded-full px-4 py-3 text-sm font-bold text-white shadow-md transition-all"
           >
             إضافة إلى السلة
           </button>
         </div>
       </Sheet>
 
-      {/* Shift close modal — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+      {/* ── Shift close modal ── */}
       <Sheet open={shiftModal} onOpenChange={setShiftModal}>
         <SheetTitle>إنهاء الوردية</SheetTitle>
 
         {!shiftResult ? (
-          <div className="my-4 space-y-3">
-            <p className="text-text-secondary text-sm">أدخل المبلغ النقدي الفعلي في الدرج الآن</p>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={closingCash}
-              onChange={(e) => setClosingCash(e.target.value)}
-              placeholder="0.00"
-              className="border-border-subtle focus:border-brand-red/50 text-brand-ink ease-spring w-full rounded-full border bg-white px-4 py-3 text-center text-lg font-medium transition-colors outline-none"
-              dir="ltr"
-            />
+          <div className="my-4 space-y-4">
+            <p className="text-text-secondary body-sm">
+              أدخل المبلغ النقدي الفعلي في الدرج الآن لإقفال الوردية ومطابقة المبيعات.
+            </p>
+            <FormField label="النقد في الدرج">
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={closingCash}
+                onChange={(e) => setClosingCash(e.target.value)}
+                placeholder="0.00"
+                dir="ltr"
+              />
+            </FormField>
             <div className="flex gap-2">
               <SheetClose>إلغاء</SheetClose>
               <button
                 onClick={handleCloseShift}
                 disabled={closingShift}
-                className="bg-status-warning hover:bg-status-warning/90 ease-spring flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50"
+                className="bg-status-warning hover:bg-status-warning/90 ease-spring flex-1 rounded-full px-4 py-3 text-sm font-bold text-white transition-colors disabled:opacity-50"
               >
                 {closingShift ? "جاري..." : "تأكيد إنهاء الوردية"}
               </button>
@@ -404,22 +430,21 @@ export function POSShell({ menu }: POSShellProps) {
           </div>
         ) : (
           <div className="my-4 space-y-3">
-            <div className="bg-brand-cream rounded-xl p-4 text-center">
-              <p className="text-text-secondary text-sm">إجمالي المبيعات</p>
-              <p className="font-heading text-brand-ink mt-1 text-2xl font-bold">
-                {shiftResult.totalSales} ₪
-              </p>
-            </div>
-            <div
-              className={`rounded-xl p-4 text-center ${
+            <Card variant="muted" className="p-4 text-center">
+              <p className="text-text-secondary caption">إجمالي المبيعات</p>
+              <p className="numeric heading-1 text-brand-ink mt-1">{shiftResult.totalSales} ₪</p>
+            </Card>
+            <Card
+              variant="flat"
+              className={`p-4 text-center ${
                 Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
-                  ? "bg-status-warning/10"
-                  : "bg-status-success/10"
+                  ? "bg-status-warning/[0.08] border-status-warning/30"
+                  : "bg-status-success/[0.08] border-status-success/30"
               }`}
             >
-              <p className="text-text-secondary text-sm">الفرق</p>
+              <p className="text-text-secondary caption">الفرق</p>
               <p
-                className={`font-heading mt-1 text-xl font-bold ${
+                className={`numeric heading-1 mt-1 ${
                   Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
                     ? "text-status-warning"
                     : "text-status-success"
@@ -427,16 +452,55 @@ export function POSShell({ menu }: POSShellProps) {
               >
                 {shiftResult.discrepancy} ₪
               </p>
-            </div>
+            </Card>
             <button
               onClick={handleSignOut}
-              className="bg-brand-red hover:bg-brand-red/90 ease-spring w-full rounded-full px-4 py-2.5 text-sm font-bold text-white transition-colors"
+              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-md transition-all"
             >
-              تسجيل الخروج
+              <LogOut className="size-4" />
+              <span>تسجيل الخروج</span>
             </button>
           </div>
         )}
       </Sheet>
     </div>
+  );
+}
+
+function ProductCard({
+  product,
+  onClick,
+}: {
+  product: POSCategory["products"][number];
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!product.isAvailable}
+      className={`ease-spring shadow-card hover:shadow-pop flex flex-col items-center rounded-2xl bg-white p-3 text-center transition-all hover:-translate-y-0.5 disabled:opacity-40 ${
+        product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
+      }`}
+    >
+      <div className="bg-brand-red-bg mb-2.5 flex h-16 w-16 items-center justify-center rounded-2xl">
+        <Image
+          src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
+          alt={product.nameAr}
+          width={56}
+          height={56}
+          loading="lazy"
+          className="h-12 w-12 object-contain"
+        />
+      </div>
+      <span className="heading-3 text-brand-ink w-full text-sm leading-tight">
+        {product.nameAr}
+      </span>
+      <span className="text-brand-red numeric mt-1 text-sm font-bold">
+        {formatPrice(toMinorUnits(product.basePrice))} ₪
+      </span>
+      {product.modifierGroups.length > 0 && (
+        <span className="text-text-secondary mt-0.5 text-[11px]">قابل للتخصيص</span>
+      )}
+    </button>
   );
 }

@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
+import { Check, AtSign, ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { endWifiSession } from "@/app/wifi/actions";
 import { PearlsField } from "@/components/digital-menu/pearls-field";
+import { Card } from "@/components/ui/card";
+import { Logo } from "@/components/ui/logo";
+import { formatPrice, toMinorUnits } from "@/lib/pricing";
 
 interface Suggestion {
   success: boolean;
@@ -48,44 +51,47 @@ export function WifiConnect({ suggestion }: { suggestion: Suggestion }) {
   }, [startedAt]);
 
   const handleMenu = useCallback(() => {
-    // Log and navigate to the menu.
     const durationSec = Math.round((Date.now() - startedAt) / 1000);
     void endWifiSession({ deviceId: deviceId(), durationSec });
   }, [startedAt]);
 
   return (
     <div
-      className="bg-brand-red-bg flex min-h-dvh flex-col items-center justify-center px-6 py-10 text-center"
+      className="bg-brand-red-bg relative flex min-h-dvh flex-col items-center justify-center px-6 py-10"
       dir="rtl"
       lang="ar"
     >
-      <div className="relative w-full max-w-sm">
-        <PearlsField className="opacity-50" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="bg-status-success/[0.08] absolute start-1/2 -top-24 size-[32rem] -translate-x-1/2 rounded-full blur-3xl" />
+      </div>
 
-        <div className="relative rounded-[1.5rem] bg-white p-8 shadow-lg">
-          <div className="bg-status-success/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full text-2xl">
-            ✓
+      <div className="relative w-full max-w-sm">
+        <PearlsField className="opacity-30" />
+
+        <Card variant="pop" className="relative p-7 text-center sm:p-8">
+          <div className="mb-5 flex justify-center">
+            <div className="bg-status-success/15 text-status-success flex size-14 items-center justify-center rounded-2xl">
+              <Check className="size-7" />
+            </div>
           </div>
-          <h1 className="font-heading text-brand-ink text-xl font-bold">أصبحت متصلًا!</h1>
-          <p className="text-text-secondary mt-1 text-sm">استمتع بالإنترنت مع أياسوفيا</p>
+
+          <h1 className="heading-1 text-brand-ink">أصبحت متصلًا!</h1>
+          <p className="body text-text-secondary mt-1.5">استمتع بالإنترنت مع أياسوفيا</p>
 
           {suggestion.product && (
-            <div className="bg-brand-red-soft mt-5 rounded-2xl p-4">
-              <p className="text-brand-red-dark text-xs font-bold">اقتراح اليوم</p>
-              <div className="mt-2 flex items-center justify-center gap-3">
-                <Image
-                  src={suggestion.product.imageUrl ?? "/icons/icon-bubbletea.svg"}
-                  alt=""
-                  width={44}
-                  height={44}
-                  className="h-11 w-11 object-contain"
-                />
-                <div className="text-start">
-                  <p className="font-heading text-brand-ink text-sm font-semibold">
+            <div className="bg-brand-red-soft mt-5 rounded-2xl p-4 text-start">
+              <p className="text-brand-red-dark flex items-center gap-1.5 text-xs font-bold">
+                <Sparkles className="size-3.5" />
+                اقتراح اليوم
+              </p>
+              <div className="mt-2.5 flex items-center gap-3">
+                <Logo size="sm" surface="soft" />
+                <div className="min-w-0 flex-1">
+                  <p className="heading-3 text-brand-ink truncate text-sm">
                     {suggestion.product.titleAr ?? suggestion.product.nameAr}
                   </p>
-                  <p className="text-brand-red-dark text-sm font-bold">
-                    {suggestion.product.basePrice} ₪
+                  <p className="text-brand-red-dark numeric text-sm font-bold">
+                    {formatPrice(toMinorUnits(suggestion.product.basePrice))} ₪
                   </p>
                 </div>
               </div>
@@ -95,20 +101,22 @@ export function WifiConnect({ suggestion }: { suggestion: Suggestion }) {
           <Link
             href={menuHref}
             onClick={handleMenu}
-            className="bg-brand-red hover:bg-brand-red-dark ease-spring mt-5 flex min-h-14 w-full items-center justify-center rounded-full px-6 text-base font-bold text-white transition-colors"
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 text-base font-bold text-white shadow-md transition-all"
           >
-            تصفّح القائمة
+            <span>تصفّح القائمة</span>
+            <ArrowLeft className="size-5 rtl:rotate-180" />
           </Link>
 
           <a
             href="https://instagram.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-text-secondary hover:text-brand-red mt-4 inline-flex items-center gap-2 text-sm"
+            className="text-text-secondary hover:text-brand-red mt-4 inline-flex items-center gap-2 text-sm transition-colors"
           >
-            <span aria-hidden="true">📸</span> تابعنا على إنستغرام
+            <AtSign className="size-4" />
+            <span>تابعنا على إنستغرام</span>
           </a>
-        </div>
+        </Card>
       </div>
     </div>
   );

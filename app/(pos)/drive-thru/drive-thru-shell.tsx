@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { LogOut, Plus, Minus, X, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { POSCategory } from "@/lib/db/queries";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
@@ -10,6 +11,11 @@ import { checkout } from "../pos/actions";
 import { enqueueOrder } from "@/lib/offline/queue";
 import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
+import { endStaffSession } from "@/lib/auth/session";
+import { Logo } from "@/components/ui/logo";
+import { Card } from "@/components/ui/card";
+import { Tabs } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 
 export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
   const router = useRouter();
@@ -47,7 +53,6 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
       modifierIds: item.selectedModifiers.map((m) => m.id),
       quantity: item.quantity,
     }));
-    // P1-M2: deterministic key for THIS cart snapshot (session + fingerprint).
     const idempotencyKey = await deriveIdempotencyKey(cartItems);
     try {
       const result = await checkout({
@@ -69,9 +74,6 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
         toast.error(result.error);
       }
     } catch {
-      // Never lose a sale to a dead Wi-Fi (spec §8, §12) — queue it
-      // for the offline sync engine with the same idempotency key so it
-      // replays exactly once on reconnect (review finding C1).
       try {
         await enqueueOrder(
           JSON.stringify(cartItems),
@@ -91,197 +93,253 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
     }
   };
 
+  const handleSignOut = async () => {
+    await endStaffSession();
+    router.push("/login");
+  };
+
   const selectedCat = driveThruMenu.find((c) => c.id === selectedCatId) ?? driveThruMenu[0];
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
   return (
-    <div className="bg-brand-cream flex h-screen flex-col" dir="rtl" lang="ar">
-      <div className="border-border-subtle bg-brand-red flex shrink-0 items-center gap-2 border-b px-3 py-2 text-white">
-        <span className="font-heading text-lg font-bold">🚘 Drive-Thru</span>
-        <div className="flex-1" />
-        <span className="text-sm">
-          {cart.length > 0 ? `${cart.length} سلعة — ${formatPrice(cartTotal)} ₪` : ""}
-        </span>
-      </div>
+    <div className="bg-brand-cream flex h-dvh flex-col" dir="rtl" lang="ar">
+      {/* ── Top bar ── */}
+      <header className="bg-brand-red border-brand-red-dark shadow-brand-red/15 flex shrink-0 items-center gap-2.5 border-b px-3 py-2.5 text-white shadow-md">
+        <Logo size="sm" invert />
+        <div className="flex-1">
+          <h1 className="heading-3 text-sm font-bold text-white">Drive-Thru</h1>
+          <p className="caption text-white/80">طلب سريع من نافذة السيارة</p>
+        </div>
+        <button
+          onClick={() => router.push("/pos")}
+          className="flex items-center gap-1.5 rounded-full border border-white/30 px-2.5 py-1.5 text-xs font-medium text-white/90 transition-colors hover:bg-white/10"
+        >
+          <span>POS</span>
+        </button>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 rounded-full border border-white/30 px-2.5 py-1.5 text-xs font-medium text-white/90 transition-colors hover:bg-white/10"
+        >
+          <LogOut className="size-3.5" />
+        </button>
+      </header>
 
-      <div className="border-border-subtle flex shrink-0 gap-1 overflow-x-auto border-b bg-white px-2 py-1.5">
-        {driveThruMenu.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCatId(cat.id)}
-            className={`ease-spring shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              cat.id === selectedCatId
-                ? "bg-brand-red text-white"
-                : "bg-muted text-brand-ink hover:bg-muted/80"
-            }`}
-          >
-            {cat.nameAr}
-          </button>
-        ))}
+      {/* ── Category tabs ── */}
+      <div className="border-border-subtle bg-card flex shrink-0 border-b px-2 py-1.5">
+        <div className="overflow-x-auto">
+          <Tabs
+            value={selectedCatId}
+            onValueChange={setSelectedCatId}
+            size="sm"
+            items={driveThruMenu.map((cat) => ({ value: cat.id, label: cat.nameAr }))}
+            aria-label="فئات Drive-Thru"
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
           {selectedCat?.products.map((product) => (
-            <button
+            <ProductCard
               key={product.id}
+              product={product}
               onClick={() => openModifiers(product)}
-              disabled={!product.isAvailable}
-              className={`border-border-subtle ease-spring flex flex-col items-center rounded-xl border bg-white p-2 text-center transition-shadow hover:shadow-sm disabled:opacity-40 ${
-                product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
-              }`}
-            >
-              <Image
-                src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
-                alt={product.nameAr}
-                width={48}
-                height={48}
-                className="mb-1 object-contain"
-              />
-              <span className="font-heading text-brand-ink text-xs leading-tight font-semibold">
-                {product.nameAr}
-              </span>
-              <span className="text-brand-red mt-0.5 text-xs font-medium">
-                {formatPrice(toMinorUnits(product.basePrice))} ₪
-              </span>
-              {product.modifierGroups.length > 0 && (
-                <span className="text-text-secondary mt-0.5 text-xs">تخصيص</span>
-              )}
-            </button>
+            />
           ))}
         </div>
       </div>
 
       {cart.length > 0 && (
-        <div className="border-border-subtle shrink-0 border-t bg-white px-3 py-2">
+        <div className="border-border-subtle shrink-0 border-t bg-white px-3 py-3 shadow-[0_-4px_12px_rgba(43,29,29,0.04)]">
           <button
-            onClick={() => setCartOpen(!cartOpen)}
-            className="bg-brand-red w-full rounded-full px-4 py-2 text-sm font-bold text-white"
+            onClick={() => setCartOpen(true)}
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-between gap-3 rounded-full px-4 py-3 text-sm font-bold text-white shadow-md transition-all"
           >
-            {`السلة: ${cart.length} — ${formatPrice(cartTotal)} ₪`}
+            <span className="flex items-center gap-2">
+              <ShoppingCart className="size-4" />
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs font-bold tabular-nums">
+                {cartCount}
+              </span>
+            </span>
+            <span className="heading-3 text-white">{`${formatPrice(cartTotal)} ₪`}</span>
+            <span className="body-sm font-semibold text-white/90">السلة</span>
           </button>
-
-          {cartOpen && (
-            <div className="mt-2 max-h-48 overflow-y-auto">
-              {cart.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border-border-subtle flex items-center justify-between border-b py-1 text-xs"
-                >
-                  <div>
-                    <span className="font-semibold">{item.productNameAr}</span>
-                    {item.selectedModifiers.length > 0 && (
-                      <span className="text-text-secondary mr-1">
-                        ({item.selectedModifiers.map((m) => m.nameAr).join("، ")})
-                      </span>
-                    )}
-                    <div className="mt-0.5 flex items-center gap-1">
-                      <button
-                        onClick={() => updateQuantity(idx, -1)}
-                        className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
-                      >
-                        −
-                      </button>
-                      <span>{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(idx, 1)}
-                        className="bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => removeItem(idx)}
-                        className="text-text-secondary hover:text-status-error flex min-h-11 min-w-11 items-center justify-center rounded-full text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  <span className="text-brand-red font-bold">{formatPrice(item.lineTotal)} ₪</span>
-                </div>
-              ))}
-
-              <div className="mt-2 space-y-2">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPaymentMethod("cash")}
-                    className={`flex-1 rounded-full py-1 text-xs font-medium ${paymentMethod === "cash" ? "bg-brand-red text-white" : "bg-muted"}`}
-                  >
-                    نقدي
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod("card")}
-                    className={`flex-1 rounded-full py-1 text-xs font-medium ${paymentMethod === "card" ? "bg-brand-red text-white" : "bg-muted"}`}
-                  >
-                    بطاقة
-                  </button>
-                </div>
-                <input
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="رقم الزبون (اختياري)"
-                  className="border-border-subtle bg-muted w-full rounded-full border px-3 py-1.5 text-xs"
-                  dir="ltr"
-                />
-                <button
-                  onClick={handleCheckout}
-                  disabled={checkingOut}
-                  className="bg-brand-red w-full rounded-full py-2 text-sm font-bold text-white disabled:opacity-50"
-                >
-                  {checkingOut ? "جاري الدفع..." : `دفع ${formatPrice(cartTotal)} ₪`}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Modifier sheet — accessible Dialog (WCAG 2.2 AA, WEB-A11Y-001) */}
+      {cartOpen && (
+        <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+          <SheetTitle>سلة Drive-Thru</SheetTitle>
+          <p className="body-sm text-text-secondary -mt-3 mb-3">{cartCount} سلعة في السلة</p>
+          <div className="max-h-48 space-y-2 overflow-y-auto pe-1">
+            {cart.map((item, idx) => (
+              <Card key={idx} variant="flat" className="p-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="heading-3 text-brand-ink text-sm">{item.productNameAr}</p>
+                    {item.selectedModifiers.length > 0 && (
+                      <p className="text-text-secondary mt-0.5 text-xs">
+                        ({item.selectedModifiers.map((m) => m.nameAr).join("، ")})
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-brand-red numeric shrink-0 text-sm font-bold">
+                    {formatPrice(item.lineTotal)} ₪
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <button
+                    onClick={() => updateQuantity(idx, -1)}
+                    aria-label="تقليل"
+                    className="bg-muted hover:bg-muted/80 flex size-9 items-center justify-center rounded-full text-xs font-bold transition-colors"
+                  >
+                    <Minus className="size-3.5" />
+                  </button>
+                  <span className="numeric w-5 text-center text-xs font-semibold">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => updateQuantity(idx, 1)}
+                    aria-label="زيادة"
+                    className="bg-muted hover:bg-muted/80 flex size-9 items-center justify-center rounded-full text-xs font-bold transition-colors"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => removeItem(idx)}
+                    aria-label="حذف"
+                    className="text-text-secondary hover:bg-status-error/10 hover:text-status-error ms-auto flex size-9 items-center justify-center rounded-full transition-colors"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <Tabs
+              value={paymentMethod}
+              onValueChange={(v) => setPaymentMethod(v as "cash" | "card")}
+              size="sm"
+              items={[
+                { value: "cash", label: "نقدي" },
+                { value: "card", label: "بطاقة" },
+              ]}
+            />
+            <Input
+              type="tel"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              placeholder="رقم الزبون (اختياري)"
+              dir="ltr"
+            />
+            <button
+              onClick={handleCheckout}
+              disabled={checkingOut}
+              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white shadow-md transition-all disabled:opacity-50"
+            >
+              {checkingOut ? "جاري..." : `دفع ${formatPrice(cartTotal)} ₪`}
+            </button>
+            <SheetClose onClick={() => setCartOpen(false)}>متابعة الإضافة</SheetClose>
+          </div>
+        </Sheet>
+      )}
+
       <Sheet
         open={!!modifierTarget}
         onOpenChange={(open) => {
           if (!open) setModifierTarget(null);
         }}
-        className="p-4"
       >
-        <SheetTitle className="text-base">{modifierTarget?.productNameAr ?? ""}</SheetTitle>
-        <div className="my-3 max-h-64 space-y-3 overflow-y-auto">
-          {modifierTarget?.groups.map((group) => (
-            <div key={group.id}>
-              <p className="text-brand-ink mb-1 text-xs font-medium">{group.name}</p>
-              <div className="flex flex-wrap gap-1">
-                {group.modifiers.map((mod) => {
-                  const isSel = (modifierSelections[group.id] ?? []).includes(mod.id);
-                  return (
-                    <button
-                      key={mod.id}
-                      onClick={() =>
-                        group.type === "single"
-                          ? toggleSingle(group.id, mod.id)
-                          : toggleMulti(group.id, mod.id)
-                      }
-                      aria-pressed={isSel}
-                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${isSel ? "border-brand-red bg-brand-red text-white" : "border-border-subtle bg-muted"}`}
-                    >
-                      {mod.nameAr}
-                      {toMinorUnits(mod.priceDelta) > 0 && ` (+${mod.priceDelta})`}
-                    </button>
-                  );
-                })}
-              </div>
+        {modifierTarget && (
+          <>
+            <SheetTitle className="text-base">{modifierTarget.productNameAr}</SheetTitle>
+            <p className="text-text-secondary -mt-3 mb-1 text-xs">السعر الأساسي</p>
+            <p className="heading-3 text-brand-ink numeric text-base">
+              {formatPrice(toMinorUnits(modifierTarget.basePrice))} ₪
+            </p>
+
+            <div className="my-3 max-h-64 space-y-4 overflow-y-auto pe-1">
+              {modifierTarget.groups.map((group) => (
+                <div key={group.id}>
+                  <p className="heading-3 text-brand-ink mb-1.5 text-xs">{group.name}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.modifiers.map((mod) => {
+                      const isSel = (modifierSelections[group.id] ?? []).includes(mod.id);
+                      return (
+                        <button
+                          key={mod.id}
+                          onClick={() =>
+                            group.type === "single"
+                              ? toggleSingle(group.id, mod.id)
+                              : toggleMulti(group.id, mod.id)
+                          }
+                          aria-pressed={isSel}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+                            isSel
+                              ? "border-brand-red bg-brand-red shadow-brand-red/20 text-white shadow-sm"
+                              : "border-border-subtle bg-muted text-brand-ink"
+                          }`}
+                        >
+                          {mod.nameAr}
+                          {toMinorUnits(mod.priceDelta) > 0 && ` +${mod.priceDelta}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <SheetClose className="py-2 text-xs">إلغاء</SheetClose>
-          <button
-            onClick={confirmModifiers}
-            className="bg-brand-red flex-1 rounded-full py-2 text-xs font-bold text-white"
-          >
-            إضافة
-          </button>
-        </div>
+            <div className="flex gap-2 pt-2">
+              <SheetClose onClick={() => setModifierTarget(null)} className="text-xs">
+                إلغاء
+              </SheetClose>
+              <button
+                onClick={confirmModifiers}
+                className="bg-brand-red shadow-brand-red/20 flex-1 rounded-full py-2.5 text-sm font-bold text-white shadow-sm"
+              >
+                إضافة
+              </button>
+            </div>
+          </>
+        )}
       </Sheet>
     </div>
+  );
+}
+
+function ProductCard({
+  product,
+  onClick,
+}: {
+  product: POSCategory["products"][number];
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!product.isAvailable}
+      className={`ease-spring shadow-card hover:shadow-pop flex flex-col items-center rounded-2xl bg-white p-2 text-center transition-all hover:-translate-y-0.5 disabled:opacity-40 ${
+        product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
+      }`}
+    >
+      <div className="bg-brand-red-bg mb-1.5 flex h-12 w-12 items-center justify-center rounded-xl">
+        <Image
+          src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
+          alt={product.nameAr}
+          width={40}
+          height={40}
+          loading="lazy"
+          className="h-9 w-9 object-contain"
+        />
+      </div>
+      <span className="heading-3 text-brand-ink w-full text-xs leading-tight">
+        {product.nameAr}
+      </span>
+      <span className="text-brand-red numeric mt-0.5 text-xs font-bold">
+        {formatPrice(toMinorUnits(product.basePrice))} ₪
+      </span>
+    </button>
   );
 }

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Ayasofia Sweet — favicon mark.
+       Full brand-red tile with the monochrome (inverted) cup mark, scaled
+       to a 200x200 square. The whole square IS the icon (no transparent
+       edges), so the favicon reads at 16x16 in the browser tab. -->
+  <rect width="200" height="200" rx="44" fill="#DC0000"/>
+  <!-- straw bending into an S shape -->
+  <g stroke="#FFFFFF" stroke-width="13" stroke-linecap="round" fill="none">
+    <path d="M 118 32 L 138 60"/>
+    <path d="M 138 60 L 118 78"/>
+    <path d="M 118 78 L 108 108"/>
+  </g>
+  <!-- cup lid -->
+  <rect x="56" y="104" width="104" height="16" rx="6" fill="#FFFFFF"/>
+  <!-- cup body -->
+  <path d="M 62 120 L 154 120 L 140 178 Q 138 188 128 188 L 88 188 Q 78 188 76 178 Z"
+        fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- tapioca pearl dot grid (2 rows x 3) -->
+  <g fill="#DC0000">
+    <circle cx="90"  cy="152" r="7"/>
+    <circle cx="106" cy="152" r="7"/>
+    <circle cx="122" cy="152" r="7"/>
+    <circle cx="94"  cy="168" r="7"/>
+    <circle cx="110" cy="168" r="7"/>
+    <circle cx="126" cy="168" r="7"/>
+  </g>
+</svg>

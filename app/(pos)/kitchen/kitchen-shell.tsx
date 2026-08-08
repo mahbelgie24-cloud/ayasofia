@@ -1,21 +1,77 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChefHat,
+  Clock,
+  Coffee,
+  MapPin,
+  PackageCheck,
+  Utensils,
+  Bike,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateOrderStatus, fetchActiveOrders, type ActiveKitchenOrder } from "./actions";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 
-const CHANNEL_LABELS: Record<string, string> = {
-  dine_in: "🥤 صالة",
-  takeaway: "📱 طلب خارجي",
-  drive_thru: "🚘 Drive-Thru",
-  delivery: "🛵 توصيل",
+const CHANNEL_LABELS: Record<
+  string,
+  { label: string; icon: React.ReactNode; tone: "red" | "amber" | "ink" }
+> = {
+  dine_in: { label: "صالة", icon: <Utensils className="size-3" />, tone: "ink" },
+  takeaway: { label: "خارجي", icon: <Coffee className="size-3" />, tone: "ink" },
+  drive_thru: { label: "Drive-Thru", icon: <Car className="size-3" />, tone: "red" },
+  delivery: { label: "توصيل", icon: <Bike className="size-3" />, tone: "amber" },
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  received: "border-status-warning bg-status-warning/5",
-  preparing: "border-status-warning bg-status-warning/10",
-  ready: "border-status-success bg-status-success/5",
-  completed: "border-border-subtle bg-brand-cream/50 opacity-50",
+import { Car } from "lucide-react";
+
+const STATUS_META: Record<
+  string,
+  {
+    label: string;
+    next: string | null;
+    nextLabel: string;
+    bar: string;
+    chip: string;
+    icon: React.ReactNode;
+  }
+> = {
+  received: {
+    label: "تم الاستلام",
+    next: "preparing",
+    nextLabel: "بدء التحضير",
+    bar: "border-status-warning",
+    chip: "bg-status-warning/15 text-status-warning",
+    icon: <Clock className="size-3.5" />,
+  },
+  preparing: {
+    label: "قيد التحضير",
+    next: "ready",
+    nextLabel: "جاهز",
+    bar: "border-status-warning",
+    chip: "bg-status-warning/20 text-status-warning",
+    icon: <ChefHat className="size-3.5" />,
+  },
+  ready: {
+    label: "جاهز للتسليم",
+    next: "completed",
+    nextLabel: "تم التسليم",
+    bar: "border-status-success",
+    chip: "bg-status-success/15 text-status-success",
+    icon: <PackageCheck className="size-3.5" />,
+  },
+  completed: {
+    label: "مكتمل",
+    next: null,
+    nextLabel: "",
+    bar: "border-border-subtle",
+    chip: "bg-muted text-text-secondary",
+    icon: <Check className="size-3.5" />,
+  },
 };
 
 export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOrder[] }) {
@@ -72,12 +128,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
   }, [refreshOrders, playBeep]);
 
   const handleAdvance = async (orderId: string, currentStatus: string) => {
-    const transitions: Record<string, string> = {
-      received: "preparing",
-      preparing: "ready",
-      ready: "completed",
-    };
-    const next = transitions[currentStatus];
+    const next = STATUS_META[currentStatus]?.next;
     if (!next) return;
 
     const result = await updateOrderStatus(orderId, next);
@@ -92,79 +143,127 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
   const pending = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
 
   return (
-    <div className="bg-brand-cream flex h-screen flex-col" dir="rtl" lang="ar">
-      <div className="bg-brand-red shrink-0 px-4 py-3 text-center text-white">
-        <h1 className="font-heading text-xl font-bold">المطبخ</h1>
-        <p className="text-sm text-white/80">{pending.length} طلب قيد الانتظار</p>
-      </div>
+    <div className="bg-brand-cream flex h-dvh flex-col" dir="rtl" lang="ar">
+      <header className="bg-brand-red shadow-brand-red/10 shrink-0 px-4 py-3 text-white shadow-md">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="heading-1 text-xl text-white">المطبخ</h1>
+            <p className="caption text-white/80">
+              {pending.length === 0
+                ? "لا طلبات قيد الانتظار"
+                : `${pending.length} طلب قيد الانتظار`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {orders.length > 0 && (
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                {orders.length} نشط
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
 
       <div className="flex-1 overflow-y-auto p-3">
         {orders.length === 0 ? (
-          <p className="text-text-secondary py-16 text-center">لا توجد طلبات حالياً</p>
+          <EmptyState
+            size="lg"
+            title="لا توجد طلبات حالياً"
+            description="ستظهر الطلبات الجديدة هنا فور وصولها."
+          />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className={`rounded-xl border-2 bg-white p-4 ${STATUS_COLORS[order.status] ?? ""}`}
-              >
-                <div className="mb-2 flex items-start justify-between">
-                  <div>
-                    <p className="font-heading text-brand-ink text-2xl font-bold">
-                      {order.orderNumber}
-                    </p>
-                    <p className="text-text-secondary text-xs">
-                      {new Date(order.createdAt).toLocaleTimeString("ar")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {order.tableCode && (
-                      <span className="bg-brand-red rounded-full px-2 py-1 text-xs font-bold text-white">
-                        طاولة {order.tableCode}
-                      </span>
-                    )}
-                    <span className="bg-muted rounded-full px-2 py-1 text-xs font-medium">
-                      {CHANNEL_LABELS[order.channel] ?? order.channel}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mb-3 space-y-0.5">
-                  {order.items.map((item, i) => (
-                    <div key={i}>
-                      <p className="text-sm">
-                        <span className="font-semibold">{item.productNameAr}</span>
-                        <span className="text-text-secondary"> × {item.quantity}</span>
-                      </p>
-                      {item.modifierNames.length > 0 && (
-                        <p className="text-text-secondary text-xs">
-                          {item.modifierNames.join("، ")}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {orders.map((order) => {
+              const meta = STATUS_META[order.status] ?? STATUS_META.received;
+              const channel = CHANNEL_LABELS[order.channel];
+              const tone =
+                channel?.tone === "red"
+                  ? "bg-brand-red"
+                  : channel?.tone === "amber"
+                    ? "bg-status-warning text-black"
+                    : "bg-brand-ink";
+              return (
+                <Card
+                  key={order.id}
+                  variant="default"
+                  className={`overflow-hidden border-t-4 p-0 ${meta.bar}`}
+                >
+                  <div className="p-4">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div>
+                        <p className="heading-1 text-brand-ink numeric text-2xl">
+                          {order.orderNumber}
                         </p>
-                      )}
-                      {item.notes && (
-                        <p className="text-status-warning text-xs italic">“{item.notes}”</p>
+                        <p className="text-text-secondary caption">
+                          {new Date(order.createdAt).toLocaleTimeString("ar", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        {order.tableCode && (
+                          <span
+                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white ${tone}`}
+                          >
+                            <MapPin className="size-3" />
+                            {order.tableCode}
+                          </span>
+                        )}
+                        {channel && (
+                          <span
+                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.chip}`}
+                          >
+                            {channel.icon}
+                            {channel.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mb-3 space-y-1.5">
+                      {order.items.map((item, i) => (
+                        <div key={i} className="text-sm">
+                          <p>
+                            <span className="text-brand-ink font-semibold">
+                              {item.productNameAr}
+                            </span>
+                            <span className="text-text-secondary numeric ms-1">
+                              × {item.quantity}
+                            </span>
+                          </p>
+                          {item.modifierNames.length > 0 && (
+                            <p className="text-text-secondary text-xs">
+                              {item.modifierNames.join("، ")}
+                            </p>
+                          )}
+                          {item.notes && (
+                            <p className="text-status-warning text-xs italic">“{item.notes}”</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-border-subtle flex items-center justify-between border-t pt-3">
+                      <span className="numeric text-brand-ink text-sm font-bold">
+                        {order.total} ₪
+                      </span>
+                      {meta.next ? (
+                        <button
+                          onClick={() => handleAdvance(order.id, order.status)}
+                          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors"
+                        >
+                          <span>{meta.nextLabel}</span>
+                          <ArrowRight className="size-3.5 rtl:rotate-180" />
+                        </button>
+                      ) : (
+                        <span className="caption text-text-secondary">مكتمل</span>
                       )}
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-ink text-sm font-bold">{order.total} ₪</span>
-                  <button
-                    onClick={() => handleAdvance(order.id, order.status)}
-                    className="bg-brand-red rounded-full px-3 py-1.5 text-xs font-bold text-white"
-                  >
-                    {order.status === "received"
-                      ? "بدء التحضير"
-                      : order.status === "preparing"
-                        ? "جاهز"
-                        : order.status === "ready"
-                          ? "تم التسليم"
-                          : ""}
-                  </button>
-                </div>
-              </div>
-            ))}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { UserPlus, Edit3, Power, PowerOff, X } from "lucide-react";
 import { getStaffList, createStaffMember, updateStaffMember, type StaffMember } from "./actions";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardBody } from "@/components/ui/card";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function StaffShell() {
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [msg, setMsg] = useState("");
+  const [success, setSuccess] = useState(false);
   const [createMode, setCreateMode] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -22,22 +29,41 @@ export function StaffShell() {
     refresh();
   }, []);
 
-  const showMsg = (m: string) => {
+  const showMsg = (m: string, ok = true) => {
+    setSuccess(ok);
     setMsg(m);
     setTimeout(() => setMsg(""), 3000);
   };
 
   return (
-    <div dir="rtl" lang="ar">
-      <h1 className="font-heading text-brand-ink text-2xl font-bold">إدارة الموظفين</h1>
-      {msg && <p className="text-status-warning mt-2 text-sm">{msg}</p>}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="إدارة الموظفين"
+        title="فريق العمل"
+        subtitle="أضف وعدّل حسابات الموظفين وعيّن الأدوار المسموح بها."
+        actions={
+          <button
+            onClick={() => setCreateMode(true)}
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all"
+          >
+            <UserPlus className="size-4" />
+            <span>موظف جديد</span>
+          </button>
+        }
+      />
 
-      <button
-        onClick={() => setCreateMode(true)}
-        className="bg-brand-red mt-4 rounded-full px-4 py-2 text-sm font-medium text-white"
-      >
-        + موظف جديد
-      </button>
+      {msg && (
+        <div
+          role="alert"
+          className={`rounded-xl border px-4 py-2.5 text-sm ${
+            success
+              ? "border-status-success/30 bg-status-success/[0.08] text-status-success"
+              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+          }`}
+        >
+          {msg}
+        </div>
+      )}
 
       {createMode && (
         <StaffForm
@@ -46,8 +72,8 @@ export function StaffShell() {
             if (r.success) {
               setCreateMode(false);
               refresh();
-              showMsg("تمت الإضافة");
-            } else showMsg(r.error ?? "فشل");
+              showMsg("تمت إضافة الموظف");
+            } else showMsg(r.error ?? "فشل", false);
           }}
           onCancel={() => setCreateMode(false)}
         />
@@ -62,83 +88,115 @@ export function StaffShell() {
               setEditId(null);
               refresh();
               showMsg("تم التحديث");
-            } else showMsg(r.error ?? "فشل");
+            } else showMsg(r.error ?? "فشل", false);
           }}
           onCancel={() => setEditId(null)}
         />
       )}
 
-      <div className="mt-6">
-        <div className="border-border-subtle rounded-xl border bg-white p-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-text-secondary border-border-subtle border-b text-right text-xs font-semibold">
-                <th className="px-3 py-2">الاسم</th>
-                <th className="px-3 py-2">الدور</th>
-                <th className="px-3 py-2">الحالة</th>
-                <th className="px-3 py-2">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((m) => (
-                <tr key={m.id} className="border-border-subtle/50 border-b">
-                  <td className="px-3 py-2 font-medium">{m.name}</td>
-                  <td className="px-3 py-2">
-                    <RoleBadge role={m.role} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        m.active
-                          ? "bg-status-success/10 text-status-success"
-                          : "bg-status-error/10 text-status-error"
-                      }`}
-                    >
-                      {m.active ? "نشط" : "غير نشط"}
-                    </span>
-                  </td>
-                  <td className="flex gap-1 px-3 py-2">
-                    <button
-                      onClick={() => setEditId(m.id)}
-                      className="text-text-secondary hover:bg-muted rounded px-2 py-0.5 text-xs"
-                    >
-                      تعديل
-                    </button>
-                    {m.active && (
-                      <button
-                        onClick={async () => {
-                          const r = await updateStaffMember({ id: m.id, active: false });
-                          if (r.success) {
-                            refresh();
-                            showMsg("تم تعطيل الموظف");
-                          } else showMsg(r.error ?? "فشل");
-                        }}
-                        className="text-status-warning hover:bg-status-warning/10 rounded px-2 py-0.5 text-xs"
-                      >
-                        تعطيل
-                      </button>
-                    )}
-                    {!m.active && (
-                      <button
-                        onClick={async () => {
-                          const r = await updateStaffMember({ id: m.id, active: true });
-                          if (r.success) {
-                            refresh();
-                            showMsg("تم تفعيل الموظف");
-                          } else showMsg(r.error ?? "فشل");
-                        }}
-                        className="text-status-success hover:bg-status-success/10 rounded px-2 py-0.5 text-xs"
-                      >
-                        تفعيل
-                      </button>
-                    )}
-                  </td>
+      {members.length === 0 ? (
+        <Card variant="default">
+          <CardBody>
+            <EmptyState
+              title="لا يوجد موظفون بعد"
+              description="ابدأ بإضافة أول موظف وعرّف دوره ورمز PIN الخاص به."
+              action={
+                <button
+                  onClick={() => setCreateMode(true)}
+                  className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-white shadow-md"
+                >
+                  <UserPlus className="size-4" />
+                  <span>موظف جديد</span>
+                </button>
+              }
+            />
+          </CardBody>
+        </Card>
+      ) : (
+        <Card variant="default" className="overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border-subtle text-text-secondary bg-brand-cream/40 border-b text-right text-[11px] font-semibold tracking-wider uppercase">
+                  <th className="px-4 py-3">الاسم</th>
+                  <th className="px-4 py-3">الدور</th>
+                  <th className="px-4 py-3">الحالة</th>
+                  <th className="px-4 py-3 text-end">الإجراءات</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <tr
+                    key={m.id}
+                    className="border-border-subtle/60 hover:bg-brand-cream/30 border-b transition-colors last:border-0"
+                  >
+                    <td className="text-brand-ink px-4 py-3 font-medium">{m.name}</td>
+                    <td className="px-4 py-3">
+                      <RoleBadge role={m.role} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          m.active
+                            ? "bg-status-success/[0.12] text-status-success"
+                            : "bg-status-error/[0.12] text-status-error"
+                        }`}
+                      >
+                        <span
+                          className={`size-1.5 rounded-full ${
+                            m.active ? "bg-status-success" : "bg-status-error"
+                          }`}
+                        />
+                        {m.active ? "نشط" : "غير نشط"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setEditId(m.id)}
+                          className="text-text-secondary hover:bg-muted hover:text-brand-ink flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                        >
+                          <Edit3 className="size-3.5" />
+                          <span>تعديل</span>
+                        </button>
+                        {m.active ? (
+                          <button
+                            onClick={async () => {
+                              const r = await updateStaffMember({ id: m.id, active: false });
+                              if (r.success) {
+                                refresh();
+                                showMsg("تم تعطيل الموظف");
+                              } else showMsg(r.error ?? "فشل", false);
+                            }}
+                            className="text-status-warning hover:bg-status-warning/[0.1] flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                          >
+                            <PowerOff className="size-3.5" />
+                            <span>تعطيل</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              const r = await updateStaffMember({ id: m.id, active: true });
+                              if (r.success) {
+                                refresh();
+                                showMsg("تم تفعيل الموظف");
+                              } else showMsg(r.error ?? "فشل", false);
+                            }}
+                            className="text-status-success hover:bg-status-success/[0.1] flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                          >
+                            <Power className="size-3.5" />
+                            <span>تفعيل</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
@@ -157,7 +215,11 @@ function RoleBadge({ role }: { role: string }) {
     barista: "bg-muted text-text-secondary",
   };
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[role] ?? ""}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+        colors[role] ?? "bg-muted text-text-secondary"
+      }`}
+    >
       {labels[role] ?? role}
     </span>
   );
@@ -176,88 +238,116 @@ function StaffForm({
   const [role, setRole] = useState(initial?.role ?? "cashier");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = () => {
+    setError(null);
+    if (!name.trim()) {
+      setError("الاسم مطلوب");
+      return;
+    }
+    if (!initial && (!pin || pin.length !== 4)) {
+      setError("الرمز يجب أن يكون 4 أرقام");
+      return;
+    }
+    if (!initial && pin !== pinConfirm) {
+      setError("الرمز وتأكيده غير متطابقين");
+      return;
+    }
+    if (initial && pin && pin.length !== 4) {
+      setError("الرمز يجب أن يكون 4 أرقام");
+      return;
+    }
+    onSave({ name: name.trim(), role, pin });
+  };
 
   return (
-    <div className="border-border-subtle mt-4 max-w-md rounded-xl border bg-white p-4">
-      <h3 className="font-heading mb-3 text-sm font-semibold">
-        {initial ? "تعديل موظف" : "موظف جديد"}
-      </h3>
-
-      <div className="space-y-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium">الاسم</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border-border-subtle w-full rounded-lg border px-3 py-2 text-sm"
-            placeholder="اسم الموظف"
-          />
+    <Card variant="pop" className="max-w-xl">
+      <CardBody className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="heading-3 text-brand-ink">{initial ? "تعديل موظف" : "موظف جديد"}</h3>
+          <button
+            onClick={onCancel}
+            className="text-text-secondary hover:bg-muted flex size-8 items-center justify-center rounded-full transition-colors"
+            aria-label="إغلاق"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">الدور</label>
+        <FormField label="الاسم" required>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="اسم الموظف"
+            autoFocus
+          />
+        </FormField>
+
+        <FormField label="الدور">
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="border-border-subtle w-full rounded-lg border px-3 py-2 text-sm"
+            className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-2xl border bg-white px-4 py-2.5 text-sm transition-colors outline-none focus:ring-3"
           >
             <option value="barista">باريستا</option>
             <option value="cashier">كاشير</option>
             <option value="manager">مدير</option>
             <option value="owner">مالك</option>
           </select>
-        </div>
+        </FormField>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">
-            {initial ? "PIN الجديد (اتركه فارغًا لعدم التغيير)" : "PIN (4 أرقام)"}
-          </label>
-          <input
+        <FormField
+          label={initial ? "PIN الجديد" : "PIN"}
+          hint={initial ? "اتركه فارغًا لعدم التغيير" : "4 أرقام، يُستخدم لتسجيل الدخول"}
+          required={!initial}
+        >
+          <Input
             type="password"
+            inputMode="numeric"
             maxLength={4}
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            className="border-border-subtle w-full rounded-lg border px-3 py-2 text-sm"
             placeholder="****"
             dir="ltr"
           />
-        </div>
+        </FormField>
 
         {!initial && (
-          <div>
-            <label className="mb-1 block text-xs font-medium">تأكيد PIN</label>
-            <input
+          <FormField label="تأكيد PIN" required>
+            <Input
               type="password"
+              inputMode="numeric"
               maxLength={4}
               value={pinConfirm}
               onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              className="border-border-subtle w-full rounded-lg border px-3 py-2 text-sm"
               placeholder="****"
               dir="ltr"
             />
-          </div>
+          </FormField>
         )}
-      </div>
 
-      <div className="mt-4 flex gap-2">
-        <button
-          onClick={() => {
-            if (!name.trim()) return;
-            if (!initial && (!pin || pin.length !== 4)) return;
-            if (!initial && pin !== pinConfirm) return;
-            onSave({ name: name.trim(), role, pin });
-          }}
-          className="bg-brand-red flex-1 rounded-full px-4 py-2 text-sm font-bold text-white"
-        >
-          {initial ? "حفظ التغييرات" : "إضافة موظف"}
-        </button>
-        <button
-          onClick={onCancel}
-          className="text-text-secondary border-border-subtle flex-1 rounded-full border px-4 py-2 text-sm"
-        >
-          إلغاء
-        </button>
-      </div>
-    </div>
+        {error && (
+          <p role="alert" className="text-status-error text-sm">
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <button
+            onClick={onCancel}
+            className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={handleSave}
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all"
+          >
+            {initial ? "حفظ التغييرات" : "إضافة موظف"}
+          </button>
+        </div>
+      </CardBody>
+    </Card>
   );
 }

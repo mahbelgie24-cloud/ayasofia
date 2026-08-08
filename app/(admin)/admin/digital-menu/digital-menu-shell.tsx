@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { QrCode, Sparkles, TrendingUp } from "lucide-react";
 import {
   getTables,
   createTable,
@@ -20,6 +21,8 @@ import {
   type UpsellRuleRow,
 } from "./actions";
 import { useToast } from "@/components/ui/toast";
+import { PageHeader } from "@/components/ui/page-header";
+import { Tabs } from "@/components/ui/tabs";
 
 type Tab = "tables" | "suggestion" | "upsell";
 
@@ -27,26 +30,23 @@ export function DigitalMenuAdminShell() {
   const [tab, setTab] = useState<Tab>("tables");
 
   return (
-    <div dir="rtl" lang="ar">
-      <h1 className="font-heading text-brand-ink text-2xl font-bold">القائمة الرقمية</h1>
-      <div className="mt-4 flex gap-2">
-        {(["tables", "suggestion", "upsell"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`ease-spring rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === t ? "bg-brand-red text-white" : "text-brand-ink bg-muted hover:bg-muted/80"
-            }`}
-          >
-            {t === "tables"
-              ? "الطاولات و QRs"
-              : t === "suggestion"
-                ? "اقتراح اليوم"
-                : "قواعد البيع الإضافي"}
-          </button>
-        ))}
-      </div>
-      <div className="mt-6">
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="القائمة الرقمية"
+        title="إدارة الضيوف"
+        subtitle="طاولات QR، اقتراح اليوم، وقواعد البيع الإضافي للزبائن."
+      />
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as Tab)}
+        items={[
+          { value: "tables", label: "الطاولات", icon: <QrCode className="size-4" /> },
+          { value: "suggestion", label: "اقتراح اليوم", icon: <Sparkles className="size-4" /> },
+          { value: "upsell", label: "البيع الإضافي", icon: <TrendingUp className="size-4" /> },
+        ]}
+        aria-label="أقسام القائمة الرقمية"
+      />
+      <div>
         {tab === "tables" && <TablesTab />}
         {tab === "suggestion" && <SuggestionTab />}
         {tab === "upsell" && <UpsellTab />}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Plus, Edit3, Trash2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { toMinorUnits } from "@/lib/pricing";
 import {
   getFullMenuForAdmin,
@@ -14,12 +15,15 @@ import {
   saveRecipe,
   deleteRecipe,
 } from "./actions";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card } from "@/components/ui/card";
 
 type FullMenu = Awaited<ReturnType<typeof getFullMenuForAdmin>>;
 
 export function MenuShell() {
   const [menu, setMenu] = useState<FullMenu | null>(null);
   const [msg, setMsg] = useState("");
+  const [success, setSuccess] = useState(true);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [editCat, setEditCat] = useState<{
     id: string;
@@ -46,30 +50,53 @@ export function MenuShell() {
     refresh();
   }, []);
 
-  const showMsg = (m: string) => {
+  const showMsg = (m: string, ok = true) => {
+    setSuccess(ok);
     setMsg(m);
     setTimeout(() => setMsg(""), 3000);
   };
 
-  if (!menu) return <p className="text-text-secondary p-6">جاري التحميل...</p>;
+  if (!menu) {
+    return (
+      <div className="space-y-6">
+        <PageHeader eyebrow="إدارة القائمة" title="الفئات والمنتجات" />
+        <Card variant="default" className="h-40" />
+      </div>
+    );
+  }
 
   return (
-    <div dir="rtl" lang="ar">
-      <h1 className="font-heading text-brand-ink text-2xl font-bold">إدارة القائمة</h1>
-      {msg && <p className="text-status-warning mt-2 text-sm">{msg}</p>}
-
-      {/* ── Categories ── */}
-      <div className="mt-6">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-lg font-semibold">الفئات</h2>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="إدارة القائمة"
+        title="الفئات والمنتجات"
+        subtitle="أضف الفئات، عدّل الأسعار والمُعدِّلات، وأدِر الوصفات المرتبطة بالمخزون."
+        actions={
           <button
             onClick={() => setNewCat(true)}
-            className="bg-brand-red rounded-full px-3 py-1 text-xs font-medium text-white"
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all"
           >
-            + فئة جديدة
+            <Plus className="size-4" />
+            <span>فئة جديدة</span>
           </button>
-        </div>
+        }
+      />
 
+      {msg && (
+        <div
+          role="alert"
+          className={`rounded-xl border px-4 py-2.5 text-sm ${
+            success
+              ? "border-status-success/30 bg-status-success/[0.08] text-status-success"
+              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+          }`}
+        >
+          {msg}
+        </div>
+      )}
+
+      {/* ── Categories ── */}
+      <section className="space-y-4">
         {newCat && (
           <CategoryForm
             onSave={async (data) => {
@@ -78,7 +105,7 @@ export function MenuShell() {
                 setNewCat(false);
                 refresh();
                 showMsg("تمت الإضافة");
-              } else showMsg(r.error ?? "فشل");
+              } else showMsg(r.error ?? "فشل", false);
             }}
             onCancel={() => setNewCat(false)}
           />
@@ -93,253 +120,293 @@ export function MenuShell() {
                 setEditCat(null);
                 refresh();
                 showMsg("تم التحديث");
-              } else showMsg(r.error ?? "فشل");
+              } else showMsg(r.error ?? "فشل", false);
             }}
             onCancel={() => setEditCat(null)}
           />
         )}
 
-        <div className="mt-2 space-y-2">
-          {menu.categories.map((cat) => (
-            <div key={cat.id} className="border-border-subtle rounded-xl border bg-white p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium">{cat.nameAr}</span>
-                  <span className="text-text-secondary mr-2 text-xs">({cat.nameEn})</span>
-                  <span className="text-text-secondary mr-2 text-xs">ترتيب: {cat.sortOrder}</span>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() =>
-                      setEditCat({
-                        id: cat.id,
-                        nameAr: cat.nameAr,
-                        nameEn: cat.nameEn,
-                        sortOrder: cat.sortOrder,
-                      })
-                    }
-                    className="text-text-secondary hover:bg-muted flex min-h-11 items-center rounded px-2 py-0.5 text-xs"
-                  >
-                    تعديل
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const r = await deleteCategory(cat.id);
-                      if (r.success) {
-                        refresh();
-                        showMsg("تم الحذف");
-                      } else showMsg(r.error ?? "فشل");
-                    }}
-                    className="text-status-error hover:bg-status-error/10 flex min-h-11 items-center rounded px-2 py-0.5 text-xs"
-                  >
-                    حذف
-                  </button>
-                </div>
+        {menu.categories.map((cat) => (
+          <Card key={cat.id} variant="default" className="overflow-hidden p-0">
+            <div className="border-border-subtle bg-brand-cream/40 flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h3 className="heading-3 text-brand-ink">{cat.nameAr}</h3>
+                <p className="caption text-text-secondary">
+                  {cat.nameEn} · ترتيب: {cat.sortOrder}
+                </p>
               </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() =>
+                    setEditCat({
+                      id: cat.id,
+                      nameAr: cat.nameAr,
+                      nameEn: cat.nameEn,
+                      sortOrder: cat.sortOrder,
+                    })
+                  }
+                  className="text-text-secondary hover:bg-card flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors"
+                >
+                  <Edit3 className="size-3.5" />
+                  <span>تعديل</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm(`حذف فئة "${cat.nameAr}"؟`)) return;
+                    const r = await deleteCategory(cat.id);
+                    if (r.success) {
+                      refresh();
+                      showMsg("تم الحذف");
+                    } else showMsg(r.error ?? "فشل", false);
+                  }}
+                  className="text-status-error hover:bg-status-error/[0.08] flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>حذف</span>
+                </button>
+              </div>
+            </div>
 
-              {/* Products under this category */}
-              <div className="mt-3 space-y-2">
-                {cat.products.map((prod) => (
-                  <div key={prod.id} className="border-border-subtle/50 rounded-lg border p-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-sm font-medium">{prod.nameAr}</span>
-                        <span className="text-text-secondary ms-1 text-xs">{prod.basePrice} ₪</span>
-                        {!prod.isAvailable && (
-                          <span className="bg-status-error/10 text-status-error ms-1 rounded-full px-2 py-0.5 text-xs">
-                            غير متاح
+            {/* Products */}
+            <div className="divide-border-subtle/60 divide-y">
+              {cat.products.map((prod) => {
+                const isExpanded = expandedProduct === prod.id;
+                return (
+                  <div key={prod.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-brand-ink truncate text-sm font-semibold">
+                            {prod.nameAr}
+                          </p>
+                          <span className="text-text-secondary numeric text-xs">
+                            {prod.basePrice} ₪
                           </span>
-                        )}
-                        {prod.recipes.length === 0 && (
-                          <span className="text-status-warning ms-1 text-xs">⚠ لا وصفة</span>
-                        )}
+                          {!prod.isAvailable && (
+                            <span className="bg-status-error/[0.12] text-status-error rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                              غير متاح
+                            </span>
+                          )}
+                          {prod.recipes.length === 0 && (
+                            <span className="text-status-warning inline-flex items-center gap-1 text-[10px] font-semibold">
+                              <AlertTriangle className="size-3" />
+                              لا وصفة
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <button
                           role="switch"
                           aria-checked={prod.isAvailable}
-                          aria-label={prod.isAvailable ? "تحديد كمتاح" : "تحديد كغير متاح"}
+                          aria-label={prod.isAvailable ? "إيقاف البيع" : "تفعيل البيع"}
                           onClick={async () => {
                             await toggleProductAvailable(prod.id, !prod.isAvailable);
                             refresh();
                           }}
-                          className={`ease-spring relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+                          className={`ease-spring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                             prod.isAvailable ? "bg-status-success" : "bg-status-error/40"
                           }`}
                         >
                           <span
-                            className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                            className={`inline-block size-4 rounded-full bg-white shadow-sm transition-transform ${
                               prod.isAvailable ? "translate-x-6" : "translate-x-1"
                             }`}
                           />
                         </button>
                         <button
-                          onClick={() =>
-                            setExpandedProduct(expandedProduct === prod.id ? null : prod.id)
-                          }
-                          className="text-text-secondary hover:bg-muted rounded px-2 py-0.5 text-xs"
+                          onClick={() => setExpandedProduct(isExpanded ? null : prod.id)}
+                          className="text-text-secondary hover:bg-brand-cream/60 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors"
+                          aria-expanded={isExpanded}
                         >
-                          {expandedProduct === prod.id ? "▲" : "تفاصيل ▼"}
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="size-3.5" />
+                              <span>إخفاء</span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="size-3.5" />
+                              <span>تفاصيل</span>
+                            </>
+                          )}
                         </button>
                         <button
                           onClick={() => setEditProduct(prod.id)}
-                          className="text-text-secondary hover:bg-muted flex min-h-11 items-center rounded px-2 py-0.5 text-xs"
+                          className="text-text-secondary hover:bg-brand-cream/60 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors"
                         >
-                          تعديل
+                          <Edit3 className="size-3.5" />
                         </button>
                       </div>
                     </div>
 
                     {editProduct === prod.id && (
-                      <ProductEditForm
-                        product={prod}
-                        categories={menu.categories}
-                        onSave={async (data) => {
-                          const r = await updateProduct({ id: prod.id, ...data });
-                          if (r.success) {
-                            setEditProduct(null);
-                            refresh();
-                            showMsg("تم التحديث");
-                          } else showMsg(r.error ?? "فشل");
-                        }}
-                        onCancel={() => setEditProduct(null)}
-                      />
+                      <div className="mt-3">
+                        <ProductEditForm
+                          product={prod}
+                          categories={menu.categories}
+                          onSave={async (data) => {
+                            const r = await updateProduct({ id: prod.id, ...data });
+                            if (r.success) {
+                              setEditProduct(null);
+                              refresh();
+                              showMsg("تم التحديث");
+                            } else showMsg(r.error ?? "فشل", false);
+                          }}
+                          onCancel={() => setEditProduct(null)}
+                        />
+                      </div>
                     )}
 
-                    {expandedProduct === prod.id && (
-                      <div className="mt-3 space-y-3 border-t pt-3">
+                    {isExpanded && (
+                      <div className="mt-4 space-y-4 border-t pt-4">
                         {/* Modifier Groups */}
                         <div>
-                          <h4 className="text-xs font-semibold">المُعدِّلات</h4>
-                          {prod.modifierGroups.map((mg) => (
-                            <div key={mg.id} className="mt-1 text-xs">
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium">{mg.name}</span>
-                                <span className="text-text-secondary">
-                                  ({mg.type === "single" ? "اختيار واحد" : "متعدد"})
-                                </span>
-                                {mg.type === "multi" && mg.maxSelections != null && (
+                          <h4 className="text-text-secondary caption mb-2 tracking-wider uppercase">
+                            المُعدِّلات
+                          </h4>
+                          <div className="space-y-2">
+                            {prod.modifierGroups.map((mg) => (
+                              <div key={mg.id} className="bg-brand-cream/40 rounded-xl p-2.5">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-brand-ink font-semibold">{mg.name}</span>
                                   <span className="text-text-secondary">
-                                    أقصى {mg.maxSelections}
+                                    ({mg.type === "single" ? "اختيار واحد" : "متعدد"})
                                   </span>
-                                )}
-                                {mg.isRequired && <span className="text-status-error">*</span>}
-                              </div>
-                              <ul className="mt-1 space-y-1">
-                                {mg.modifiers.map((m) => (
-                                  <li
-                                    key={m.id}
-                                    className="border-border-subtle/50 flex items-center gap-2 rounded-lg border px-2 py-1"
-                                  >
-                                    <span className="font-medium">{m.nameAr}</span>
+                                  {mg.type === "multi" && mg.maxSelections != null && (
                                     <span className="text-text-secondary">
-                                      {toMinorUnits(m.priceDelta) > 0 ? `(+${m.priceDelta} ₪)` : ""}
+                                      · أقصى {mg.maxSelections}
                                     </span>
-                                    <span className="mr-auto flex items-center gap-1">
-                                      {m.ingredientId ? (
+                                  )}
+                                  {mg.isRequired && <span className="text-status-error">*</span>}
+                                </div>
+                                <ul className="mt-1.5 space-y-1">
+                                  {mg.modifiers.map((m) => (
+                                    <li
+                                      key={m.id}
+                                      className="border-border-subtle bg-card flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs"
+                                    >
+                                      <span className="text-brand-ink font-medium">{m.nameAr}</span>
+                                      {toMinorUnits(m.priceDelta) > 0 && (
                                         <span className="text-text-secondary">
-                                          {menu.ingredients.find((i) => i.id === m.ingredientId)
-                                            ?.name ?? "مكوّن"}
-                                          : {m.ingredientQty}
-                                        </span>
-                                      ) : (
-                                        <span className="text-text-secondary opacity-60">
-                                          بدون مخزون
+                                          (+{m.priceDelta} ₪)
                                         </span>
                                       )}
-                                      <button
-                                        onClick={() => setModifierIngredientTarget(m.id)}
-                                        className="text-brand-red hover:underline"
-                                      >
-                                        {m.ingredientId ? "تعديل المكوّن" : "+ مكوّن"}
-                                      </button>
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                              {modifierIngredientTarget && (
-                                <ModifierIngredientForm
-                                  ingredients={menu.ingredients}
-                                  modifierId={modifierIngredientTarget}
-                                  onSave={async (data) => {
-                                    const r = await updateModifier({
-                                      id: modifierIngredientTarget,
-                                      ...data,
-                                    });
-                                    setModifierIngredientTarget(null);
-                                    refresh();
-                                    showMsg(r.success ? "تم" : (r.error ?? "فشل"));
-                                  }}
-                                  onClear={async () => {
-                                    await updateModifier({
-                                      id: modifierIngredientTarget,
-                                      clearIngredient: true,
-                                    });
-                                    setModifierIngredientTarget(null);
-                                    refresh();
-                                    showMsg("تم إزالة الربط");
-                                  }}
-                                  onCancel={() => setModifierIngredientTarget(null)}
-                                />
-                              )}
-                            </div>
-                          ))}
+                                      <span className="ms-auto flex items-center gap-2">
+                                        {m.ingredientId ? (
+                                          <span className="text-text-secondary">
+                                            {menu.ingredients.find((i) => i.id === m.ingredientId)
+                                              ?.name ?? "مكوّن"}
+                                            : {m.ingredientQty}
+                                          </span>
+                                        ) : (
+                                          <span className="text-text-secondary/60">بدون مخزون</span>
+                                        )}
+                                        <button
+                                          onClick={() => setModifierIngredientTarget(m.id)}
+                                          className="text-brand-red hover:underline"
+                                        >
+                                          {m.ingredientId ? "تعديل" : "+ مكوّن"}
+                                        </button>
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {modifierIngredientTarget && (
+                                  <div className="mt-2">
+                                    <ModifierIngredientForm
+                                      ingredients={menu.ingredients}
+                                      modifierId={modifierIngredientTarget}
+                                      onSave={async (data) => {
+                                        const r = await updateModifier({
+                                          id: modifierIngredientTarget,
+                                          ...data,
+                                        });
+                                        setModifierIngredientTarget(null);
+                                        refresh();
+                                        showMsg(r.success ? "تم" : (r.error ?? "فشل"), r.success);
+                                      }}
+                                      onClear={async () => {
+                                        await updateModifier({
+                                          id: modifierIngredientTarget,
+                                          clearIngredient: true,
+                                        });
+                                        setModifierIngredientTarget(null);
+                                        refresh();
+                                        showMsg("تم إزالة الربط");
+                                      }}
+                                      onCancel={() => setModifierIngredientTarget(null)}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
+
                         {/* Recipes */}
                         <div>
-                          <h4 className="text-xs font-semibold">الوصفة</h4>
+                          <h4 className="text-text-secondary caption mb-2 tracking-wider uppercase">
+                            الوصفة
+                          </h4>
                           {prod.recipes.length === 0 && (
                             <p className="text-status-warning text-xs">
                               لا توجد وصفة — المبيعات لا تخصم من المخزون
                             </p>
                           )}
-                          {prod.recipes.map((rec) => (
-                            <div
-                              key={rec.ingredientId}
-                              className="flex items-center justify-between text-xs"
-                            >
-                              <span>
-                                {rec.ingredientName}: {rec.quantityUsed}
-                              </span>
-                              <button
-                                onClick={async () => {
-                                  await deleteRecipe(prod.id, rec.ingredientId);
-                                  refresh();
-                                }}
-                                className="text-status-error text-xs"
+                          <ul className="space-y-1">
+                            {prod.recipes.map((rec) => (
+                              <li
+                                key={rec.ingredientId}
+                                className="border-border-subtle bg-card flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs"
                               >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
+                                <span className="text-brand-ink">
+                                  {rec.ingredientName}:{" "}
+                                  <span className="numeric font-medium">{rec.quantityUsed}</span>
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    await deleteRecipe(prod.id, rec.ingredientId);
+                                    refresh();
+                                  }}
+                                  className="text-status-error text-xs hover:underline"
+                                >
+                                  ✕
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                           <button
                             onClick={() => setRecipeProduct(prod.id)}
-                            className="text-brand-red mt-1 text-xs hover:underline"
+                            className="text-brand-red mt-2 text-xs font-medium hover:underline"
                           >
-                            + إضافة مكون
+                            + إضافة مكوّن
                           </button>
                           {recipeProduct === prod.id && (
-                            <RecipeForm
-                              ingredients={menu.ingredients}
-                              onSave={async (data) => {
-                                const r = await saveRecipe({ productId: prod.id, ...data });
-                                if (r.success) {
-                                  setRecipeProduct(null);
-                                  refresh();
-                                  showMsg("تم");
-                                } else showMsg(r.error ?? "فشل");
-                              }}
-                              onCancel={() => setRecipeProduct(null)}
-                            />
+                            <div className="mt-2">
+                              <RecipeForm
+                                ingredients={menu.ingredients}
+                                onSave={async (data) => {
+                                  const r = await saveRecipe({ productId: prod.id, ...data });
+                                  if (r.success) {
+                                    setRecipeProduct(null);
+                                    refresh();
+                                    showMsg("تم");
+                                  } else showMsg(r.error ?? "فشل", false);
+                                }}
+                                onCancel={() => setRecipeProduct(null)}
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
                     )}
                   </div>
-                ))}
+                );
+              })}
 
-                {/* New product button */}
-                {newProduct === cat.id ? (
+              {newProduct === cat.id ? (
+                <div className="px-4 py-3">
                   <ProductCreateForm
                     categories={menu.categories}
                     defaultCategoryId={cat.id}
@@ -349,23 +416,24 @@ export function MenuShell() {
                         setNewProduct(null);
                         refresh();
                         showMsg("تمت الإضافة");
-                      } else showMsg(r.error ?? "فشل");
+                      } else showMsg(r.error ?? "فشل", false);
                     }}
                     onCancel={() => setNewProduct(null)}
                   />
-                ) : (
-                  <button
-                    onClick={() => setNewProduct(cat.id)}
-                    className="text-text-secondary hover:bg-muted/50 w-full rounded-lg border border-dashed py-2 text-xs"
-                  >
-                    + منتج جديد
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setNewProduct(cat.id)}
+                  className="text-text-secondary hover:bg-brand-cream/40 hover:text-brand-ink border-border-subtle mx-4 my-2 flex w-[calc(100%-2rem)] items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-xs font-medium transition-colors"
+                >
+                  <Plus className="size-3.5" />
+                  <span>منتج جديد</span>
+                </button>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
+          </Card>
+        ))}
+      </section>
     </div>
   );
 }
@@ -385,41 +453,45 @@ function CategoryForm({
   const [nameEn, setNameEn] = useState(initial?.nameEn ?? "");
   const [sortOrder, setSortOrder] = useState(initial?.sortOrder ?? 0);
   return (
-    <div className="border-border-subtle mt-2 rounded-lg border p-3">
-      <input
-        value={nameAr}
-        onChange={(e) => setNameAr(e.target.value)}
-        placeholder="الاسم العربي"
-        className="border-border-subtle mb-2 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        value={nameEn}
-        onChange={(e) => setNameEn(e.target.value)}
-        placeholder="الاسم الإنجليزي"
-        className="border-border-subtle mb-2 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        type="number"
-        value={sortOrder}
-        onChange={(e) => setSortOrder(parseInt(e.target.value) || 0)}
-        placeholder="الترتيب"
-        className="border-border-subtle mb-2 w-full rounded border px-2 py-1 text-sm"
-      />
-      <div className="flex gap-2">
-        <button
-          onClick={() => onSave({ nameAr, nameEn, sortOrder })}
-          className="bg-brand-red rounded-full px-3 py-1 text-xs text-white"
-        >
-          حفظ
-        </button>
-        <button
-          onClick={onCancel}
-          className="text-text-secondary rounded-full border px-3 py-1 text-xs"
-        >
-          إلغاء
-        </button>
+    <Card variant="pop" className="max-w-2xl">
+      <div className="space-y-3 p-5">
+        <input
+          value={nameAr}
+          onChange={(e) => setNameAr(e.target.value)}
+          placeholder="الاسم العربي"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-2xl border bg-white px-4 py-2.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          value={nameEn}
+          onChange={(e) => setNameEn(e.target.value)}
+          placeholder="الاسم الإنجليزي"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-2xl border bg-white px-4 py-2.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          type="number"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(parseInt(e.target.value) || 0)}
+          placeholder="الترتيب"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-2xl border bg-white px-4 py-2.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onCancel}
+            className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={() => onSave({ nameAr, nameEn, sortOrder })}
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/20 flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all"
+          >
+            حفظ
+          </button>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -449,54 +521,66 @@ function ProductEditForm({
   const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
   const [trackInventory, setTrackInventory] = useState(product.trackInventory);
   return (
-    <div className="border-border-subtle mt-2 rounded-lg border p-3">
-      <input
-        value={nameAr}
-        onChange={(e) => setNameAr(e.target.value)}
-        placeholder="الاسم العربي"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        value={nameEn}
-        onChange={(e) => setNameEn(e.target.value)}
-        placeholder="الاسم الإنجليزي"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        type="number"
-        step="0.01"
-        value={basePrice}
-        onChange={(e) => setBasePrice(e.target.value)}
-        placeholder="السعر"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <select
-        value={catId}
-        onChange={(e) => setCatId(e.target.value)}
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      >
-        <option value="">الفئة (بدون تغيير)</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nameAr}
-          </option>
-        ))}
-      </select>
-      <input
-        value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
-        placeholder="رابط الصورة"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <label className="flex items-center gap-2 text-xs">
+    <Card variant="flat" className="space-y-2 p-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          value={nameAr}
+          onChange={(e) => setNameAr(e.target.value)}
+          placeholder="الاسم العربي"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          value={nameEn}
+          onChange={(e) => setNameEn(e.target.value)}
+          placeholder="الاسم الإنجليزي"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          type="number"
+          step="0.01"
+          value={basePrice}
+          onChange={(e) => setBasePrice(e.target.value)}
+          placeholder="السعر"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <select
+          value={catId}
+          onChange={(e) => setCatId(e.target.value)}
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        >
+          <option value="">الفئة (بدون تغيير)</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nameAr}
+            </option>
+          ))}
+        </select>
+        <input
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="رابط الصورة"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3 sm:col-span-2"
+        />
+      </div>
+      <label className="text-text-secondary flex items-center gap-2 text-xs">
         <input
           type="checkbox"
           checked={trackInventory}
           onChange={(e) => setTrackInventory(e.target.checked)}
+          className="accent-brand-red size-4"
         />
         تتبع المخزون
       </label>
-      <div className="mt-2 flex gap-2">
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={onCancel}
+          className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+        >
+          إلغاء
+        </button>
         <button
           onClick={() => {
             const data: Record<string, unknown> = {};
@@ -508,26 +592,16 @@ function ProductEditForm({
             if (trackInventory !== product.trackInventory) data.trackInventory = trackInventory;
             onSave(data);
           }}
-          className="bg-brand-red rounded-full px-3 py-1 text-xs text-white"
+          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex-1 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
         >
           حفظ
         </button>
-        <button
-          onClick={onCancel}
-          className="text-text-secondary rounded-full border px-3 py-1 text-xs"
-        >
-          إلغاء
-        </button>
       </div>
-    </div>
+    </Card>
   );
 }
 
 function ProductCreateForm({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  categories,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  defaultCategoryId,
   onSave,
   onCancel,
 }: {
@@ -547,49 +621,69 @@ function ProductCreateForm({
   const [basePrice, setBasePrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [trackInventory, setTrackInventory] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   return (
-    <div className="border-border-subtle mt-2 rounded-lg border p-3">
-      <input
-        value={nameAr}
-        onChange={(e) => setNameAr(e.target.value)}
-        placeholder="الاسم العربي"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        value={nameEn}
-        onChange={(e) => setNameEn(e.target.value)}
-        placeholder="الاسم الإنجليزي"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        type="number"
-        step="0.01"
-        value={basePrice}
-        onChange={(e) => setBasePrice(e.target.value)}
-        placeholder="السعر"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <input
-        value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
-        placeholder="رابط الصورة (اختياري)"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-sm"
-      />
-      <label className="flex items-center gap-2 text-xs">
+    <Card variant="flat" className="space-y-2 p-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          value={nameAr}
+          onChange={(e) => setNameAr(e.target.value)}
+          placeholder="الاسم العربي"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          value={nameEn}
+          onChange={(e) => setNameEn(e.target.value)}
+          placeholder="الاسم الإنجليزي"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          type="number"
+          step="0.01"
+          value={basePrice}
+          onChange={(e) => setBasePrice(e.target.value)}
+          placeholder="السعر"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+        <input
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="رابط الصورة (اختياري)"
+          dir="ltr"
+          className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-sm transition-colors outline-none focus:ring-3"
+        />
+      </div>
+      <label className="text-text-secondary flex items-center gap-2 text-xs">
         <input
           type="checkbox"
           checked={trackInventory}
           onChange={(e) => setTrackInventory(e.target.checked)}
+          className="accent-brand-red size-4"
         />
         تتبع المخزون
       </label>
-      <div className="mt-2 flex gap-2">
+      {error && (
+        <p role="alert" className="text-status-error text-xs">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={onCancel}
+          className="border-border-subtle text-text-secondary hover:bg-muted flex-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+        >
+          إلغاء
+        </button>
         <button
           onClick={() => {
+            setError(null);
             const price = basePrice.trim();
-            // Light client-side guard — authoritative validation (scale-2
-            // money parsing) happens server-side in sanitizePrice.
-            if (!nameAr || !nameEn || price === "") return;
+            if (!nameAr || !nameEn || price === "") {
+              setError("الاسم بالعربية والإنجليزية والسعر مطلوبة");
+              return;
+            }
             onSave({
               nameAr,
               nameEn,
@@ -598,18 +692,12 @@ function ProductCreateForm({
               trackInventory,
             });
           }}
-          className="bg-brand-red rounded-full px-3 py-1 text-xs text-white"
+          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex-1 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
         >
           إضافة
         </button>
-        <button
-          onClick={onCancel}
-          className="text-text-secondary rounded-full border px-3 py-1 text-xs"
-        >
-          إلغاء
-        </button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -629,11 +717,11 @@ function ModifierIngredientForm({
   const [ingId, setIngId] = useState(ingredients[0]?.id ?? "");
   const [qty, setQty] = useState("");
   return (
-    <div className="border-border-subtle bg-muted/30 mt-1 rounded border p-2">
+    <div className="bg-brand-cream/40 space-y-1.5 rounded-xl p-2.5">
       <select
         value={ingId}
         onChange={(e) => setIngId(e.target.value)}
-        className="border-border-subtle mb-1 w-full rounded border bg-white px-2 py-1 text-xs"
+        className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-xs transition-colors outline-none focus:ring-3"
       >
         {ingredients.map((i) => (
           <option key={i.id} value={i.id}>
@@ -647,31 +735,32 @@ function ModifierIngredientForm({
         step="0.01"
         value={qty}
         onChange={(e) => setQty(e.target.value)}
-        placeholder="الكمية لكل حصة (مثال: 50)"
-        className="border-border-subtle mb-1 w-full rounded border bg-white px-2 py-1 text-xs"
+        placeholder="الكمية لكل حصة"
+        dir="ltr"
+        className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-xs transition-colors outline-none focus:ring-3"
       />
-      <div className="flex gap-1">
+      <div className="flex gap-1.5 pt-1">
         <button
           onClick={() => {
             const n = qty.trim();
             if (!ingId || n === "") return;
             onSave({ ingredientId: ingId, ingredientQty: n });
           }}
-          className="bg-brand-red rounded-full px-2 py-0.5 text-xs text-white"
+          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex-1 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
         >
           حفظ
         </button>
         {modifierId && (
           <button
             onClick={onClear}
-            className="text-status-error border-status-error/30 rounded-full border px-2 py-0.5 text-xs"
+            className="text-status-error border-status-error/30 hover:bg-status-error/[0.08] rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
           >
-            إزالة الربط
+            إزالة
           </button>
         )}
         <button
           onClick={onCancel}
-          className="text-text-secondary rounded-full border px-2 py-0.5 text-xs"
+          className="text-text-secondary border-border-subtle hover:bg-muted rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
         >
           إلغاء
         </button>
@@ -692,11 +781,11 @@ function RecipeForm({
   const [ingId, setIngId] = useState(ingredients[0]?.id ?? "");
   const [qty, setQty] = useState("");
   return (
-    <div className="border-border-subtle mt-1 rounded border p-2">
+    <div className="bg-brand-cream/40 space-y-1.5 rounded-xl p-2.5">
       <select
         value={ingId}
         onChange={(e) => setIngId(e.target.value)}
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-xs"
+        className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-xs transition-colors outline-none focus:ring-3"
       >
         {ingredients.map((i) => (
           <option key={i.id} value={i.id}>
@@ -710,22 +799,23 @@ function RecipeForm({
         value={qty}
         onChange={(e) => setQty(e.target.value)}
         placeholder="الكمية"
-        className="border-border-subtle mb-1 w-full rounded border px-2 py-1 text-xs"
+        dir="ltr"
+        className="border-border-subtle focus:border-brand-red/60 focus:ring-brand-red/15 w-full rounded-xl border bg-white px-3 py-1.5 text-xs transition-colors outline-none focus:ring-3"
       />
-      <div className="flex gap-1">
+      <div className="flex gap-1.5 pt-1">
         <button
           onClick={() => {
             const n = qty.trim();
             if (!ingId || n === "") return;
             onSave({ ingredientId: ingId, quantityUsed: n });
           }}
-          className="bg-brand-red rounded-full px-2 py-0.5 text-xs text-white"
+          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex-1 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
         >
           حفظ
         </button>
         <button
           onClick={onCancel}
-          className="text-text-secondary rounded-full border px-2 py-0.5 text-xs"
+          className="text-text-secondary border-border-subtle hover:bg-muted rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
         >
           إلغاء
         </button>

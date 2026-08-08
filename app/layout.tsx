@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Baloo_2, Baloo_Bhaijaan_2, Inter, Noto_Sans_Arabic } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
@@ -32,9 +32,42 @@ const notoAr = Noto_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
-  title: "Ayasofia Sweet — حلويات آيا صوفيا",
+  title: {
+    default: "Ayasofia Sweet — حلويات آيا صوفيا",
+    template: "%s · Ayasofia Sweet",
+  },
   description:
-    "Internal operations system for Ayasofia Sweet, Qalqilya — integrated POS, inventory, and ordering platform for Taiwanese bubble tea and Japanese/Korean desserts.",
+    "حلويات آيا صوفيا، قلقيلية — بابل تي تايواني، حلويات يابانية وكورية. اطلب من QR، تابع حالتك لحظة بلحظة.",
+  applicationName: "Ayasofia Sweet",
+  keywords: [
+    "Ayasofia",
+    "Qalqilya",
+    "bubble tea",
+    "boba",
+    "bingsu",
+    "حلويات",
+    "قلقيليا",
+    "بابل تي",
+  ],
+  authors: [{ name: "Ayasofia Sweet" }],
+  creator: "Ayasofia Sweet",
+  publisher: "Ayasofia Sweet",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#DC0000" },
+    { media: "(prefers-color-scheme: dark)", color: "#2B1D1D" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
