@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { computeProxyRedirect } from "@/lib/security/proxy-redirect";
 
 /**
  * Proxy — route protection per spec §12.
@@ -11,6 +12,12 @@ import { NextResponse, type NextRequest } from "next/server";
  *
  * Protected routes: /pos, /kitchen, /drive-thru, /admin
  * Public routes:   /, /login, /order (customer self-order, no auth)
+ *
+ * The redirect decision (fail-closed on protected + unauthenticated,
+ * fail-loud on protected + session-check error) lives in
+ * `lib/security/proxy-redirect.ts` so it can be unit-tested in
+ * isolation. This file owns the I/O (Supabase client, cookies,
+ * NextResponse); the helper owns the decision.
  */
 
 export async function proxy(request: NextRequest) {
@@ -40,26 +47,24 @@ export async function proxy(request: NextRequest) {
 
   const {
     data: { user },
+    error: getUserError,
   } = await supabase.auth.getUser();
 
   const staffId = user?.app_metadata?.staff_id as string | undefined;
-
   const pathname = request.nextUrl.pathname;
 
-  const isProtected =
-    pathname.startsWith("/pos") ||
-    pathname.startsWith("/kitchen") ||
-    pathname.startsWith("/drive-thru") ||
-    pathname.startsWith("/admin");
+  const redirectTo = computeProxyRedirect({
+    pathname,
+    staffId,
+    getUserError: getUserError ? { message: getUserError.message } : null,
+  });
 
-  const isLogin = pathname.startsWith("/login");
-  const isHome = pathname === "/";
-
-  if (isProtected && !staffId) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (redirectTo) {
+    return NextResponse.redirect(new URL(redirectTo, request.url));
   }
 
-  if ((isLogin || isHome) && staffId) {
+  // Authenticated user on /login or / → send them to /pos.
+  if (staffId && (pathname.startsWith("/login") || pathname === "/")) {
     return NextResponse.redirect(new URL("/pos", request.url));
   }
 
