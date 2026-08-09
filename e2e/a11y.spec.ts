@@ -1,18 +1,43 @@
 import { test, expect, type Page } from "@playwright/test";
 import { loginWithPin, addItemToCart } from "./helpers";
 
+/**
+ * Dispatch a toast event, retrying until the toast actually renders.
+ * The ToastProvider registers its window listener during React hydration;
+ * a dispatch fired before the listener is attached is silently lost, so we
+ * re-dispatch until the toast appears (bounded retry).
+ */
+async function dispatchToast(
+  page: Page,
+  variant: "error" | "warning",
+  message: string,
+): Promise<void> {
+  const toast = page.getByTestId("toast");
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await page.evaluate(
+      ([v, m]) => {
+        window.dispatchEvent(
+          new CustomEvent("ayasofia-toast", { detail: { variant: v, message: m } }),
+        );
+      },
+      [variant, message] as const,
+    );
+    try {
+      await toast.first().waitFor({ state: "visible", timeout: 1000 });
+      return;
+    } catch {
+      /* listener not ready — retry */
+    }
+  }
+  throw new Error(`toast did not render after retries (variant=${variant})`);
+}
+
 test.describe("A11y — toast notifications", () => {
   test('error toast renders with role="alert" and status-error brand token', async ({ page }) => {
     await page.goto("/login");
     await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
-    await page.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("ayasofia-toast", {
-          detail: { variant: "error", message: "خطأ تجريبي" },
-        }),
-      );
-    });
+    await dispatchToast(page, "error", "خطأ تجريبي");
 
     const toast = page.getByTestId("toast");
     await expect(toast).toBeVisible({ timeout: 5000 });
@@ -28,13 +53,7 @@ test.describe("A11y — toast notifications", () => {
     await page.goto("/login");
     await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
-    await page.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("ayasofia-toast", {
-          detail: { variant: "warning", message: "تحذير تجريبي" },
-        }),
-      );
-    });
+    await dispatchToast(page, "warning", "تحذير تجريبي");
 
     const toast = page.getByTestId("toast");
     await expect(toast).toBeVisible({ timeout: 5000 });
@@ -48,13 +67,7 @@ test.describe("A11y — toast notifications", () => {
     await page.goto("/login");
     await page.waitForSelector("button[aria-label='رقم 1']", { timeout: 10000 });
 
-    await page.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("ayasofia-toast", {
-          detail: { variant: "error", message: "رسالة مؤقتة" },
-        }),
-      );
-    });
+    await dispatchToast(page, "error", "رسالة مؤقتة");
 
     const toast = page.getByTestId("toast");
     await expect(toast).toBeVisible({ timeout: 5000 });
