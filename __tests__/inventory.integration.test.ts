@@ -5,7 +5,10 @@ import { describe, it, expect, afterAll, afterEach, beforeEach } from "vitest";
 const { testPool, staffId } = await vi.hoisted(async () => {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");
-  const envPath = path.resolve(__dirname, "..", ".env.local");
+  const testEnvFile = path.resolve(__dirname, "..", ".env.test.local");
+  const envPath = fs.existsSync(testEnvFile)
+    ? testEnvFile
+    : path.resolve(__dirname, "..", ".env.local");
   try {
     const content = fs.readFileSync(envPath, "utf-8");
     for (const line of content.split("\n")) {
@@ -16,6 +19,14 @@ const { testPool, staffId } = await vi.hoisted(async () => {
     }
   } catch {
     /* ignore */
+  }
+  // Step-3 guard: refuse to run against the production project host.
+  const PROD_HOST = "aws-0-ap-northeast-1.pooler.supabase.com";
+  if ((process.env.DATABASE_URL ?? "").includes(PROD_HOST)) {
+    throw new Error(
+      `[test-env] REFUSED: DATABASE_URL points at the PRODUCTION project (${PROD_HOST}). ` +
+        `Use the isolated staging .env.test.local.`,
+    );
   }
   const { Pool } = require("pg") as typeof import("pg");
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

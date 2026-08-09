@@ -27,7 +27,10 @@ const session = vi.hoisted(() => ({
 await vi.hoisted(async () => {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");
-  const envPath = path.resolve(__dirname, "..", ".env.local");
+  const testEnvFile = path.resolve(__dirname, "..", ".env.test.local");
+  const envPath = fs.existsSync(testEnvFile)
+    ? testEnvFile
+    : path.resolve(__dirname, "..", ".env.local");
   try {
     const content = fs.readFileSync(envPath, "utf-8");
     for (const line of content.split("\n")) {
@@ -40,6 +43,13 @@ await vi.hoisted(async () => {
     /* ignore */
   }
 });
+// Step-3 guard: refuse to run against the production project host.
+if ((process.env.DATABASE_URL ?? "").includes("aws-0-ap-northeast-1.pooler.supabase.com")) {
+  throw new Error(
+    `[test-env] REFUSED: DATABASE_URL points at the PRODUCTION project. ` +
+      `Use the isolated staging .env.test.local.`,
+  );
+}
 
 vi.mock("@/lib/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth")>();

@@ -23,21 +23,10 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Pool } from "pg";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { loadTestEnv } from "@/lib/test-env";
 
-const envPath = resolve(import.meta.dirname ?? __dirname, "..", ".env.local");
-try {
-  const content = readFileSync(envPath, "utf-8");
-  for (const line of content.split("\n")) {
-    const match = line.match(/^(\w+)=(.*)$/);
-    if (match && match[1] === "DATABASE_URL") {
-      process.env.DATABASE_URL = match[2].replace(/^["']|["']$/g, "");
-    }
-  }
-} catch {
-  // .env.local not found — tests depending on it will fail
-}
+// Load the isolated staging credentials + assert not the production project.
+loadTestEnv();
 
 // A superuser pool (postgres) for setup + a dedicated client we can SET ROLE on.
 const superPool = new Pool({ connectionString: process.env.DATABASE_URL });

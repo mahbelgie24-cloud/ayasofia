@@ -1,23 +1,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { loadTestEnv } from "@/lib/test-env";
 
-// Vitest doesn't auto-load Next.js .env.local — load it explicitly
-// BEFORE creating the Pool (same pattern as checkout.integration.test.ts).
-const envPath = resolve(import.meta.dirname ?? __dirname, "..", ".env.local");
-try {
-  const content = readFileSync(envPath, "utf-8");
-  for (const line of content.split("\n")) {
-    const match = line.match(/^(\w+)=(.*)$/);
-    if (match && match[1] === "DATABASE_URL") {
-      process.env.DATABASE_URL = match[2].replace(/^["']|["']$/g, "");
-    }
-  }
-} catch {
-  /* ignore — tests will skip if DB is unreachable */
-}
+// Load the isolated staging credentials + assert not the production project
+// BEFORE creating the Pool (Step-3 guard).
+loadTestEnv();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, {

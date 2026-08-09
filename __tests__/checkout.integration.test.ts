@@ -2,8 +2,8 @@
  * Integration test: confirms that concurrent transactions with the same
  * idempotencyKey result in exactly one order row.
  *
- * Requires DATABASE_URL (from .env.local) pointing to the live Supabase
- * Postgres instance.
+ * Requires DATABASE_URL (from .env.test.local — the isolated staging project;
+ * never production .env.local).
  *
  * Every test is self-cleaning: afterEach deletes created rows by their
  * exact IDs, regardless of whether the test passed or failed.
@@ -14,22 +14,11 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { and, eq } from "drizzle-orm";
 import { orders, products, modifiers, orderItems } from "@/db/schema";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { loadTestEnv } from "@/lib/test-env";
 
-// Vitest doesn't auto-load Next.js .env.local — load it explicitly.
-const envPath = resolve(import.meta.dirname ?? __dirname, "..", ".env.local");
-try {
-  const content = readFileSync(envPath, "utf-8");
-  for (const line of content.split("\n")) {
-    const match = line.match(/^(\w+)=(.*)$/);
-    if (match && match[1] === "DATABASE_URL") {
-      process.env.DATABASE_URL = match[2].replace(/^["']|["']$/g, "");
-    }
-  }
-} catch {
-  // .env.local not found — tests depending on it will fail
-}
+// Load the isolated staging credentials + assert this is not the production
+// project (Step-3 guard). CI-injected DATABASE_URL is used as-is.
+loadTestEnv();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema: { orders, products, modifiers, orderItems } });

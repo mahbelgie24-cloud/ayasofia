@@ -15,11 +15,15 @@
 
 import { vi } from "vitest";
 import { describe, it, expect, afterAll, afterEach, beforeEach } from "vitest";
+import { loadTestEnv } from "@/lib/test-env";
 
 await vi.hoisted(async () => {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");
-  const envPath = path.resolve(__dirname, "..", ".env.local");
+  const testEnvFile = path.resolve(__dirname, "..", ".env.test.local");
+  const envPath = fs.existsSync(testEnvFile)
+    ? testEnvFile
+    : path.resolve(__dirname, "..", ".env.local");
   try {
     const content = fs.readFileSync(envPath, "utf-8");
     for (const line of content.split("\n")) {
@@ -39,6 +43,9 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { orders, orderItems, inventoryMoves, ingredients, products, recipes } from "@/db/schema";
 import { executeCheckout } from "@/lib/checkout-core";
 import { computeIdempotencyKey } from "@/lib/idempotency";
+
+// Step-3 guard: assert the resolved DATABASE_URL is not the production project.
+loadTestEnv();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, {

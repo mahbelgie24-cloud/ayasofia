@@ -8,6 +8,7 @@
  */
 import { vi } from "vitest";
 import { describe, it, expect, afterAll, afterEach, beforeEach } from "vitest";
+import { loadTestEnv } from "@/lib/test-env";
 
 vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ "x-forwarded-for": "127.0.0.1" })),
@@ -27,7 +28,10 @@ vi.mock("@/lib/auth", async (importOriginal) => {
 await vi.hoisted(async () => {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");
-  const envPath = path.resolve(__dirname, "..", ".env.local");
+  const testEnvFile = path.resolve(__dirname, "..", ".env.test.local");
+  const envPath = fs.existsSync(testEnvFile)
+    ? testEnvFile
+    : path.resolve(__dirname, "..", ".env.local");
   try {
     const content = fs.readFileSync(envPath, "utf-8");
     for (const line of content.split("\n")) {
@@ -55,6 +59,9 @@ import {
 } from "@/db/schema";
 import { getSalesSummary, getBestSellers } from "@/app/(admin)/admin/reports/actions";
 import { placeCustomerOrder } from "@/app/order/actions";
+
+// Step-3 guard: assert the resolved DATABASE_URL is not the production project.
+loadTestEnv();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, {

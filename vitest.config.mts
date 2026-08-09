@@ -8,6 +8,9 @@ export default defineConfig({
   test: {
     environment: "node",
     exclude: ["node_modules", "e2e"],
+    // isolation: load .env.test.local (staging) + assert the resolved
+    // DATABASE_URL is not the production project, before any test runs.
+    globalSetup: [path.resolve(__dirname, "vitest.setup.ts")],
     // TD-2: integration tests share one Supabase project across files; running
     // them in parallel makes them contend for the same rows (shifts,
     // idempotency keys, RLS state), turning the local suite red. CI's

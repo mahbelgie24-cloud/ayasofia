@@ -1,8 +1,10 @@
 import { defineConfig } from "@playwright/test";
-import { loadEnvConfig } from "@next/env";
 import { resolve } from "node:path";
+import { loadTestEnv } from "@/lib/test-env";
 
-loadEnvConfig(process.cwd());
+// Load the isolated staging credentials (never production .env.local). This
+// also asserts DATABASE_URL is not the production project (Step-3 guard).
+loadTestEnv();
 
 const baseURL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 

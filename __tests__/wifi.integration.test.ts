@@ -8,12 +8,11 @@
 
 import { describe, it, expect, afterEach, afterAll, beforeEach } from "vitest";
 import { vi } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq } from "drizzle-orm";
 import { wifiSessions, settings } from "@/db/schema";
+import { loadTestEnv } from "@/lib/test-env";
 
 // Mock next/headers — the wifi actions call headers() for IP rate-limiting.
 // Outside a request scope, provide a stable test IP (mirrors phase3 test).
@@ -21,18 +20,8 @@ vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Headers({ "x-forwarded-for": "127.0.0.1" })),
 }));
 
-const envPath = resolve(import.meta.dirname ?? __dirname, "..", ".env.local");
-try {
-  const content = readFileSync(envPath, "utf-8");
-  for (const line of content.split("\n")) {
-    const match = line.match(/^(\w+)=(.*)$/);
-    if (match && match[1] === "DATABASE_URL") {
-      process.env.DATABASE_URL = match[2].replace(/^["']|["']$/g, "");
-    }
-  }
-} catch {
-  /* no .env.local */
-}
+// Load the isolated staging credentials + assert not the production project.
+loadTestEnv();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema: { wifiSessions, settings } });

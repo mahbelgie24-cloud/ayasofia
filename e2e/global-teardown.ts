@@ -4,12 +4,14 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadEnvConfig } from "@next/env";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { sql } from "drizzle-orm";
+import { loadTestEnv } from "@/lib/test-env";
 
-loadEnvConfig(process.cwd());
+// Load the isolated staging credentials (never production .env.local) +
+// assert DATABASE_URL is not the production project (Step-3 guard).
+loadTestEnv();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 const db = drizzle(pool);

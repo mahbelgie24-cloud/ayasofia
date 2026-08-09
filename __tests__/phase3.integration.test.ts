@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { vi } from "vitest";
 import { describe, it, expect, afterAll, afterEach, beforeEach } from "vitest";
+import { loadTestEnv } from "@/lib/test-env";
 
 // Mock next/headers — placeCustomerOrder now calls headers() for IP
 // rate-limiting.  In the integration test there's no request scope,
@@ -12,7 +13,9 @@ vi.mock("next/headers", () => ({
 const { testPool } = await vi.hoisted(async () => {
   const fs = require("node:fs") as typeof import("node:fs");
   const path = require("node:path") as typeof import("node:path");
-  const envPath = path.resolve(__dirname, "..", ".env.local");
+  // Staging env preferred so local tests never touch production.
+  const envFile = path.resolve(__dirname, "..", ".env.test.local");
+  const envPath = fs.existsSync(envFile) ? envFile : path.resolve(__dirname, "..", ".env.local");
   try {
     const content = fs.readFileSync(envPath, "utf-8");
     for (const line of content.split("\n")) {
@@ -27,6 +30,9 @@ const { testPool } = await vi.hoisted(async () => {
   const { Pool } = require("pg") as typeof import("pg");
   return { testPool: new Pool({ connectionString: process.env.DATABASE_URL }) };
 });
+
+// Step-3 guard: assert the resolved DATABASE_URL is not the production project.
+loadTestEnv();
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq, sql } from "drizzle-orm";

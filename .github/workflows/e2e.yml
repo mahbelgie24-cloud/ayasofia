@@ -10,9 +10,9 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # E2E tests touch a live Supabase project — never run from forks or on
-    # every PR.  Only on manual trigger or weekly schedule against the
-    # staging database.
+    # E2E tests touch the ISOLATED staging Supabase project — never
+    # production. Run only on manual trigger or weekly schedule against
+    # the staging database (STAGING_* secrets).
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v4
@@ -30,10 +30,11 @@ jobs:
       - name: Run E2E Tests
         run: npx playwright test
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Staging secrets — an isolated project, never the shared production one.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 
       - name: Upload Test Results
         if: always()
