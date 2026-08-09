@@ -53,7 +53,7 @@ test.describe("Design review — baseline screenshots", () => {
     await addItemToCart(page, "ميلك تي كلاسيك", []);
     await addItemToCart(page, "ميلك تي بالسكر البني", []);
     // Switch to second category to add a different product
-    await page.getByRole("button", { name: "شاي فواكه" }).click();
+    await page.getByRole("tab", { name: "شاي فواكه" }).click();
     await page.waitForTimeout(300);
     await addItemToCart(page, "شاي الفراولة", []);
     await page.getByRole("button", { name: /سلعة/ }).click();
@@ -62,8 +62,11 @@ test.describe("Design review — baseline screenshots", () => {
       path: "docs/design-review/before/pos-cart-open-1440x900.png",
       fullPage: true,
     });
+    // Close the blocking cart Sheet before interacting with the menu behind it.
+    await page.getByRole("button", { name: "متابعة الإضافة" }).click();
+    await page.waitForTimeout(300);
     // Switch to Cheese Foam Tea and open modifier sheet
-    await page.getByRole("button", { name: "شاي كريمة الجبن" }).click();
+    await page.getByRole("tab", { name: "شاي كريمة الجبن" }).click();
     await page.waitForTimeout(300);
     await page.getByRole("button", { name: "ماتشا بكريمة الجبن" }).first().click();
     await page.waitForTimeout(400);

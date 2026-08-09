@@ -122,13 +122,15 @@ test.describe("Phase 1 DoD — 20 sales", () => {
 
     for (let i = 0; i < 20; i++) {
       const v = VARIANTS[i % VARIANTS.length];
-      await page.getByRole("button", { name: v.category, exact: true }).click();
+      // Category tabs render as role="tab" (Tabs component).
+      await page.getByRole("tab", { name: v.category, exact: true }).click();
       await page.waitForTimeout(200);
 
       await addItemToCart(page, v.product, v.modifiers);
 
-      // Read total from cart bar — "X سلعة — Y ₪"
-      const bar = page.getByRole("button", { name: /سلعة —/ });
+      // Read total from the cart bar button — its accessible name is the
+      // concatenation "<count> سلعة <total> ₪ السلة" (e.g. "1 سلعة 15.00 ₪ السلة").
+      const bar = page.getByRole("button", { name: /سلعة/ }).first();
       const barText = await bar.textContent();
       const numbers = barText?.match(/\d+\.?\d*/g);
       if (numbers) {

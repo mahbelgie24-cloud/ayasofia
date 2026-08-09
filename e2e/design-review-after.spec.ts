@@ -52,7 +52,7 @@ test.describe("Design review — after screenshots", () => {
     await loginWithPin(page);
     await addItemToCart(page, "ميلك تي كلاسيك", []);
     await addItemToCart(page, "ميلك تي بالسكر البني", []);
-    await page.getByRole("button", { name: "شاي فواكه" }).click();
+    await page.getByRole("tab", { name: "شاي فواكه" }).click();
     await page.waitForTimeout(300);
     await addItemToCart(page, "شاي الفراولة", []);
     await page.getByRole("button", { name: /سلعة/ }).click();
@@ -61,7 +61,10 @@ test.describe("Design review — after screenshots", () => {
       path: "docs/design-review/after/pos-cart-open-1440x900.png",
       fullPage: true,
     });
-    await page.getByRole("button", { name: "شاي كريمة الجبن" }).click();
+    // Close the blocking cart Sheet before interacting with the menu behind it.
+    await page.getByRole("button", { name: "متابعة الإضافة" }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole("tab", { name: "شاي كريمة الجبن" }).click();
     await page.waitForTimeout(300);
     await page.getByRole("button", { name: "ماتشا بكريمة الجبن" }).first().click();
     await page.waitForTimeout(400);
