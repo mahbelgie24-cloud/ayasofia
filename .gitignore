@@ -76,3 +76,8 @@ yarn-error.log*
 
 # Turbo
 .turbo
+.supabase
+
+# Supabase CLI generated runtime artifacts
+supabase/.temp/
+supabase/.branches/

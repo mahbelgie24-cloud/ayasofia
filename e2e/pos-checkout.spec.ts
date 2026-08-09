@@ -1,25 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { loginWithPin } from "./helpers";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, sql } from "drizzle-orm";
 import { orders, inventoryMoves } from "@/db/schema";
+import { loadTestEnv } from "@/lib/test-env";
 
-// Load DATABASE_URL for direct DB assertions
-const envPath = resolve(__dirname, "..", ".env.local");
-try {
-  const content = readFileSync(envPath, "utf-8");
-  for (const line of content.split("\n")) {
-    const match = line.match(/^(\w+)=(.*)$/);
-    if (match && match[1] === "DATABASE_URL") {
-      process.env.DATABASE_URL = match[2].replace(/^["']|["']$/g, "");
-    }
-  }
-} catch {
-  /* ignore */
-}
+// Load the isolated local/staging DB credentials for direct DB assertions
+// (never production .env.local). Also enforces the production-host guard.
+loadTestEnv();
 
 const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(dbPool, { schema: { orders, inventoryMoves } });

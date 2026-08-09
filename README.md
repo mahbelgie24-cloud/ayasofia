@@ -97,19 +97,31 @@ This is **Option 1** (an explicit seed step in CI) rather than per-test
 self-seeding — a single seed per shard is cheaper than seeding inside every
 integration suite, and it exercises the real `db:seed` path in CI.
 
-To reproduce locally against a blank Docker Postgres:
+To reproduce locally, use the **Supabase local stack** (no cloud account
+needed — a second cloud project is not required for testing):
 
 ```bash
-docker run --rm -d --name dev-pg -p 5433:5432 \
-  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=ayasofia_test postgres:16-alpine
-export DATABASE_URL=postgresql://postgres:postgres@localhost:5433/ayasofia_test
-node .github/ci-ensure-role.mjs
+npm install supabase --save-dev        # one-time
+npx supabase init                      # creates ./supabase/config.toml (no secrets)
+npx supabase start                     # runs the local stack in Docker (ports 54321-54324)
+```
+
+`supabase start` prints the local API URL, anon key, service-role key, DB URL
+and Studio URL. Copy those into `.env.test.local` (git-ignored; the
+`lib/test-env.ts` guard refuses to run if `DATABASE_URL` points at the
+production project). Then migrate + seed the local database:
+
+```bash
+export DATABASE_URL="$(grep '^DATABASE_URL' .env.test.local | cut -d= -f2)"
 npx drizzle-kit migrate
 npm run db:seed
-# run integration suites without a .env.local present
+# run the integration suites against the local stack (reads .env.test.local)
 npx vitest run __tests__/*.integration.test.ts
 ```
+
+The local stack is isolated from production: local integration/e2e runs never
+touch the shared production Supabase project (verified by a read-only COUNT
+of `orders`/`ingredients` before and after — unchanged).
 
 ## Project structure
 
@@ -161,13 +173,15 @@ Do not use this codebase for real sales until:
 ### Playwright E2E tests
 
 ```bash
+npx supabase start          # local stack (see "Tests & CI seed gate" above)
 npx playwright test
 ```
 
-E2E tests require a live Supabase project (they create real orders,
-inventory moves, and stock changes against the database). Run them
-**manually** against the staging database before each deploy until
-Phase 5 sets up a proper CI-integrated staging environment. They are
-**not** configured in CI yet — adding them to the merge gate would
-require Supabase credentials as CI secrets, which should be set up
-carefully, not rushed.
+The E2E suite runs against the **local Supabase stack** (via `.env.test.local`,
+read by `playwright.config.ts` / `e2e/global-setup.ts`), so it creates real
+orders, inventory moves, and stock changes against the isolated local database
+— never the shared production project. The `webServer` dev server is pointed
+at the local stack by the Playwright config, and the `lib/test-env.ts` guard
+aborts the run if `DATABASE_URL` ever resolves to the production host.
+`./supabase/config.toml` is safe to commit (no secrets); the generated
+`supabase/.temp/` and `supabase/.branches/` dirs are git-ignored.
