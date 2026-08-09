@@ -2,14 +2,24 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { LogOut, ClipboardList, X, Plus, Minus, ArrowRight, Car, ShoppingCart } from "lucide-react";
+import {
+  LogOut,
+  ClipboardList,
+  X,
+  Plus,
+  Minus,
+  ArrowRight,
+  Car,
+  ShoppingCart,
+  Sparkles,
+} from "lucide-react";
 import type { POSCategory } from "@/lib/db/queries";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 import { usePOSCart } from "@/hooks/usePOSCart";
 import { checkout } from "./actions";
 import { closeShift } from "@/lib/shifts";
 import { enqueueOrder } from "@/lib/offline/queue";
-import { Sheet, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetTitle, SheetClose, SheetDescription } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { endStaffSession } from "@/lib/auth/session";
 import { useRouter } from "next/navigation";
@@ -65,7 +75,6 @@ export function POSShell({ menu }: POSShellProps) {
       modifierIds: item.selectedModifiers.map((m) => m.id),
       quantity: item.quantity,
     }));
-    // P1-M2: deterministic key for THIS cart snapshot (session + fingerprint).
     const idempotencyKey = await deriveIdempotencyKey(cartItems);
     try {
       const result = await checkout({
@@ -86,11 +95,6 @@ export function POSShell({ menu }: POSShellProps) {
         toast.error(result.error);
       }
     } catch {
-      // The sale must never be lost to a dead Wi-Fi (spec §8, §12).
-      // If the server call threw (network failure / session hiccup),
-      // persist the order to the offline queue with the SAME idempotency
-      // key so the sync engine can replay it — and only then, exactly
-      // once — on reconnect (review finding C1).
       try {
         await enqueueOrder(
           JSON.stringify(cartItems),
@@ -138,18 +142,18 @@ export function POSShell({ menu }: POSShellProps) {
   return (
     <div className="bg-brand-cream flex h-dvh flex-col" dir="rtl" lang="ar">
       {/* ── Top bar ── */}
-      <header className="border-border-subtle flex shrink-0 items-center justify-between gap-3 border-b bg-white px-4 py-2.5 shadow-sm">
+      <header className="border-border-subtle/60 relative flex shrink-0 items-center justify-between gap-3 border-b bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2.5">
           <Logo size="sm" surface="tile" />
           <div className="hidden sm:block">
             <p className="heading-3 text-brand-ink text-sm leading-tight">Ayasofia POS</p>
-            <p className="caption text-text-secondary">حلويات آيا صوفيا</p>
+            <p className="text-text-secondary caption">حلويات آيا صوفيا</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => router.push("/drive-thru")}
-            className="border-border-subtle text-text-secondary hover:border-brand-red hover:text-brand-red flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+            className="border-border-subtle text-text-secondary hover:border-brand-red hover:text-brand-red ease-spring flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-1.5 text-xs font-semibold transition-colors"
             title="Drive-Thru"
           >
             <Car className="size-3.5" />
@@ -161,14 +165,14 @@ export function POSShell({ menu }: POSShellProps) {
               setClosingCash("");
               setShiftModal(true);
             }}
-            className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+            className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 ease-spring flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-1.5 text-xs font-semibold transition-colors"
           >
             <ClipboardList className="size-3.5" />
             <span>إنهاء الوردية</span>
           </button>
           <button
             onClick={handleSignOut}
-            className="border-border-subtle text-text-secondary hover:border-status-error hover:text-status-error flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+            className="border-border-subtle text-text-secondary hover:border-status-error hover:text-status-error ease-spring flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1.5 text-xs font-semibold transition-colors"
             title="تسجيل الخروج"
           >
             <LogOut className="size-3.5" />
@@ -177,8 +181,8 @@ export function POSShell({ menu }: POSShellProps) {
       </header>
 
       {/* ── Category tabs ── */}
-      <div className="border-border-subtle bg-card flex shrink-0 border-b px-3 py-2">
-        <div className="overflow-x-auto">
+      <div className="border-border-subtle/60 flex shrink-0 border-b bg-white/60 px-3 py-2 backdrop-blur-sm">
+        <div className="w-full overflow-x-auto">
           <Tabs
             value={selectedCatId}
             onValueChange={setSelectedCatId}
@@ -207,20 +211,24 @@ export function POSShell({ menu }: POSShellProps) {
       </div>
 
       {/* ── Cart bar ── */}
-      <div className="border-border-subtle shrink-0 border-t bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(43,29,29,0.04)]">
+      <div className="border-border-subtle/60 relative shrink-0 border-t bg-white px-4 py-3 shadow-[0_-8px_24px_rgba(43,29,29,0.06)]">
         <button
           onClick={() => setCartOpen(true)}
-          className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-between gap-3 rounded-full px-5 py-3 text-white shadow-md transition-all"
+          className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand animate-shimmer relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-full px-5 py-3.5 text-white transition-all hover:-translate-y-0.5"
         >
-          <span className="flex items-center gap-2.5">
-            <ShoppingCart className="size-5" />
-            <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/20 px-2 text-sm font-bold tabular-nums">
+          <span className="relative z-10 flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+              <ShoppingCart className="size-4" />
+            </span>
+            <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/25 px-2 text-sm font-bold tabular-nums backdrop-blur-sm">
               {cartCount}
             </span>
-            <span className="body-sm text-white/85">سلعة</span>
+            <span className="body-sm font-medium text-white/90">سلعة</span>
           </span>
-          <span className="heading-3 text-white">{`${formatPrice(cartTotal)} ₪`}</span>
-          <span className="body-sm flex items-center gap-1 font-semibold text-white/95">
+          <span className="heading-3 relative z-10 text-white tabular-nums">
+            {`${formatPrice(cartTotal)} ₪`}
+          </span>
+          <span className="body-sm relative z-10 flex items-center gap-1 font-semibold text-white/95">
             <span>السلة</span>
             <ArrowRight className="size-4 rtl:rotate-180" />
           </span>
@@ -228,19 +236,19 @@ export function POSShell({ menu }: POSShellProps) {
       </div>
 
       {/* ── Cart panel ── */}
-      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+      <Sheet open={cartOpen} onOpenChange={setCartOpen} size="md">
         <SheetTitle>سلة الطلب</SheetTitle>
-        <p className="body-sm text-text-secondary -mt-3 mb-4">
+        <SheetDescription>
           {cart.length === 0
             ? "أضف منتجات من القائمة لبدء الطلب"
             : `${cartCount} سلعة • ${cart.length} نوع`}
-        </p>
-        <div className="max-h-72 space-y-2 overflow-y-auto pe-1">
+        </SheetDescription>
+        <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pe-1">
           {cart.length === 0 ? (
-            <EmptyState title="السلة فارغة" />
+            <EmptyState title="السلة فارغة" description="اختر منتجاً من القائمة لتبدأ." />
           ) : (
             cart.map((item, idx) => (
-              <Card key={idx} variant="flat" className="p-3">
+              <Card key={idx} variant="flat" className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="heading-3 text-brand-ink text-sm">{item.productNameAr}</p>
@@ -258,7 +266,7 @@ export function POSShell({ menu }: POSShellProps) {
                   <button
                     onClick={() => updateQuantity(idx, -1)}
                     aria-label="تقليل"
-                    className="bg-muted hover:bg-muted/80 flex size-10 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                    className="bg-muted hover:bg-brand-red-soft hover:text-brand-red ease-spring flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold transition-colors"
                   >
                     <Minus className="size-4" />
                   </button>
@@ -271,14 +279,14 @@ export function POSShell({ menu }: POSShellProps) {
                   <button
                     onClick={() => updateQuantity(idx, 1)}
                     aria-label="زيادة"
-                    className="bg-muted hover:bg-muted/80 flex size-10 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                    className="bg-muted hover:bg-brand-red-soft hover:text-brand-red ease-spring flex min-h-11 min-w-11 items-center justify-center rounded-full text-sm font-bold transition-colors"
                   >
                     <Plus className="size-4" />
                   </button>
                   <button
                     onClick={() => removeItem(idx)}
                     aria-label="حذف"
-                    className="text-text-secondary hover:bg-status-error/10 hover:text-status-error ms-auto flex size-10 items-center justify-center rounded-full transition-colors"
+                    className="text-text-secondary hover:bg-status-error/10 hover:text-status-error ease-spring ms-auto flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors"
                   >
                     <X className="size-4" />
                   </button>
@@ -289,39 +297,47 @@ export function POSShell({ menu }: POSShellProps) {
         </div>
 
         {cart.length > 0 && (
-          <>
-            <div className="mt-5 space-y-4">
-              <FormField label="طريقة الدفع">
-                <Tabs
-                  value={paymentMethod}
-                  onValueChange={(v) => setPaymentMethod(v as "cash" | "card")}
-                  size="sm"
-                  items={[
-                    { value: "cash", label: "نقدي" },
-                    { value: "card", label: "بطاقة" },
-                  ]}
-                />
-              </FormField>
+          <div className="mt-5 space-y-4">
+            <FormField label="طريقة الدفع">
+              <Tabs
+                value={paymentMethod}
+                onValueChange={(v) => setPaymentMethod(v as "cash" | "card")}
+                size="sm"
+                items={[
+                  { value: "cash", label: "نقدي" },
+                  { value: "card", label: "بطاقة" },
+                ]}
+              />
+            </FormField>
 
-              <FormField label="رقم الزبون" hint="اختياري — لإرسال الفاتورة عبر واتساب">
-                <Input
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="05XXXXXXXX"
-                  dir="ltr"
-                />
-              </FormField>
+            <FormField label="رقم الزبون" hint="اختياري — لإرسال الفاتورة عبر واتساب">
+              <Input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="05XXXXXXXX"
+                dir="ltr"
+              />
+            </FormField>
 
-              <button
-                onClick={handleCheckout}
-                disabled={checkingOut}
-                className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-base font-bold text-white shadow-md transition-all disabled:opacity-50"
-              >
-                {checkingOut ? "جاري الدفع..." : `دفع ${formatPrice(cartTotal)} ₪`}
-              </button>
-            </div>
-          </>
+            <button
+              onClick={handleCheckout}
+              disabled={checkingOut}
+              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-base font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              {checkingOut ? (
+                <span className="flex items-center gap-2">
+                  <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  جاري الدفع...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Sparkles className="size-4" />
+                  دفع {formatPrice(cartTotal)} ₪
+                </span>
+              )}
+            </button>
+          </div>
         )}
 
         <div className="mt-3 flex justify-end">
@@ -335,20 +351,24 @@ export function POSShell({ menu }: POSShellProps) {
         onOpenChange={(open) => {
           if (!open) setModifierTarget(null);
         }}
+        size="md"
       >
         <SheetTitle>{modifierTarget?.productNameAr ?? ""}</SheetTitle>
-        <p className="text-text-secondary -mt-3 mb-1 text-sm">السعر الأساسي</p>
-        <p className="heading-2 text-brand-ink numeric text-lg">
-          {formatPrice(toMinorUnits(modifierTarget?.basePrice ?? "0"))} ₪
-        </p>
+        <SheetDescription>اختر الإضافات لضبط الطلب</SheetDescription>
+        <div className="mt-3 flex items-baseline gap-2">
+          <span className="text-text-secondary caption">السعر الأساسي</span>
+          <span className="heading-2 text-brand-ink numeric text-lg">
+            {formatPrice(toMinorUnits(modifierTarget?.basePrice ?? "0"))} ₪
+          </span>
+        </div>
 
         <div className="mt-4 mb-4 max-h-96 space-y-5 overflow-y-auto pe-1">
           {modifierTarget?.groups.map((group) => (
             <div key={group.id}>
-              <div className="mb-2 flex items-center gap-2">
+              <div className="mb-2.5 flex items-center gap-2">
                 <p className="heading-3 text-brand-ink text-sm">{group.name}</p>
                 {group.isRequired && (
-                  <span className="text-status-error text-[10px] font-semibold tracking-wider uppercase">
+                  <span className="bg-status-error/10 text-status-error rounded-full px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
                     مطلوب
                   </span>
                 )}
@@ -365,10 +385,10 @@ export function POSShell({ menu }: POSShellProps) {
                           : toggleMulti(group.id, mod.id)
                       }
                       aria-pressed={isSelected}
-                      className={`ease-spring rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+                      className={`ease-spring rounded-full border px-3.5 py-2 text-sm font-medium transition-all ${
                         isSelected
-                          ? "border-brand-red bg-brand-red shadow-brand-red/20 text-white shadow-sm"
-                          : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/40"
+                          ? "bg-brand-red border-brand-red shadow-brand-soft -translate-y-0.5 text-white"
+                          : "border-border-subtle bg-muted text-brand-ink hover:border-brand-red/40 hover:bg-brand-red-soft/40"
                       }`}
                     >
                       {mod.nameAr}
@@ -391,7 +411,7 @@ export function POSShell({ menu }: POSShellProps) {
           <SheetClose onClick={() => setModifierTarget(null)}>إلغاء</SheetClose>
           <button
             onClick={confirmModifiers}
-            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex-1 rounded-full px-4 py-3 text-sm font-bold text-white shadow-md transition-all"
+            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand flex-1 rounded-full px-4 py-3 text-sm font-bold text-white transition-all hover:-translate-y-0.5"
           >
             إضافة إلى السلة
           </button>
@@ -399,14 +419,14 @@ export function POSShell({ menu }: POSShellProps) {
       </Sheet>
 
       {/* ── Shift close modal ── */}
-      <Sheet open={shiftModal} onOpenChange={setShiftModal}>
+      <Sheet open={shiftModal} onOpenChange={setShiftModal} size="sm">
         <SheetTitle>إنهاء الوردية</SheetTitle>
+        <SheetDescription>
+          أدخل المبلغ النقدي الفعلي في الدرج الآن لإقفال الوردية ومطابقة المبيعات.
+        </SheetDescription>
 
         {!shiftResult ? (
           <div className="my-4 space-y-4">
-            <p className="text-text-secondary body-sm">
-              أدخل المبلغ النقدي الفعلي في الدرج الآن لإقفال الوردية ومطابقة المبيعات.
-            </p>
             <FormField label="النقد في الدرج">
               <Input
                 type="number"
@@ -455,7 +475,7 @@ export function POSShell({ menu }: POSShellProps) {
             </Card>
             <button
               onClick={handleSignOut}
-              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-md transition-all"
+              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white transition-all hover:-translate-y-0.5"
             >
               <LogOut className="size-4" />
               <span>تسجيل الخروج</span>
@@ -478,11 +498,11 @@ function ProductCard({
     <button
       onClick={onClick}
       disabled={!product.isAvailable}
-      className={`ease-spring shadow-card hover:shadow-pop flex flex-col items-center rounded-2xl bg-white p-3 text-center transition-all hover:-translate-y-0.5 disabled:opacity-40 ${
+      className={`ease-spring shadow-card hover:shadow-pop group relative flex flex-col items-center overflow-hidden rounded-2xl bg-white p-3 text-center transition-all hover:-translate-y-1 disabled:opacity-40 ${
         product.isAvailable ? "cursor-pointer" : "cursor-not-allowed"
       }`}
     >
-      <div className="bg-brand-red-bg mb-2.5 flex h-16 w-16 items-center justify-center rounded-2xl">
+      <div className="bg-brand-red-bg relative mb-2.5 flex h-16 w-16 items-center justify-center rounded-2xl transition-transform group-hover:scale-105">
         <Image
           src={product.imageUrl ?? "/icons/icon-bubbletea.svg"}
           alt={product.nameAr}
@@ -490,6 +510,10 @@ function ProductCard({
           height={56}
           loading="lazy"
           className="h-12 w-12 object-contain"
+        />
+        <span
+          aria-hidden="true"
+          className="bg-brand-red/10 absolute inset-0 rounded-2xl opacity-0 transition-opacity group-hover:opacity-100"
         />
       </div>
       <span className="heading-3 text-brand-ink w-full text-sm leading-tight">

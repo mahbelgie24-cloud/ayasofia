@@ -79,8 +79,8 @@ test.describe("A11y — touch target size (WCAG 2.5.5)", () => {
   test("quantity and remove buttons meet 44×44px minimum", async ({ page }) => {
     await openCartWithItem(page);
 
-    const qtyMinus = page.getByRole("button", { name: "−" }).first();
-    const qtyPlus = page.getByRole("button", { name: "+" }).first();
+    const qtyMinus = page.getByRole("button", { name: "تقليل" }).first();
+    const qtyPlus = page.getByRole("button", { name: "زيادة" }).first();
     const removeBtn = page.getByRole("button", { name: "حذف" }).first();
 
     for (const btn of [qtyMinus, qtyPlus, removeBtn]) {
