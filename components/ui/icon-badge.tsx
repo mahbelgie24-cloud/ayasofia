@@ -11,20 +11,23 @@ import { cn } from "@/lib/utils";
  *   - ink:    brand-ink (premium / owner surfaces)
  *   - muted:  cream wash (neutral inline icons)
  *   - success / warning / error:  status tiles
+ *   - glass:  translucent overlay for use on brand surfaces
  */
-type Variant = "brand" | "soft" | "ink" | "muted" | "success" | "warning" | "error";
+type Variant = "brand" | "soft" | "ink" | "muted" | "success" | "warning" | "error" | "glass";
 
 const variantClasses: Record<Variant, string> = {
-  brand: "bg-brand-red text-white shadow-md shadow-brand-red/20",
+  brand: "bg-brand-red text-white shadow-md shadow-brand-red/20 ring-1 ring-inset ring-white/10",
   soft: "bg-brand-red-soft text-brand-red",
   ink: "bg-brand-ink text-white shadow-md shadow-brand-ink/20",
   muted: "bg-brand-cream text-brand-ink border border-border-subtle",
   success: "bg-status-success/[0.12] text-status-success",
   warning: "bg-status-warning/[0.12] text-status-warning",
   error: "bg-status-error/[0.12] text-status-error",
+  glass: "glass text-white",
 };
 
 const sizeMap = {
+  xs: "size-7 rounded-xl",
   sm: "size-8 rounded-xl",
   md: "size-10 rounded-2xl",
   lg: "size-12 rounded-2xl",

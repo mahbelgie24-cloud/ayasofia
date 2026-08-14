@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Check, ChefHat, Clock, PackageCheck, MapPin, Receipt } from "lucide-react";
+import { Check, ChefHat, Clock, PackageCheck, MapPin, Receipt, Sparkles } from "lucide-react";
 import { getOrderStatus } from "@/app/order/status/[orderId]/actions";
-import { PearlsLoader } from "@/components/digital-menu/pearls-loader";
-import { PearlsField } from "@/components/digital-menu/pearls-field";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
+import { PearlField } from "@/components/ui/pearl-field";
 
 interface DMStatusData {
   branchSlug: string;
@@ -109,18 +108,28 @@ export function DMStatusClient({
 
   return (
     <div className="bg-brand-red-bg flex min-h-dvh flex-col" dir="rtl" lang="ar">
-      <header className="bg-brand-red relative overflow-hidden px-4 pt-6 pb-12 text-center text-white">
-        <PearlsField />
+      <header className="bg-brand-red relative overflow-hidden px-4 pt-7 pb-14 text-center text-white">
+        <PearlField variant="scatter" tone="white" count={10} />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.18) 0%, transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(0,0,0,0.18) 0%, transparent 60%)",
+          }}
+        />
         <div className="relative z-10">
-          <div className="mb-3 flex justify-center">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-white/15 shadow-lg shadow-black/10 backdrop-blur-sm">
-              <Logo size="sm" invert />
-            </div>
+          <div className="mb-4 flex justify-center">
+            <Logo size="md" surface="glass" alt="متابعة الطلب" />
           </div>
-          <h1 className="heading-1 text-white">متابعة طلبك</h1>
-          <p className="body mt-1 text-white/85">رقم الطلب: {initial.orderNumber}</p>
+          <p className="eyebrow flex items-center justify-center gap-1.5 tracking-[0.18em] text-white/85">
+            <Sparkles className="size-3" />
+            تحديث لحظي
+          </p>
+          <h1 className="display-1 mt-1.5 text-white">متابعة طلبك</h1>
+          <p className="body mt-1.5 font-medium text-white/90">رقم الطلب: {initial.orderNumber}</p>
           {initial.tableCode && (
-            <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+            <span className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1.5 text-xs font-bold backdrop-blur-md">
               <MapPin className="size-3.5" />
               الطاولة {initial.tableCode}
             </span>
@@ -128,39 +137,48 @@ export function DMStatusClient({
         </div>
       </header>
 
-      <main className="relative z-10 -mt-6 flex-1 space-y-3 px-4 pb-10">
-        <Card variant="pop" className="p-5">
+      <main className="relative z-10 -mt-7 flex-1 space-y-3 px-4 pb-10">
+        <Card variant="elev" className="noise animate-scale-in relative overflow-hidden p-5">
+          <span
+            aria-hidden="true"
+            className="bg-brand-red/10 pointer-events-none absolute -end-16 -top-16 size-44 rounded-full blur-3xl"
+          />
           {cancelled ? (
             <p className="text-status-error text-center text-lg font-bold">تم إلغاء الطلب</p>
           ) : (
-            <>
-              <p className="text-text-secondary caption mb-4 text-center">الحالة الحالية</p>
-              <p className="heading-1 text-brand-red text-center text-2xl">
+            <div className="relative">
+              <p className="text-text-secondary caption mb-3 text-center">الحالة الحالية</p>
+              <p className="display-2 text-brand-red text-center text-2xl">
                 {STATUS_LABELS[status] ?? status}
               </p>
-              <ol className="relative mt-6 space-y-0" aria-label="تقدم الطلب">
+              <ol className="relative mt-7 space-y-0" aria-label="تقدم الطلب">
                 {/* connector line */}
                 <div
                   aria-hidden="true"
-                  className="bg-border-subtle absolute start-[14px] top-3 bottom-3 w-px"
+                  className="bg-border-subtle absolute start-[15px] top-3 bottom-3 w-0.5"
+                />
+                <div
+                  aria-hidden="true"
+                  className="bg-brand-red absolute start-[15px] top-3 w-0.5 transition-all duration-700 ease-out"
+                  style={{ height: `calc(${(step / (STATUS_STEPS.length - 1)) * 100}% - 0px)` }}
                 />
                 {STATUS_STEPS.map((s, i) => {
                   const done = i <= step;
                   const current = i === step;
                   return (
-                    <li key={s.key} className="relative flex items-center gap-3 py-2.5">
+                    <li key={s.key} className="relative flex items-center gap-3.5 py-2.5">
                       <span
                         aria-hidden="true"
-                        className={`relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full transition-colors ${
+                        className={`relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
                           done
-                            ? "bg-brand-red shadow-brand-red/30 text-white shadow-sm"
+                            ? "bg-brand-red shadow-brand-soft text-white"
                             : "bg-card border-border-subtle text-text-secondary border-2"
-                        } ${current ? "ring-brand-red/20 ring-4" : ""}`}
+                        } ${current ? "ring-brand-red/20 scale-110 ring-4" : ""}`}
                       >
                         {s.icon}
                       </span>
                       <span
-                        className={`text-sm font-medium ${
+                        className={`text-sm font-semibold ${
                           done ? "text-brand-ink" : "text-text-secondary"
                         }`}
                       >
@@ -170,13 +188,15 @@ export function DMStatusClient({
                   );
                 })}
               </ol>
-            </>
+            </div>
           )}
         </Card>
 
         <Card variant="default" className="p-5">
           <div className="mb-3 flex items-center gap-2">
-            <Receipt className="text-text-secondary size-4" />
+            <div className="bg-brand-red-soft text-brand-red flex size-7 items-center justify-center rounded-xl">
+              <Receipt className="size-3.5" />
+            </div>
             <h2 className="heading-3 text-brand-ink text-sm">تفاصيل الطلب</h2>
           </div>
           <ul className="space-y-3">
@@ -195,20 +215,37 @@ export function DMStatusClient({
                     <p className="text-status-warning mt-0.5 text-xs italic">“{item.notes}”</p>
                   )}
                 </div>
-                <span className="numeric shrink-0 font-medium">{item.lineTotal} ₪</span>
+                <span className="numeric shrink-0 font-bold">{item.lineTotal} ₪</span>
               </li>
             ))}
           </ul>
           <div className="border-border-subtle mt-4 flex items-center justify-between border-t pt-3">
-            <span className="text-text-secondary text-sm">المجموع</span>
-            <span className="numeric text-brand-ink text-base font-bold">{initial.total} ₪</span>
+            <span className="text-text-secondary text-sm font-medium">المجموع</span>
+            <span className="numeric text-brand-red text-base font-extrabold">
+              {initial.total} ₪
+            </span>
           </div>
-          <p className="text-text-secondary mt-3 text-center text-xs">
+          <p className="text-text-secondary/80 mt-3 text-center text-xs">
             المدة المتوقعة للتحضير 10–15 دقيقة
           </p>
         </Card>
 
-        {loading && <PearlsLoader label="جاري تحديث الحالة…" className="py-4" />}
+        {loading && (
+          <div className="text-text-secondary caption flex items-center justify-center gap-2 py-3">
+            <span className="flex gap-1">
+              <span className="bg-brand-red animate-pearl-bounce size-1.5 rounded-full" />
+              <span
+                className="bg-brand-red animate-pearl-bounce size-1.5 rounded-full"
+                style={{ animationDelay: "120ms" }}
+              />
+              <span
+                className="bg-brand-red animate-pearl-bounce size-1.5 rounded-full"
+                style={{ animationDelay: "240ms" }}
+              />
+            </span>
+            <span>جاري تحديث الحالة…</span>
+          </div>
+        )}
       </main>
     </div>
   );

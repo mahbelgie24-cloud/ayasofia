@@ -57,6 +57,38 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/favicon.ico", sizes: "16x16 32x32" },
+      { url: "/icon1.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon2.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "ar_PS",
+    siteName: "Ayasofia Sweet",
+    title: "Ayasofia Sweet — حلويات آيا صوفيا",
+    description:
+      "حلويات آيا صوفيا، قلقيلية — بابل تي تايواني، حلويات يابانية وكورية. اطلب من QR، تابع حالتك لحظة بلحظة.",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Ayasofia Sweet — Bubble Tea & Sweets",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ayasofia Sweet — حلويات آيا صوفيا",
+    description:
+      "حلويات آيا صوفيا، قلقيلية — بابل تي تايواني، حلويات يابانية وكورية. اطلب من QR، تابع حالتك لحظة بلحظة.",
+    images: ["/opengraph-image.png"],
+  },
 };
 
 export const viewport: Viewport = {

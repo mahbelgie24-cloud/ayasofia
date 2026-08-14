@@ -40,33 +40,44 @@ export function AdminMobileNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminMo
 
   return (
     <nav
-      className="border-border-subtle fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 backdrop-blur-md lg:hidden"
+      className="border-border-subtle/60 fixed inset-x-3 bottom-3 z-40 lg:hidden"
       aria-label="القائمة السريعة"
     >
-      <ul className="flex items-stretch justify-around px-1 py-1" role="list">
-        {items.map((link) => {
-          const active =
-            link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
-          const Icon = link.icon;
-          return (
-            <li key={link.href} className="flex-1">
-              <a
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors",
-                  active ? "text-brand-red" : "text-text-secondary hover:text-brand-ink",
-                )}
-              >
-                <Icon
-                  className={cn("size-5 shrink-0 transition-colors", active && "text-brand-red")}
-                />
-                <span className="truncate">{link.label}</span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="shadow-elev mx-auto max-w-md rounded-3xl border border-white/40 bg-white/85 px-1.5 py-1.5 backdrop-blur-xl">
+        <ul className="flex items-stretch justify-around" role="list">
+          {items.map((link) => {
+            const active =
+              link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
+            const Icon = link.icon;
+            return (
+              <li key={link.href} className="flex-1">
+                <a
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "ease-spring relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition-all duration-300",
+                    active ? "text-white" : "text-text-secondary hover:text-brand-ink",
+                  )}
+                >
+                  {active && (
+                    <span
+                      aria-hidden="true"
+                      className="bg-brand-red shadow-brand-soft absolute inset-0 rounded-2xl"
+                    />
+                  )}
+                  <Icon
+                    className={cn(
+                      "relative z-10 size-5 shrink-0 transition-colors",
+                      active ? "text-white" : "text-text-secondary",
+                    )}
+                  />
+                  <span className="relative z-10 truncate">{link.label}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </nav>
   );
 }

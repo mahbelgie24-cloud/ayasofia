@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
+import { PearlDivider } from "@/components/ui/pearl-field";
 
 interface AdminNavProps {
   digitalMenuOn: boolean;
@@ -23,6 +24,7 @@ interface NavLink {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  description?: string;
 }
 
 interface NavGroup {
@@ -33,8 +35,6 @@ interface NavGroup {
 export function AdminNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminNavProps) {
   const pathname = usePathname();
 
-  // Build groups inside the component so the boolean flags (closure vars)
-  // can gate the conditional links. T-B15: staff management is owner-only.
   const navGroups: NavGroup[] = [
     {
       label: "عام",
@@ -59,14 +59,18 @@ export function AdminNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminNavProps
 
   return (
     <nav
-      className="border-border-subtle hidden w-60 shrink-0 flex-col border-l bg-white/80 backdrop-blur-sm lg:flex"
+      className="border-border-subtle/60 hidden w-64 shrink-0 flex-col bg-white/70 backdrop-blur-md lg:flex"
       aria-label="قائمة الإدارة"
     >
       {/* Brand */}
-      <div className="border-border-subtle flex items-center gap-3 border-b px-5 py-4">
-        <Logo size="sm" surface="tile" />
-        <div className="min-w-0">
-          <h2 className="heading-3 text-brand-ink text-sm">الإدارة</h2>
+      <div className="border-border-subtle/60 relative flex items-center gap-3 border-b px-5 py-5">
+        <span
+          aria-hidden="true"
+          className="bg-brand-red/10 absolute -end-8 -top-8 size-24 rounded-full blur-2xl"
+        />
+        <Logo size="md" surface="tile" className="relative" />
+        <div className="relative min-w-0">
+          <h2 className="heading-3 text-brand-ink text-base leading-tight">الإدارة</h2>
           <p className="text-text-secondary caption">Ayasofia Sweet</p>
         </div>
       </div>
@@ -74,13 +78,13 @@ export function AdminNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminNavProps
       {/* Nav groups */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
         {navGroups.map((group) => (
-          <div key={group.label} className="mb-5 last:mb-0">
+          <div key={group.label} className="mb-6 last:mb-0">
             {group.items.length > 0 && (
-              <p className="text-text-secondary/60 mb-2 px-2 text-[10px] font-semibold tracking-wider uppercase">
+              <p className="text-text-secondary/60 mb-2.5 px-3 text-[10px] font-bold tracking-[0.14em] uppercase">
                 {group.label}
               </p>
             )}
-            <ul className="space-y-0.5" role="list">
+            <ul className="space-y-1" role="list">
               {group.items.map((link) => {
                 const active =
                   link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
@@ -91,20 +95,28 @@ export function AdminNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminNavProps
                       href={link.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+                        "group ease-spring relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-300",
                         active
-                          ? "bg-brand-red shadow-brand-red/20 text-white shadow-sm"
-                          : "text-brand-ink hover:bg-brand-red/5",
+                          ? "bg-brand-red shadow-brand-soft text-white"
+                          : "text-brand-ink/80 hover:bg-brand-red-soft hover:text-brand-red",
                       )}
                     >
-                      <Icon
+                      {active && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute end-1 top-1/2 size-1.5 -translate-y-1/2 rounded-full bg-white/20"
+                        />
+                      )}
+                      <span
                         className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
+                          "flex size-7 items-center justify-center rounded-xl transition-colors",
                           active
-                            ? "text-white/90"
-                            : "text-text-secondary group-hover:text-brand-red",
+                            ? "bg-white/15 text-white"
+                            : "bg-muted text-text-secondary group-hover:text-brand-red group-hover:bg-white",
                         )}
-                      />
+                      >
+                        <Icon className="size-4" />
+                      </span>
                       <span className="truncate">{link.label}</span>
                     </a>
                   </li>
@@ -115,10 +127,11 @@ export function AdminNav({ digitalMenuOn, wifiPortalOn, isOwner }: AdminNavProps
         ))}
       </div>
 
-      {/* Footer */}
-      <div className="border-border-subtle border-t px-4 py-3">
-        <p className="text-text-secondary/60 text-center text-[10px]">
-          Ayasofia Sweet © {new Date().getFullYear()}
+      {/* Footer with brand mark */}
+      <div className="border-border-subtle/60 border-t px-4 py-4">
+        <PearlDivider tone="muted" className="mb-3" />
+        <p className="text-text-secondary/60 text-center text-[10px] font-medium tracking-wider uppercase">
+          Ayasofia Sweet · {new Date().getFullYear()}
         </p>
       </div>
     </nav>

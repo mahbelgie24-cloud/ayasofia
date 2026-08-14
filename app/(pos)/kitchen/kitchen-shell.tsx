@@ -11,23 +11,24 @@ import {
   PackageCheck,
   Utensils,
   Bike,
+  Car,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateOrderStatus, fetchActiveOrders, type ActiveKitchenOrder } from "./actions";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Logo } from "@/components/ui/logo";
+import { PearlField } from "@/components/ui/pearl-field";
 
 const CHANNEL_LABELS: Record<
   string,
-  { label: string; icon: React.ReactNode; tone: "red" | "amber" | "ink" }
+  { label: string; icon: React.ReactNode; tone: "red" | "amber" | "ink" | "white" }
 > = {
   dine_in: { label: "صالة", icon: <Utensils className="size-3" />, tone: "ink" },
   takeaway: { label: "خارجي", icon: <Coffee className="size-3" />, tone: "ink" },
   drive_thru: { label: "Drive-Thru", icon: <Car className="size-3" />, tone: "red" },
   delivery: { label: "توصيل", icon: <Bike className="size-3" />, tone: "amber" },
 };
-
-import { Car } from "lucide-react";
 
 const STATUS_META: Record<
   string,
@@ -82,7 +83,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
   const playBeep = useCallback(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio(
-        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/g",
+        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gIB/f3+AgH9/f4CAf39/gH",
       );
     }
     audioRef.current.play().catch(() => {});
@@ -115,10 +116,6 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
       })
       .subscribe();
 
-    // Realtime fallback — if the WebSocket drops or an event is missed
-    // during a brief disconnect, no new order would ever appear.  A
-    // periodic refetch (every 15s) is a cheap belt-and-suspenders guard
-    // for a live KDS on flaky in-store Wi-Fi (see review R-M3).
     const pollId = setInterval(refreshOrders, 15_000);
 
     return () => {
@@ -144,22 +141,30 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
 
   return (
     <div className="bg-brand-cream flex h-dvh flex-col" dir="rtl" lang="ar">
-      <header className="bg-brand-red shadow-brand-red/10 shrink-0 px-4 py-3 text-white shadow-md">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="heading-1 text-xl text-white">المطبخ</h1>
-            <p className="caption text-white/80">
-              {pending.length === 0
-                ? "لا طلبات قيد الانتظار"
-                : `${pending.length} طلب قيد الانتظار`}
-            </p>
+      <header className="bg-brand-red shadow-brand relative shrink-0 overflow-hidden px-4 py-3.5 text-white">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -end-20 -top-20 size-72 rounded-full bg-white/10 blur-3xl"
+        />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Logo size="sm" surface="glass" alt="المطبخ" />
+            <div>
+              <h1 className="heading-1 text-xl text-white">المطبخ</h1>
+              <p className="caption font-medium text-white/85">
+                {pending.length === 0
+                  ? "لا طلبات قيد الانتظار"
+                  : `${pending.length} طلب قيد الانتظار`}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {orders.length > 0 && (
-              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-md">
                 {orders.length} نشط
               </span>
             )}
+            <PearlField variant="row" tone="white" count={3} size="sm" />
           </div>
         </div>
       </header>
@@ -170,31 +175,36 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
             size="lg"
             title="لا توجد طلبات حالياً"
             description="ستظهر الطلبات الجديدة هنا فور وصولها."
+            icon={<ChefHat className="size-8" />}
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {orders.map((order) => {
               const meta = STATUS_META[order.status] ?? STATUS_META.received;
               const channel = CHANNEL_LABELS[order.channel];
-              const tone =
+              const channelBg =
                 channel?.tone === "red"
-                  ? "bg-brand-red"
+                  ? "bg-brand-red text-white"
                   : channel?.tone === "amber"
                     ? "bg-status-warning text-black"
-                    : "bg-brand-ink";
+                    : "bg-brand-ink text-white";
               return (
                 <Card
                   key={order.id}
-                  variant="default"
+                  variant="pop"
                   className={`overflow-hidden border-t-4 p-0 ${meta.bar}`}
                 >
                   <div className="p-4">
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <div>
-                        <p className="heading-1 text-brand-ink numeric text-2xl">
+                        <p
+                          className="display-2 text-brand-ink numeric tabular-nums"
+                          style={{ fontSize: "1.875rem", lineHeight: 1 }}
+                        >
                           {order.orderNumber}
                         </p>
-                        <p className="text-text-secondary caption">
+                        <p className="text-text-secondary caption mt-1 flex items-center gap-1">
+                          <Clock className="size-2.5" />
                           {new Date(order.createdAt).toLocaleTimeString("ar", {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -204,7 +214,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
                       <div className="flex flex-col items-end gap-1.5">
                         {order.tableCode && (
                           <span
-                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white ${tone}`}
+                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${channelBg}`}
                           >
                             <MapPin className="size-3" />
                             {order.tableCode}
@@ -212,7 +222,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
                         )}
                         {channel && (
                           <span
-                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.chip}`}
+                            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${meta.chip}`}
                           >
                             {channel.icon}
                             {channel.label}
@@ -223,12 +233,13 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
 
                     <div className="mb-3 space-y-1.5">
                       {order.items.map((item, i) => (
-                        <div key={i} className="text-sm">
-                          <p>
-                            <span className="text-brand-ink font-semibold">
-                              {item.productNameAr}
-                            </span>
-                            <span className="text-text-secondary numeric ms-1">
+                        <div
+                          key={i}
+                          className="border-border-subtle/60 border-brand-red-soft/60 border-r-2 pr-2.5"
+                        >
+                          <p className="text-sm leading-relaxed">
+                            <span className="text-brand-ink font-bold">{item.productNameAr}</span>
+                            <span className="text-brand-red numeric ms-1.5 font-extrabold">
                               × {item.quantity}
                             </span>
                           </p>
@@ -251,7 +262,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
                       {meta.next ? (
                         <button
                           onClick={() => handleAdvance(order.id, order.status)}
-                          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-red/20 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors"
+                          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-soft ease-spring flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5"
                         >
                           <span>{meta.nextLabel}</span>
                           <ArrowRight className="size-3.5 rtl:rotate-180" />

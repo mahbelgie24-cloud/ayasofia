@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, AtSign, ArrowLeft, Sparkles } from "lucide-react";
+import { Check, AtSign, ArrowLeft, Sparkles, Wifi } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { endWifiSession } from "@/app/wifi/actions";
-import { PearlsField } from "@/components/digital-menu/pearls-field";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
+import { PearlField, PearlDivider } from "@/components/ui/pearl-field";
 import { formatPrice, toMinorUnits } from "@/lib/pricing";
 
 interface Suggestion {
@@ -57,65 +58,98 @@ export function WifiConnect({ suggestion }: { suggestion: Suggestion }) {
 
   return (
     <div
-      className="bg-brand-red-bg relative flex min-h-dvh flex-col items-center justify-center px-6 py-10"
+      className="bg-brand-red-bg relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 py-10"
       dir="rtl"
       lang="ar"
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="bg-status-success/[0.08] absolute start-1/2 -top-24 size-[32rem] -translate-x-1/2 rounded-full blur-3xl" />
+        <div className="bg-status-success/[0.1] absolute start-1/2 -top-32 size-[40rem] -translate-x-1/2 rounded-full blur-3xl" />
+        <div className="bg-brand-red/[0.05] absolute end-1/4 -bottom-32 size-[28rem] rounded-full blur-3xl" />
+        <PearlField variant="scatter" tone="muted" count={8} />
       </div>
 
       <div className="relative w-full max-w-sm">
-        <PearlsField className="opacity-30" />
+        <div className="animate-fade-in mb-6 flex justify-center">
+          <Logo size="xl" surface="halo" />
+        </div>
 
-        <Card variant="pop" className="relative p-7 text-center sm:p-8">
-          <div className="mb-5 flex justify-center">
-            <div className="bg-status-success/15 text-status-success flex size-14 items-center justify-center rounded-2xl">
-              <Check className="size-7" />
-            </div>
-          </div>
+        <Card
+          variant="elev"
+          className="noise animate-scale-in relative overflow-hidden p-7 text-center sm:p-8"
+          style={{ animationDelay: "120ms" }}
+        >
+          <span
+            aria-hidden="true"
+            className="bg-status-success/10 pointer-events-none absolute -end-16 -top-16 size-44 rounded-full blur-3xl"
+          />
 
-          <h1 className="heading-1 text-brand-ink">أصبحت متصلًا!</h1>
-          <p className="body text-text-secondary mt-1.5">استمتع بالإنترنت مع أياسوفيا</p>
-
-          {suggestion.product && (
-            <div className="bg-brand-red-soft mt-5 rounded-2xl p-4 text-start">
-              <p className="text-brand-red-dark flex items-center gap-1.5 text-xs font-bold">
-                <Sparkles className="size-3.5" />
-                اقتراح اليوم
-              </p>
-              <div className="mt-2.5 flex items-center gap-3">
-                <Logo size="sm" surface="soft" />
-                <div className="min-w-0 flex-1">
-                  <p className="heading-3 text-brand-ink truncate text-sm">
-                    {suggestion.product.titleAr ?? suggestion.product.nameAr}
-                  </p>
-                  <p className="text-brand-red-dark numeric text-sm font-bold">
-                    {formatPrice(toMinorUnits(suggestion.product.basePrice))} ₪
-                  </p>
-                </div>
+          <div className="relative">
+            <div className="mb-4 flex justify-center">
+              <div className="bg-status-success/15 text-status-success relative flex size-16 items-center justify-center rounded-3xl">
+                <span
+                  aria-hidden="true"
+                  className="bg-status-success/20 animate-pearl-pulse absolute inset-0 rounded-3xl"
+                />
+                <Check className="relative size-8" strokeWidth={3} />
               </div>
             </div>
-          )}
 
-          <Link
-            href={menuHref}
-            onClick={handleMenu}
-            className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 text-base font-bold text-white shadow-md transition-all"
-          >
-            <span>تصفّح القائمة</span>
-            <ArrowLeft className="size-5 rtl:rotate-180" />
-          </Link>
+            <p className="text-status-success mb-1.5 flex items-center justify-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase">
+              <Wifi className="size-3" />
+              متصل
+            </p>
+            <h1 className="heading-1 text-brand-ink">أصبحت متصلًا!</h1>
+            <p className="text-text-secondary body mt-1.5">استمتع بالإنترنت مع أياسوفيا</p>
 
-          <a
-            href="https://instagram.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text-secondary hover:text-brand-red mt-4 inline-flex items-center gap-2 text-sm transition-colors"
-          >
-            <AtSign className="size-4" />
-            <span>تابعنا على إنستغرام</span>
-          </a>
+            {suggestion.product && (
+              <div className="bg-brand-red-soft/60 relative mt-5 overflow-hidden rounded-2xl p-3.5 text-start">
+                <p className="text-brand-red flex items-center gap-1.5 text-[10px] font-bold tracking-[0.16em] uppercase">
+                  <Sparkles className="size-3" />
+                  اقتراح اليوم
+                </p>
+                <div className="mt-2.5 flex items-center gap-3">
+                  <div className="bg-brand-red-bg relative flex size-12 shrink-0 items-center justify-center rounded-2xl">
+                    <Image
+                      src={suggestion.product.imageUrl ?? "/icons/icon-bubbletea.svg"}
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="h-9 w-9 object-contain"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="heading-3 text-brand-ink truncate text-sm">
+                      {suggestion.product.titleAr ?? suggestion.product.nameAr}
+                    </p>
+                    <p className="text-brand-red numeric text-sm font-bold">
+                      {formatPrice(toMinorUnits(suggestion.product.basePrice))} ₪
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Link
+              href={menuHref}
+              onClick={handleMenu}
+              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 text-base font-bold text-white transition-all hover:-translate-y-0.5"
+            >
+              <span>تصفّح القائمة</span>
+              <ArrowLeft className="size-5 rtl:rotate-180" />
+            </Link>
+
+            <PearlDivider tone="muted" className="mt-5 mb-4" />
+
+            <a
+              href="https://instagram.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-text-secondary hover:text-brand-red ease-spring inline-flex items-center gap-2 text-sm font-medium transition-colors"
+            >
+              <AtSign className="size-4" />
+              <span>تابعنا على إنستغرام</span>
+            </a>
+          </div>
         </Card>
       </div>
     </div>

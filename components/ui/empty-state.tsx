@@ -1,11 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { PearlField } from "./pearl-field";
 
 /**
  * Empty state — replaces the bare "لا توجد..." text pasted across the app.
- *
- * Uses the brand's six-dot pearl grid as a visual anchor. Sized small by
- * default; `size="lg"` for full-page empty states.
+ * Uses the brand's six-dot pearl grid as a visual anchor.
  */
 export interface EmptyStateProps {
   title: React.ReactNode;
@@ -13,6 +12,7 @@ export interface EmptyStateProps {
   action?: React.ReactNode;
   size?: "sm" | "lg";
   className?: string;
+  icon?: React.ReactNode;
 }
 
 export function EmptyState({
@@ -21,44 +21,48 @@ export function EmptyState({
   action,
   size = "sm",
   className,
+  icon,
 }: EmptyStateProps) {
   return (
     <div
       role="status"
       className={cn(
         "flex flex-col items-center justify-center text-center",
-        size === "lg" ? "py-16" : "py-10",
+        size === "lg" ? "py-20" : "py-12",
         className,
       )}
     >
-      <PearlGrid
-        className={cn(
-          "text-brand-red/40 mb-4",
-          size === "lg" ? "[&>span]:size-2.5" : "[&>span]:size-2",
-        )}
-      />
-      <p className={cn("text-brand-ink font-semibold", size === "lg" ? "text-lg" : "text-base")}>
+      {icon ? (
+        <div
+          className={cn(
+            "bg-brand-red-soft text-brand-red mb-4 flex items-center justify-center rounded-3xl",
+            size === "lg" ? "size-20" : "size-14",
+          )}
+        >
+          {icon}
+        </div>
+      ) : (
+        <PearlField
+          variant="trail"
+          tone="brand"
+          size={size === "lg" ? "lg" : "md"}
+          className="mb-5"
+        />
+      )}
+      <p className={cn("text-brand-ink font-bold", size === "lg" ? "text-xl" : "text-base")}>
         {title}
       </p>
       {description && (
         <p
-          className={cn("text-text-secondary mt-1 max-w-sm", size === "lg" ? "text-sm" : "text-xs")}
+          className={cn(
+            "text-text-secondary mt-1.5 max-w-sm",
+            size === "lg" ? "text-sm" : "text-xs",
+          )}
         >
           {description}
         </p>
       )}
-      {action && <div className="mt-4">{action}</div>}
-    </div>
-  );
-}
-
-/** Brand six-dot pearl grid — the empty state anchor. */
-function PearlGrid({ className }: { className?: string }) {
-  return (
-    <div aria-hidden="true" className={cn("grid grid-cols-3 gap-1", className)}>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <span key={i} className="block rounded-full bg-current" />
-      ))}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

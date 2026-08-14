@@ -5,8 +5,9 @@ import { cn } from "@/lib/utils";
  * Stat / KPI card. The single source for the five-up KPI row on the
  * admin dashboard, and for inline stats inside reports.
  *
- * `tone="warning"` paints the value amber to flag an actionable state
- * (e.g. low stock count).  All other tones use ink.
+ * `tone` controls the value color and surface tint.
+ * `featured` paints the entire card with a brand-red hero treatment —
+ * use for the single most-important stat on the page.
  */
 type Tone = "default" | "warning" | "success" | "brand";
 
@@ -27,34 +28,92 @@ const toneBgs: Record<Tone, string> = {
 export interface StatProps {
   label: React.ReactNode;
   value: React.ReactNode;
-  /** Small hint line under the value (e.g. unit, comparison). */
   hint?: React.ReactNode;
   tone?: Tone;
-  /** Optional lucide icon shown above the label. */
   icon?: React.ReactNode;
+  /** When true, paints the whole card with a brand-red gradient hero. */
+  featured?: boolean;
   className?: string;
+  /** Trailing element (e.g. trend indicator). */
+  trend?: React.ReactNode;
 }
 
-export function Stat({ label, value, hint, tone = "default", icon, className }: StatProps) {
+export function Stat({
+  label,
+  value,
+  hint,
+  tone = "default",
+  icon,
+  featured = false,
+  className,
+  trend,
+}: StatProps) {
+  if (featured) {
+    return (
+      <div
+        className={cn(
+          "shadow-brand relative overflow-hidden rounded-3xl p-5 text-white transition-shadow",
+          "from-brand-red-bright via-brand-red to-brand-red-dark bg-gradient-to-br",
+          className,
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className="absolute -end-12 -top-12 size-40 rounded-full bg-white/10 blur-2xl"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -start-16 -bottom-16 size-48 rounded-full bg-white/5 blur-3xl"
+        />
+        <div className="relative flex items-center gap-2">
+          {icon && <span className="text-white/90">{icon}</span>}
+          <span className="eyebrow tracking-[0.14em] text-white/85">{label}</span>
+        </div>
+        <div className="relative mt-3 flex items-baseline gap-2">
+          <span
+            className="display-1 numeric text-white"
+            style={{ fontSize: "2.25rem", lineHeight: 1 }}
+          >
+            {value}
+          </span>
+          {trend && <span className="text-sm font-medium text-white/85">{trend}</span>}
+        </div>
+        {hint && <span className="caption relative mt-1.5 block text-white/80">{hint}</span>}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        "shadow-card flex flex-col gap-1 rounded-2xl p-5 transition-shadow",
+        "shadow-card group/stat flex flex-col gap-1 rounded-2xl p-5 transition-shadow",
         toneBgs[tone],
         className,
       )}
     >
       <div className="flex items-center gap-2">
-        {icon && <span className="text-text-secondary">{icon}</span>}
+        {icon && (
+          <span
+            className={cn(
+              "flex size-6 items-center justify-center rounded-lg",
+              tone === "default" ? "bg-brand-red-soft text-brand-red" : "bg-white/60",
+              tone === "brand" && "bg-brand-red-soft text-brand-red",
+              tone === "warning" && "bg-status-warning/10 text-status-warning",
+              tone === "success" && "bg-status-success/10 text-status-success",
+            )}
+          >
+            {icon}
+          </span>
+        )}
         <span className="label text-text-secondary tracking-wider uppercase">{label}</span>
       </div>
       <span
-        className={cn("display-1 numeric mt-1", toneClasses[tone])}
-        style={{ fontSize: "1.875rem", lineHeight: 1.1 }}
+        className={cn("display-2 numeric mt-1.5", toneClasses[tone])}
+        style={{ lineHeight: 1.05 }}
       >
         {value}
       </span>
-      {hint && <span className="caption text-text-secondary/80 mt-0.5">{hint}</span>}
+      {hint && <span className="caption text-text-secondary/80 mt-1">{hint}</span>}
     </div>
   );
 }

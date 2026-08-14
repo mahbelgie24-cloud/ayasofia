@@ -5,6 +5,7 @@ import { AlertCircle, RotateCcw } from "lucide-react";
 import * as Sentry from "@sentry/nextjs";
 import { Logo } from "@/components/ui/logo";
 import { Card, CardBody } from "@/components/ui/card";
+import { PearlField } from "@/components/ui/pearl-field";
 
 export default function GlobalError({
   error,
@@ -21,12 +22,23 @@ export default function GlobalError({
 
   return (
     <html lang="ar" dir="rtl">
-      <body className="bg-brand-red-bg flex min-h-dvh items-center justify-center px-4 antialiased">
-        <Card variant="pop" className="w-full max-w-md text-center">
-          <CardBody className="space-y-5 p-8">
+      <body className="bg-brand-red-bg relative flex min-h-dvh items-center justify-center overflow-hidden px-4 antialiased">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="bg-status-error/[0.06] absolute start-1/2 -top-32 size-[40rem] -translate-x-1/2 rounded-full blur-3xl" />
+          <PearlField variant="scatter" tone="muted" count={6} />
+        </div>
+        <Card
+          variant="elev"
+          className="noise animate-scale-in relative w-full max-w-md overflow-hidden text-center"
+        >
+          <span
+            aria-hidden="true"
+            className="bg-status-error/10 pointer-events-none absolute -end-16 -top-16 size-44 rounded-full blur-3xl"
+          />
+          <CardBody className="relative space-y-5 p-8">
             <div className="flex justify-center">
-              <div className="bg-status-error/[0.12] text-status-error flex size-14 items-center justify-center rounded-2xl">
-                <AlertCircle className="size-7" />
+              <div className="bg-status-error/[0.12] text-status-error flex size-16 items-center justify-center rounded-3xl">
+                <AlertCircle className="size-8" />
               </div>
             </div>
             <div>
@@ -37,7 +49,7 @@ export default function GlobalError({
             </div>
             <button
               onClick={reset}
-              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand-red/25 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-bold text-white shadow-md transition-all"
+              className="bg-brand-red hover:bg-brand-red-dark ease-spring shadow-brand inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-bold text-white transition-all hover:-translate-y-0.5"
             >
               <RotateCcw className="size-4" />
               <span>حاول مجدداً</span>

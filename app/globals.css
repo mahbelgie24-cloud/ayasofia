@@ -17,6 +17,16 @@
   --color-status-success: #16a34a;
   --color-status-warning: #f59e0b;
   --color-status-error: #9f1239;
+
+  /* Signature gradients */
+  --gradient-brand-aurora: linear-gradient(135deg, #dc0000 0%, #ff2a26 45%, #ff6b6b 100%);
+  --gradient-brand-ember: radial-gradient(
+    ellipse at top,
+    rgba(255, 42, 38, 0.22) 0%,
+    rgba(220, 0, 0, 0.08) 35%,
+    transparent 70%
+  );
+  --gradient-cream-warm: linear-gradient(180deg, #faf6f3 0%, #f5efea 100%);
 }
 
 @import "tw-animate-css";
@@ -91,13 +101,29 @@
   --ring: var(--color-brand-ink);
   --radius: 0.625rem;
 
-  /* ── Elevation system (restrained) ── */
-  --shadow-card: 0 1px 2px rgba(43, 29, 29, 0.04), 0 1px 3px rgba(43, 29, 29, 0.06);
-  --shadow-pop: 0 4px 12px rgba(43, 29, 29, 0.08), 0 2px 4px rgba(43, 29, 29, 0.04);
-  --shadow-elev: 0 12px 32px rgba(43, 29, 29, 0.12), 0 4px 8px rgba(43, 29, 29, 0.06);
+  /* ── Elevation system (refined, multi-layered) ── */
+  --shadow-card:
+    0 1px 1px rgba(43, 29, 29, 0.03), 0 2px 4px rgba(43, 29, 29, 0.04),
+    0 4px 12px rgba(43, 29, 29, 0.04);
+  --shadow-pop:
+    0 2px 4px rgba(43, 29, 29, 0.04), 0 8px 16px rgba(43, 29, 29, 0.06),
+    0 16px 32px rgba(43, 29, 29, 0.05);
+  --shadow-elev:
+    0 8px 16px rgba(43, 29, 29, 0.08), 0 24px 48px rgba(43, 29, 29, 0.12),
+    0 4px 8px rgba(43, 29, 29, 0.05);
+  --shadow-brand:
+    0 4px 12px rgba(220, 0, 0, 0.18), 0 12px 28px rgba(220, 0, 0, 0.22),
+    0 2px 4px rgba(220, 0, 0, 0.12);
+  --shadow-brand-soft: 0 2px 6px rgba(220, 0, 0, 0.08), 0 8px 20px rgba(220, 0, 0, 0.1);
+  --shadow-inset-hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
 
   /* ── Section rhythm ── */
   --section-gap: 1.5rem;
+
+  /* ── Spring easing tokens ── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 .dark {
@@ -127,7 +153,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    background: var(--gradient-cream-warm);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -148,6 +176,27 @@
 
 @utility ease-spring-gentle {
   transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@utility ease-out-expo {
+  transition-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ── Subtle film grain for luxury feel ── */
+@utility noise {
+  position: relative;
+}
+@layer utilities {
+  .noise::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 200px 200px;
+  }
 }
 
 /* ── Skeleton shimmer ── */
@@ -187,16 +236,28 @@
 /* ── Brand signature motion: floating pearls ── */
 @keyframes pearl-float {
   0% {
-    transform: translateY(0);
-    opacity: 0.9;
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
   }
   50% {
-    transform: translateY(-1.25rem);
+    transform: translateY(-1.5rem) scale(1.06);
     opacity: 1;
   }
   100% {
-    transform: translateY(0);
-    opacity: 0.9;
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes pearl-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
   }
 }
 
@@ -222,8 +283,60 @@
   }
 }
 
+/* ── Brand signature: shimmer sweep across a CTA ── */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+@utility animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+@layer utilities {
+  .animate-shimmer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 75%
+    );
+    animation: shimmer-sweep 2.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+/* ── Aurora / ambient brand background ── */
+@keyframes aurora-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate(2rem, -1.5rem) rotate(8deg) scale(1.05);
+  }
+  66% {
+    transform: translate(-1.5rem, 1rem) rotate(-5deg) scale(0.97);
+  }
+}
+
+@utility animate-aurora {
+  animation: aurora-drift 18s ease-in-out infinite;
+}
+
 @utility animate-pearl-float {
   animation: pearl-float 4s ease-in-out infinite;
+}
+
+@utility animate-pearl-pulse {
+  animation: pearl-pulse 2.4s ease-in-out infinite;
 }
 
 @utility animate-pearl-bounce {
@@ -251,12 +364,60 @@
   }
 }
 
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(-1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(220, 0, 0, 0.45),
+      0 4px 12px rgba(220, 0, 0, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px rgba(220, 0, 0, 0),
+      0 4px 12px rgba(220, 0, 0, 0.18);
+  }
+}
+
 @utility animate-fade-in-up {
-  animation: fade-in-up 0.4s var(--easing-spring) both;
+  animation: fade-in-up 0.5s var(--ease-out-expo) both;
 }
 
 @utility animate-fade-in {
   animation: fade-in 0.3s ease-out both;
+}
+
+@utility animate-scale-in {
+  animation: scale-in 0.4s var(--ease-spring) both;
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right 0.4s var(--ease-out-expo) both;
+}
+
+@utility animate-glow-pulse {
+  animation: glow-pulse 2.4s ease-in-out infinite;
 }
 
 /* ── Reduced motion ── */
@@ -282,24 +443,32 @@
    the body stack. */
 @utility display-1 {
   font-family: var(--font-display-ar), var(--font-display), sans-serif;
-  font-size: 2.25rem;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  font-weight: 700;
+  font-size: 2.5rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+@utility display-2 {
+  font-family: var(--font-display-ar), var(--font-display), sans-serif;
+  font-size: 2rem;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  font-weight: 800;
 }
 
 @utility heading-1 {
   font-family: var(--font-display-ar), var(--font-display), sans-serif;
   font-size: 1.875rem;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
   font-weight: 700;
 }
 
 @utility heading-2 {
   font-family: var(--font-display-ar), var(--font-display), sans-serif;
   font-size: 1.375rem;
-  line-height: 1.25;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
   font-weight: 700;
 }
 
@@ -343,6 +512,14 @@
   font-feature-settings: "tnum" 1;
 }
 
+@utility eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
 /* ── Elevation utilities (restrained scale) ── */
 @utility shadow-card {
   box-shadow: var(--shadow-card);
@@ -354,6 +531,14 @@
 
 @utility shadow-elev {
   box-shadow: var(--shadow-elev);
+}
+
+@utility shadow-brand {
+  box-shadow: var(--shadow-brand);
+}
+
+@utility shadow-brand-soft {
+  box-shadow: var(--shadow-brand-soft);
 }
 
 /* ── Section rhythm ── */
@@ -380,21 +565,71 @@
   box-shadow: var(--shadow-pop);
 }
 
-/* ── Scrollbar styling (WebKit) ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@utility surface-elev {
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-elev);
 }
 
+/* ── Glass surface — backdrop blur with subtle border ── */
+@utility glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+@utility glass-dark {
+  background: rgba(43, 29, 29, 0.6);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ── Brand-aurora background utility ── */
+@utility bg-aurora {
+  background: var(--gradient-brand-ember);
+}
+
+@utility gradient-text-brand {
+  background: var(--gradient-brand-aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Brand ring — used to halo CTAs ── */
+@utility ring-brand-soft {
+  box-shadow: 0 0 0 4px rgba(220, 0, 0, 0.08);
+}
+
+@utility ring-brand-medium {
+  box-shadow: 0 0 0 6px rgba(220, 0, 0, 0.14);
+}
+
+/* ── Scrollbar styling (WebKit) ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-subtle);
-  border-radius: 3px;
+  background: rgba(232, 222, 219, 0.8);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 92, 92, 0.6);
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+/* ── Body: smooth font rendering ── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }

@@ -174,8 +174,8 @@ function ToastRegion({
             data-testid="toast"
             role={style.role}
             className={cn(
-              "ease-spring pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl px-4 py-3 shadow-lg sm:max-w-md",
-              "animate-[toast-in_0.3s_ease-spring]",
+              "ease-spring shadow-elev pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl px-4 py-3.5 sm:max-w-md",
+              "animate-[toast-in_0.35s_var(--ease-spring)]",
               style.bg,
             )}
             onMouseEnter={() => onPause(toast.id)}

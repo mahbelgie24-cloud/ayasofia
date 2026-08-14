@@ -1,0 +1,20 @@
+{
+  "name": "Ayasofia Sweet — حلويات آيا صوفيا",
+  "short_name": "Ayasofia",
+  "description": "حلويات آيا صوفيا، قلقيلية — بابل تي تايواني، حلويات يابانية وكورية. اطلب من QR، تابع حالتك لحظة بلحظة.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#DC0000",
+  "theme_color": "#DC0000",
+  "categories": ["food", "lifestyle", "shopping"],
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "16x16 32x32", "type": "image/x-icon", "purpose": "any" },
+    { "src": "/icon1.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon2.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

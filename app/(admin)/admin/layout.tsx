@@ -18,16 +18,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     notFound();
   }
 
-  // Resolve feature flags server-side so the nav can hide digital-menu/
-  // wifi items when the corresponding feature is OFF (C9). Never trust a
-  // client-side flag for authorization — these only control visibility.
   const [digitalMenuOn, wifiPortalOn] = await Promise.all([
     isFeatureEnabled(FEATURE_DIGITAL_MENU),
     isFeatureEnabled(FEATURE_WIFI_PORTAL),
   ]);
 
   return (
-    <div className="bg-brand-cream flex min-h-dvh" dir="rtl" lang="ar">
+    <div className="flex min-h-dvh" dir="rtl" lang="ar">
       <AdminNav
         digitalMenuOn={digitalMenuOn}
         wifiPortalOn={wifiPortalOn}
@@ -37,15 +34,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar — only on small screens. The desktop nav is the
             full sidebar in `AdminNav`. */}
-        <header className="border-border-subtle sticky top-0 z-30 flex items-center gap-3 border-b bg-white/90 px-4 py-3 backdrop-blur-md lg:hidden">
+        <header className="border-border-subtle/60 sticky top-0 z-30 flex items-center gap-3 border-b bg-white/80 px-4 py-3 shadow-sm backdrop-blur-md lg:hidden">
+          <span aria-hidden="true" className="bg-brand-red/10 absolute inset-x-0 -bottom-1 h-px" />
           <Logo size="sm" surface="tile" />
           <div className="min-w-0 flex-1">
-            <h1 className="heading-3 text-brand-ink text-sm">لوحة الإدارة</h1>
-            <p className="caption text-text-secondary">Ayasofia Sweet</p>
+            <h1 className="heading-3 text-brand-ink text-sm leading-tight">لوحة الإدارة</h1>
+            <p className="text-text-secondary caption">Ayasofia Sweet</p>
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 lg:pb-8">
+        <main className="flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:pb-8">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>

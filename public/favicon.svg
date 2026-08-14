@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ayasofia Sweet">
+  <!-- Canonical source mark for all favicon / app-icon / og-image derivatives.
+       512x512 viewBox, mark centered with generous padding (~22% safe area on
+       each side) so it survives downscale to 16x16 in the browser tab. Colors
+       are exact brand tokens: #DC0000, #FFFFFF. No shadow here — the app-icon
+       shadow is added in the per-asset render step. -->
+  <rect width="512" height="512" rx="112" fill="#DC0000"/>
+  <g transform="translate(160, 76)">
+    <!-- straw bending into an S, 3 segments -->
+    <g stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" fill="none">
+      <path d="M 60 18 L 110 86"/>
+      <path d="M 110 86 L 60 132"/>
+      <path d="M 60 132 L 38 200"/>
+    </g>
+    <!-- cup lid -->
+    <rect x="8" y="190" width="176" height="28" rx="10" fill="#FFFFFF"/>
+    <!-- cup body -->
+    <path d="M 22 218 L 170 218 L 148 332 Q 144 352 124 352 L 68 352 Q 48 352 44 332 Z"
+          fill="#FFFFFF"/>
+    <!-- 6-dot pearl grid (2 rows x 3) -->
+    <g fill="#DC0000">
+      <circle cx="62" cy="278" r="11"/>
+      <circle cx="96" cy="278" r="11"/>
+      <circle cx="130" cy="278" r="11"/>
+      <circle cx="68" cy="312" r="11"/>
+      <circle cx="102" cy="312" r="11"/>
+      <circle cx="136" cy="312" r="11"/>
+    </g>
+  </g>
+</svg>
