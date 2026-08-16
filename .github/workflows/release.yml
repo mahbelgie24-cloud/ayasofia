@@ -25,6 +25,39 @@ jobs:
 
       - run: npm ci
 
+      # C5: the env contract from .env.example is enforced at release time
+      # (presence-only — the build below uses placeholders).
+      - name: Validate environment
+        run: npm run validate:env
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          DATABASE_URL: postgresql://placeholder
+
+      # O2: apply pending drizzle migrations to PRODUCTION before the tag is
+      # released, so a new build never ships ahead of its schema. Opt-in via
+      # the PROD_DATABASE_URL secret — until the owner sets it (DR-6) this
+      # step is skipped and migrations follow the manual backup→migrate
+      # runbook (docs/operations). Strict env validation runs here too, so a
+      # misconfigured production environment blocks the release, not go-live.
+      - name: Validate production environment
+        if: ${{ secrets.PROD_DATABASE_URL != '' }}
+        run: npm run validate:env
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PROD_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          WIFI_DEVICE_ID_SALT: ${{ secrets.PROD_WIFI_DEVICE_ID_SALT }}
+          RUN_ENV: production
+
+      - name: Apply database migrations (production)
+        if: ${{ secrets.PROD_DATABASE_URL != '' }}
+        run: npx drizzle-kit migrate
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+
       - name: Build
         run: npm run build
         env:
