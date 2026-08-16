@@ -75,7 +75,7 @@ export async function authorizeGuest(input: {
   }
 
   const ip = await callerIp();
-  const throttle = checkThrottle(`wifi:${ip}`, AUTHORIZE_LIMIT);
+  const throttle = await checkThrottle(`wifi:${ip}`, AUTHORIZE_LIMIT);
   if (!throttle.allowed) {
     return { success: false, error: "محاولات كثيرة، حاول بعد قليل" };
   }
@@ -129,7 +129,7 @@ export async function endWifiSession(input: {
 
   // T-B2: throttle the public logout/session-end endpoint per source IP.
   const ip = await callerIp();
-  const throttle = checkThrottle(`wifi-end:${ip}`, WIFI_END_LIMIT);
+  const throttle = await checkThrottle(`wifi-end:${ip}`, WIFI_END_LIMIT);
   if (!throttle.allowed) return { success: false, error: "محاولات كثيرة، حاول بعد قليل" };
 
   const deviceHash = hashDeviceId(input.deviceId);
@@ -205,7 +205,7 @@ export async function getWifiSuggestion(): Promise<{
 
   // T-B2: throttle the public suggestion read per source IP.
   const ip = await callerIp();
-  const throttle = checkThrottle(`wifi-suggestion:${ip}`, WIFI_SUGGESTION_LIMIT);
+  const throttle = await checkThrottle(`wifi-suggestion:${ip}`, WIFI_SUGGESTION_LIMIT);
   if (!throttle.allowed) return { success: false, product: null, branchSlug: null };
 
   const suggestion = await getTodaySuggestionForWifi();

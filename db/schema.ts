@@ -423,6 +423,22 @@ export const wifiSessions = pgTable(
   ],
 ).enableRLS();
 
+// Durable rate-limit / lockout state (WEB-SEC-004). One row per limiter
+// key (e.g. "pin:<ip>", "order:<ip>", "<anon-user-id>"). Shared by the
+// two limiter flavors: the fixed-window throttle uses count/window_start,
+// the PIN lockout uses count/locked_until/lockout_multiplier. Stored in
+// Postgres so the caps hold globally across instances; RLS default-deny
+// (app pools connect as roles that bypass RLS, everything else is locked
+// out). expires_at drives opportunistic purging of stale rows.
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: timestamp("window_start", { withTimezone: true }),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  lockoutMultiplier: integer("lockout_multiplier").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}).enableRLS();
+
 // ---------- Drizzle Relations (for query API) ----------
 
 export const categoriesRelations = relations(categories, ({ many }) => ({

@@ -52,7 +52,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   // Rate limit check — keyed by the server-derived session user (per-device
   // lockout), plus an IP-level cap below that cannot be bypassed by minting
   // fresh anonymous users (review finding C4).
-  const rateCheck = checkRateLimit(sessionUserId);
+  const rateCheck = await checkRateLimit(sessionUserId);
   if (!rateCheck.allowed) {
     const waitSeconds = Math.ceil(rateCheck.waitMs / 1000);
     return {
@@ -65,7 +65,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   // identities, so the anon-user lockout cannot be bypassed by minting
   // a new anonymous session for every guess.
   const ip = await callerIp();
-  const ipThrottle = checkThrottle(`pin:${ip}`, LOGIN_IP_LIMIT);
+  const ipThrottle = await checkThrottle(`pin:${ip}`, LOGIN_IP_LIMIT);
   if (!ipThrottle.allowed) {
     const waitMinutes = Math.max(1, Math.ceil(ipThrottle.retryAfterMs / 60_000));
     return {
@@ -91,7 +91,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   const match = staffRows.find((row) => verifyPin(pin, row.pinHash));
 
   if (!match) {
-    const { locked, waitMs } = recordFailedAttempt(sessionUserId);
+    const { locked, waitMs } = await recordFailedAttempt(sessionUserId);
     if (locked) {
       return {
         success: false,
@@ -102,7 +102,7 @@ export async function verifyStaffPin(pin: string, anonUserId: string): Promise<P
   }
 
   // Successful auth — reset attempt counter
-  resetAttempts(sessionUserId);
+  await resetAttempts(sessionUserId);
 
   const { error: authErr } = await supabase.auth.admin.updateUserById(sessionUserId, {
     app_metadata: { staff_id: match.id, role: match.role },

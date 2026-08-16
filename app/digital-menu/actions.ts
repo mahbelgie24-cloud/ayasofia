@@ -84,7 +84,7 @@ export async function getDigitalMenuData(
   if (!validateSlug(branchSlug)) return { success: false, error: "فرع غير صالح" };
 
   const ip = await callerIp();
-  const throttle = checkThrottle(`dm-catalog:${ip}`, CATALOG_RATE_LIMIT);
+  const throttle = await checkThrottle(`dm-catalog:${ip}`, CATALOG_RATE_LIMIT);
   if (!throttle.allowed) return { success: false, error: "محاولات كثيرة، حاول بعد قليل" };
 
   const data = await getPublicCatalog(branchSlug);
@@ -143,7 +143,7 @@ export async function placeDigitalMenuOrder(input: {
   }
 
   const ip = await callerIp();
-  const throttle = checkThrottle(`dm-order:${ip}`, PLACE_ORDER_RATE_LIMIT);
+  const throttle = await checkThrottle(`dm-order:${ip}`, PLACE_ORDER_RATE_LIMIT);
   if (!throttle.allowed) {
     captureThrottled("placeDigitalMenuOrder", `dm-order:${ip}`);
     const secs = Math.ceil(throttle.retryAfterMs / 1000);
@@ -195,7 +195,7 @@ export async function getUpsellSuggestions(input: {
   if (!active) return flagOffError(FEATURE_DIGITAL_MENU);
 
   const ip = await callerIp();
-  const throttle = checkThrottle(`dm-upsell:${ip}`, CATALOG_RATE_LIMIT);
+  const throttle = await checkThrottle(`dm-upsell:${ip}`, CATALOG_RATE_LIMIT);
   if (!throttle.allowed) return { success: false, error: "محاولات كثيرة، حاول بعد قليل" };
 
   const productIds = [...new Set(input.cartItems.map((c) => c.productId))];

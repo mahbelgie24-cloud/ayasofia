@@ -43,7 +43,7 @@ export async function placeCustomerOrder(input: {
   // public, unauthenticated endpoint (spec §12 exception), so an IP
   // cap is the only abuse signal available (WEB-SEC-001).
   const ip = await callerIp();
-  const throttle = checkThrottle(`order:${ip}`, ORDER_RATE_LIMIT);
+  const throttle = await checkThrottle(`order:${ip}`, ORDER_RATE_LIMIT);
   if (!throttle.allowed) {
     captureThrottled("placeCustomerOrder", `order:${ip}`);
     const secs = Math.ceil(throttle.retryAfterMs / 1000);

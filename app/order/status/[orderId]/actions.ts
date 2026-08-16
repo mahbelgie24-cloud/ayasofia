@@ -25,7 +25,7 @@ export async function getOrderStatus(
   if (!STATUS_UUID_RE.test(orderId)) return null;
 
   const ip = await callerIp();
-  const throttle = checkThrottle(`order-status:${ip}:${orderId}`, STATUS_THROTTLE);
+  const throttle = await checkThrottle(`order-status:${ip}:${orderId}`, STATUS_THROTTLE);
   if (!throttle.allowed) {
     captureThrottled("getOrderStatus", `order-status:${ip}:${orderId}`);
     return null;
