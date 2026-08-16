@@ -1,0 +1,150 @@
+{
+  "captured": [
+    {
+      "name": "customer-landing-phone",
+      "url": "http://localhost:3000/",
+      "fullPage": false
+    },
+    {
+      "name": "customer-landing-phone-scrolled",
+      "url": "http://localhost:3000/",
+      "fullPage": false
+    },
+    {
+      "name": "menu-phone-top",
+      "url": "http://localhost:3000/m/qalqilya",
+      "fullPage": false
+    },
+    {
+      "name": "menu-phone-catalog",
+      "url": "http://localhost:3000/m/qalqilya",
+      "fullPage": false
+    },
+    {
+      "name": "menu-phone-product-sheet",
+      "url": "http://localhost:3000/m/qalqilya",
+      "fullPage": false
+    },
+    {
+      "name": "menu-phone-cart-open",
+      "url": "http://localhost:3000/m/qalqilya",
+      "fullPage": false
+    },
+    {
+      "name": "order-status-phone",
+      "url": "http://localhost:3000/order/status/9d5910ce-0a75-4e55-97ac-c1a0c38c2993?accessToken=3cef283c-33e9-4ce4-8450-b0f53ff9ff79",
+      "fullPage": false
+    },
+    {
+      "name": "order-status-wrong-token",
+      "url": "http://localhost:3000/order/status/9d5910ce-0a75-4e55-97ac-c1a0c38c2993?accessToken=00000000-0000-0000-0000-000000000000",
+      "fullPage": false
+    },
+    {
+      "name": "wifi-splash-phone",
+      "url": "http://localhost:3000/wifi",
+      "fullPage": false
+    },
+    {
+      "name": "wifi-connect-phone",
+      "url": "http://localhost:3000/wifi/connect",
+      "fullPage": false
+    },
+    {
+      "name": "menu-branch-notfound",
+      "url": "http://localhost:3000/m/nothing-here",
+      "fullPage": false
+    },
+    {
+      "name": "login-tablet",
+      "url": "http://localhost:3000/login",
+      "fullPage": false
+    },
+    {
+      "name": "login-wrong-pin",
+      "url": "http://localhost:3000/login",
+      "fullPage": false
+    },
+    {
+      "name": "login-focus-visible",
+      "url": "http://localhost:3000/login",
+      "fullPage": false
+    },
+    {
+      "name": "pos-tablet-empty",
+      "url": "http://localhost:3000/pos",
+      "fullPage": false
+    },
+    {
+      "name": "pos-tablet-modifier-sheet",
+      "url": "http://localhost:3000/pos",
+      "fullPage": false
+    },
+    {
+      "name": "pos-tablet-cart",
+      "url": "http://localhost:3000/pos",
+      "fullPage": false
+    },
+    {
+      "name": "kitchen-tablet",
+      "url": "http://localhost:3000/kitchen",
+      "fullPage": false
+    },
+    {
+      "name": "drive-thru-tablet",
+      "url": "http://localhost:3000/drive-thru",
+      "fullPage": false
+    },
+    {
+      "name": "receipt-tablet",
+      "url": "http://localhost:3000/pos/receipt/9d5910ce-0a75-4e55-97ac-c1a0c38c2993",
+      "fullPage": false
+    },
+    {
+      "name": "admin-dashboard",
+      "url": "http://localhost:3000/admin",
+      "fullPage": false
+    },
+    {
+      "name": "admin-menu",
+      "url": "http://localhost:3000/admin/menu",
+      "fullPage": false
+    },
+    {
+      "name": "admin-inventory",
+      "url": "http://localhost:3000/admin/inventory",
+      "fullPage": false
+    },
+    {
+      "name": "admin-reports",
+      "url": "http://localhost:3000/admin/reports",
+      "fullPage": false
+    },
+    {
+      "name": "admin-staff",
+      "url": "http://localhost:3000/admin/staff",
+      "fullPage": false
+    },
+    {
+      "name": "admin-settings",
+      "url": "http://localhost:3000/admin/settings",
+      "fullPage": false
+    },
+    {
+      "name": "admin-wifi",
+      "url": "http://localhost:3000/admin/wifi",
+      "fullPage": false
+    },
+    {
+      "name": "admin-digital-menu",
+      "url": "http://localhost:3000/admin/digital-menu",
+      "fullPage": false
+    },
+    {
+      "name": "admin-dashboard-phone",
+      "url": "http://localhost:3000/admin",
+      "fullPage": false
+    }
+  ],
+  "failures": []
+}
