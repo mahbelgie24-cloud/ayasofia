@@ -1,6 +1,7 @@
 "use server";
 
 import { requireStaffSession, hashPin, verifyPin } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 import { db } from "@/lib/db";
 import { staff } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
@@ -117,5 +118,37 @@ export async function updateStaffMember(input: {
   }
 
   await db.update(staff).set(data).where(eq(staff.id, input.id));
+
+  // S5: keep the LIVE session's authorization claims in sync with the staff
+  // row. `requireStaffSession` reads app_metadata via auth.getUser() (fresh
+  // from the DB on every call), so updating the auth user here takes effect
+  // on the staff member's next server action — a demotion or deactivation
+  // can no longer be outrun by an already-signed-in session. app_metadata
+  // merges, so nulling staff_id clears the guard's key check.
+  if (data.role !== undefined || data.active === false) {
+    const [row] = await db
+      .select({ authUserId: staff.authUserId })
+      .from(staff)
+      .where(eq(staff.id, input.id))
+      .limit(1);
+    if (row?.authUserId) {
+      const supabase = createServiceClient();
+      const claims =
+        data.active === false
+          ? { staff_id: null, role: null } // deactivated → NO_STAFF_ID on next action
+          : { staff_id: input.id, role: data.role as string };
+      const { error: authErr } = await supabase.auth.admin.updateUserById(row.authUserId, {
+        app_metadata: claims,
+      });
+      if (authErr) {
+        // The staff row IS updated — report the desync rather than pretend.
+        return {
+          success: false,
+          error: "تم التحديث لكن فشل مزامنة صلاحيات الجلسة — اطلب من الموظف تسجيل الخروج",
+        };
+      }
+    }
+  }
+
   return { success: true };
 }

@@ -22,6 +22,14 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+const { mockUpdateUserById } = vi.hoisted(() => ({ mockUpdateUserById: vi.fn() }));
+
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: () => ({
+    auth: { admin: { updateUserById: mockUpdateUserById } },
+  }),
+}));
+
 vi.mock("@/lib/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth")>();
   return {
@@ -234,6 +242,72 @@ describe("RBAC — manager routes reject lower roles", () => {
       new (await import("@/lib/auth")).AuthError("no", "INSUFFICIENT_ROLE"),
     );
     await expect(updateStaffMember({ id: "s1", active: false })).rejects.toThrow();
+  });
+});
+
+// ── Staff update: live-session claim sync (S5) ──
+
+describe("updateStaffMember — app_metadata claim sync (S5)", () => {
+  function mockSuccessfulUpdate(authUserId: string | null) {
+    mockDbUpdate.mockReturnValueOnce({
+      set: () => ({ where: () => Promise.resolve() }),
+    });
+    mockDbSelect.mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve(authUserId ? [{ authUserId }] : []),
+        }),
+      }),
+    });
+  }
+
+  it("syncs the new role into the auth user's app_metadata", async () => {
+    vi.mocked(requireStaffSession).mockResolvedValue({ staffId: "s1", role: "owner" });
+    mockSuccessfulUpdate("auth-user-1");
+    mockUpdateUserById.mockResolvedValueOnce({ data: {}, error: null });
+
+    const result = await updateStaffMember({ id: "staff-9", role: "cashier" });
+
+    expect(result.success).toBe(true);
+    expect(mockUpdateUserById).toHaveBeenCalledWith("auth-user-1", {
+      app_metadata: { staff_id: "staff-9", role: "cashier" },
+    });
+  });
+
+  it("strips staff_id from app_metadata on deactivation (guard fails on next action)", async () => {
+    vi.mocked(requireStaffSession).mockResolvedValue({ staffId: "s1", role: "owner" });
+    mockSuccessfulUpdate("auth-user-1");
+    mockUpdateUserById.mockResolvedValueOnce({ data: {}, error: null });
+
+    const result = await updateStaffMember({ id: "staff-9", active: false });
+
+    expect(result.success).toBe(true);
+    expect(mockUpdateUserById).toHaveBeenCalledWith("auth-user-1", {
+      app_metadata: { staff_id: null, role: null },
+    });
+  });
+
+  it("does not touch the auth user for name-only changes", async () => {
+    vi.mocked(requireStaffSession).mockResolvedValue({ staffId: "s1", role: "owner" });
+    mockDbUpdate.mockReturnValueOnce({
+      set: () => ({ where: () => Promise.resolve() }),
+    });
+
+    const result = await updateStaffMember({ id: "staff-9", name: "new name" });
+
+    expect(result.success).toBe(true);
+    expect(mockUpdateUserById).not.toHaveBeenCalled();
+  });
+
+  it("reports a desync instead of pretending success when the auth sync fails", async () => {
+    vi.mocked(requireStaffSession).mockResolvedValue({ staffId: "s1", role: "owner" });
+    mockSuccessfulUpdate("auth-user-1");
+    mockUpdateUserById.mockResolvedValueOnce({ data: {}, error: { message: "boom" } });
+
+    const result = await updateStaffMember({ id: "staff-9", role: "manager" });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("تسجيل الخروج");
   });
 });
 
