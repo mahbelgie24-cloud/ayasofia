@@ -10,7 +10,7 @@ import { describe, it, expect, afterEach, afterAll, beforeEach } from "vitest";
 import { vi } from "vitest";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq } from "drizzle-orm";
+import { eq, gte } from "drizzle-orm";
 import { wifiSessions, settings } from "@/db/schema";
 import { loadTestEnv } from "@/lib/test-env";
 
@@ -60,15 +60,21 @@ describe("wifi guest authorization (integration)", () => {
       const { authorizeGuest } = await import("@/app/wifi/actions");
       const deviceId = `test-device-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+      // Scope the row lookup to this run: the shared integration DB carries
+      // sessions from previous runs/e2e, and an unordered select().from()
+      // can hand back one of those (expired) rows instead of ours.
+      const startedAt = new Date(Date.now() - 1000);
       const res = await authorizeGuest({ deviceId });
       expect(res.success).toBe(true);
       if (!res.success) return;
 
       // The stored session must be anonymous when consent is not given.
-      const rows = await db.select().from(wifiSessions);
-      const mine = rows.filter((r) => r.notes?.includes("ip="));
-      expect(mine.length).toBeGreaterThanOrEqual(1);
-      const session = mine[mine.length - 1];
+      const rows = await db
+        .select()
+        .from(wifiSessions)
+        .where(gte(wifiSessions.authorizedAt, startedAt));
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const session = rows[rows.length - 1];
       createdHashes.push(session!.deviceIdHash);
 
       // Never store the raw device id.
