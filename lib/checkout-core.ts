@@ -69,6 +69,19 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
 
   if (!cartItems.length) return { success: false, error: "Cart is empty" };
   if (!idempotencyKey) return { success: false, error: "Missing idempotency key" };
+  // The key deduplicates writes — mutating it would break retry semantics,
+  // so an oversized key is rejected outright instead of truncated.
+  if (idempotencyKey.length > 100) {
+    return { success: false, error: "Invalid idempotency key" };
+  }
+
+  // Free-text caps (API4/API5): the PII columns below are `text` (unbounded)
+  // and the public self-order surfaces accept these fields from
+  // unauthenticated callers. Normalize once here — every entry surface (POS,
+  // digital menu, legacy /order) funnels through this pipeline.
+  const safeCustomerName = customerName?.trim().slice(0, 100) || null;
+  const safeCustomerPhone = customerPhone?.trim().slice(0, 20) || null;
+  const safeDeliveryAddress = deliveryAddress?.trim().slice(0, 300) || null;
 
   // Reject invalid quantities before any DB write (SEC-001).
   // quantity must be a safe integer ≥ 1 — a negative, zero, or
@@ -233,11 +246,11 @@ export async function executeCheckout(params: SharedCheckoutParams): Promise<Sha
           paymentMethod,
           staffId,
           idempotencyKey,
-          customerPhone: customerPhone || null,
-          customerName: customerName || null,
+          customerPhone: safeCustomerPhone,
+          customerName: safeCustomerName,
           source,
           tableId,
-          deliveryAddress: deliveryAddress || null,
+          deliveryAddress: safeDeliveryAddress,
           deliveryFee: deliveryFeeStr,
         })
         .returning({ id: orders.id, accessToken: orders.accessToken });

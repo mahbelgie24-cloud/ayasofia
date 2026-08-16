@@ -33,6 +33,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { checkout } from "@/app/(pos)/pos/actions";
+import { executeCheckout } from "@/lib/checkout-core";
 import { requireStaffSession } from "@/lib/auth";
 
 function q(rows: unknown[] = []) {
@@ -99,6 +100,77 @@ describe("checkout — idempotency", () => {
         paymentMethod: "cash",
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("checkout — free-text caps (API4/API5)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function capturingTx() {
+    const inserts: Record<string, unknown>[] = [];
+    const tx = Object.assign(makeTx({}), {
+      insert: () => ({
+        values: (v: Record<string, unknown>) => {
+          inserts.push(v);
+          return { returning: () => Promise.resolve([{ id: "order-001", accessToken: "tok" }]) };
+        },
+      }),
+    });
+    return { tx, inserts };
+  }
+
+  it("trims and caps customerName/customerPhone/deliveryAddress before insert", async () => {
+    const { tx, inserts } = capturingTx();
+    mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+
+    const result = await executeCheckout({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 1 }],
+      idempotencyKey: "caps-key-1",
+      paymentMethod: "cash",
+      channel: "takeaway",
+      staffId: null,
+      customerName: `  ${"اسم".repeat(60)}  `,
+      customerPhone: `0${"5".repeat(40)}`,
+      deliveryAddress: "ش".repeat(500),
+    });
+
+    expect(result.success).toBe(true);
+    const orderRow = inserts[0];
+    expect((orderRow.customerName as string).length).toBe(100);
+    expect((orderRow.customerPhone as string).length).toBe(20);
+    expect((orderRow.deliveryAddress as string).length).toBe(300);
+  });
+
+  it("keeps empty PII fields null", async () => {
+    const { tx, inserts } = capturingTx();
+    mockTx.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+
+    const result = await executeCheckout({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 1 }],
+      idempotencyKey: "caps-key-2",
+      paymentMethod: "cash",
+      channel: "takeaway",
+      staffId: null,
+      customerName: "   ",
+    });
+
+    expect(result.success).toBe(true);
+    expect(inserts[0].customerName).toBeNull();
+    expect(inserts[0].customerPhone).toBeNull();
+    expect(inserts[0].deliveryAddress).toBeNull();
+  });
+
+  it("rejects an oversized idempotency key instead of truncating it", async () => {
+    const result = await executeCheckout({
+      cartItems: [{ productId: "p1", modifierIds: [], quantity: 1 }],
+      idempotencyKey: "k".repeat(101),
+      paymentMethod: "cash",
+      channel: "takeaway",
+      staffId: null,
+    });
+    expect(result.success).toBe(false);
   });
 });
 
