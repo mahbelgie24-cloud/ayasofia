@@ -35,16 +35,20 @@ the security boundary. The authorization enforcement lives in
 session carries `app_metadata.staff_id` and optionally checks
 `ROLE_RANK[role]` against a minimum.
 
-The **only** exceptions are:
+The **only exceptions** are the deliberately public (unauthenticated) server
+actions. Each has its own guardrail in place of a staff session:
 
-- `verifyStaffPin` in `app/login/actions.ts` — it is the auth gate that
-  establishes the session in the first place, so it cannot require one
-  beforehand.
-- `placeCustomerOrder` in `app/order/actions.ts` — this is a deliberately
-  public customer-facing endpoint (no staff involved, `staffId` is null
-  on the resulting order). It still enforces server-side recomputation,
-  atomic transaction, and idempotency — all the same correctness rules as
-  `checkout()`, just without the staff-session requirement.
+| Action                                                                                                  | Guardrail                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verifyStaffPin` (`app/login/actions.ts`)                                                               | The auth gate itself — anon-user lockout + IP throttle (`lib/rate-limit.ts`), server-derived session identity (T-B5).                          |
+| `placeCustomerOrder` (`app/order/actions.ts`)                                                           | Retired surface (308 → digital menu) kept for offline/legacy callers. IP throttle, server-side recomputation, atomic transaction, idempotency. |
+| `getDigitalMenuData` / `placeDigitalMenuOrder` / `getUpsellSuggestions` (`app/digital-menu/actions.ts`) | Feature-flag gated, IP throttled, same atomic checkout pipeline + idempotency for orders; all ids UUID-validated server-side.                  |
+| `getOrderStatus` (`app/order/status/[orderId]/actions.ts`)                                              | Per-order bearer token (P2-SEC-1) + IP throttle; wrong token is indistinguishable from missing order.                                          |
+| `authorizeDevice` / `endWifiSession` / `submitWifiSuggestion` (`app/wifi/actions.ts`)                   | Feature-flag gated, IP throttled, device ids hashed before storage.                                                                            |
+
+Every other server action **must** call `requireStaffSession` first — see
+`app/(admin)/admin/**/actions.ts` and `app/(pos)/pos/actions.ts` for the
+pattern, and `__tests__/rbac-margins.test.ts` for the enforcement tests.
 
 ## Key files (quick reference)
 

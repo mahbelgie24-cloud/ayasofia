@@ -36,24 +36,25 @@ previously-active suggestion survives (`today-suggestion.integration.test.ts`).
 ## P1-M10 (deferred) — wifi device-id hashing relies on a fixed secret
 
 Hardware/router integration is pending owner decision, so P1-M10 is explicitly
-**deferred** (per the audit) and NOT implemented. Three related INFO notes:
+**deferred** (per the audit) and NOT implemented. Two related INFO notes:
 
 - **Public salt fallback** — `hashDeviceId` uses `process.env.WIFI_DEVICE_ID_SALT`
   and falls back to the literal string `"ayasofia-wifi"` when the value is
-  unset. In production this env var is a deploy-time secret; the fallback only
-  exists so local/dev works with zero config.
+  unset. The fallback only exists so local/dev works with zero config;
+  `scripts/validate-env.ts` now **hard-fails in production mode** when the
+  salt is missing or is the documented placeholder.
 - **Client-supplied device id** — the guest's `deviceId` is hashed server-side
-  before storage, but the raw id originates from `crypto.randomUUID()` on the
-  client. A determined client can vary it per request (it is per-device random,
+  before storage, but the raw id originates from `crypto.randomUUID()` on
+  the client. A determined client can vary it per request (it is per-device random,
   not a strong anti-abuse signal).
 - **Unconsented `ip=` note** — `wifi_sessions.notes` records the string
   `ip=<address>` even before consent. This is an operational aid for abuse
   triage; it is not stored in a dedicated PII column, but an IP is arguably
   personal data (C5 tracks consent for name/phone only).
 
-**"Good":** rotate `WIFI_DEVICE_ID_SALT` (re-hash), make the salt required in
-production at deploy time, and revisit whether to retain the IP note or move it
-to a hashed/generalized form.
+**"Good":** rotate `WIFI_DEVICE_ID_SALT` (re-hash), and revisit whether to
+retain the IP note or move it to a hashed/generalized form. (Production
+enforcement of the salt itself is now automated — see above.)
 
 ## P2-PERF-2 — catalog cache is in-process and single-instance
 
@@ -115,15 +116,18 @@ nanoid** advisory (GHSA-2v37-7h3g-55p8) was fixed by `npm audit fix` → nanoid
 3.3.18. **"Good":** a future drizzle-kit release that drops the
 `@esbuild-kit/esm-loader` loader (or upstream esbuild bump) clears all 4.
 
-## H6 — in-memory rate limiting on a multi-instance (Vercel) deployment
+## H6 — in-memory rate limiting on a multi-instance (Vercel) deployment — RESOLVED (WEB-SEC-004)
 
-`lib/rate-limit.ts` keeps the PIN-login lockout and the public-endpoint abuse
-throttle in **process memory** (`Map`s, no shared store). On Vercel's
-serverless model each cold instance holds its own counters, so a spray across
-instances can exceed the per-instance cap. This is the documented P0
-mitigation (WEB-SEC-001); a durable Postgres/Upstash-backed limiter is tracked
-as WEB-SEC-004 and is **not** yet implemented. **"Good":** move the counters to
-a Postgres table (or Upstash) so the caps are global across instances.
+`lib/rate-limit.ts` now hits a **durable Postgres-backed store first**
+(`lib/rate-limit-durable.ts`, table `rate_limits`, migration `0014`): every
+PIN-lockout check and public-endpoint throttle is a single atomic
+`INSERT … ON CONFLICT DO UPDATE … RETURNING`, so the caps hold globally
+across instances (proven by a concurrency test: 10 parallel attempts →
+exactly `max` allowed). If the DB errors, the limiter fails open to the old
+in-process memory policy — a database blip degrades to the previous
+single-instance caps instead of blocking all traffic. The table is
+RLS default-deny (enable + force, no policies — migration `0014`), like
+every other table.
 
 ## H6 — single shared Supabase project (no staging/prod split)
 
@@ -135,13 +139,15 @@ the e2e exact-total and anonymous-sign-in tests are flaky/red in a long run.
 **"Good":** provision a second, disposable **staging** Supabase project for
 e2e/CI and keep the shared project for production only (spec §16 / D8).
 
-## H6 — missing coverage tooling
+## H6 — missing coverage tooling — RESOLVED
 
-`npx vitest run --coverage` fails with `MISSING DEPENDENCY
-@vitest/coverage-v8`; `vitest.config.mts` defines no `coverage` block. There are
-no branch/line coverage numbers to report. **"Good":** add
-`@vitest/coverage-v8` as a devDependency and a `coverage` config when coverage
-is needed.
+`@vitest/coverage-v8` is installed with a `coverage` block in
+`vitest.config.mts` (v8 provider, app/lib/components/db include). Run
+`npm run test:coverage`. First measured baseline (2026-08-16): 33.7% lines /
+23.3% branches across **all** TS/TSX including UI shells — the vitest suite
+targets business logic (pricing, checkout, rate-limit, RBAC, security headers
+are near-100%), while UI routes are exercised by the 39-spec Playwright e2e
+suite. Not enforced as a CI gate; the number is reported, not weaponized.
 
 ## H6 — tax_rate currently 0 (pending owner decision)
 

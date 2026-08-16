@@ -30,7 +30,7 @@ Schema source of truth: [`db/schema.ts`](./db/schema.ts), generated from spec §
 ### Local reset recipe
 
 Rebuild a (possibly drifted) database from scratch — re-apply every migration
-`0000…0012`, then seed the demo catalog. Call "reset" before ingesting real-menu
+`0000…0014`, then seed the demo catalog. Call "reset" before ingesting real-menu
 data.
 
 ```bash
@@ -96,6 +96,11 @@ npx vitest run --shard=N/2          # run tests per shard
 This is **Option 1** (an explicit seed step in CI) rather than per-test
 self-seeding — a single seed per shard is cheaper than seeding inside every
 integration suite, and it exercises the real `db:seed` path in CI.
+
+Coverage: `npm run test:coverage` (v8 provider; reports lines/branches/
+functions across `app/`, `lib/`, `components/`, `db/`). Env contract:
+`npm run validate:env` — presence-only by default, strict production checks
+when `RUN_ENV=production` (also enforced in the Release workflow).
 
 To reproduce locally, use the **Supabase local stack** (no cloud account
 needed — a second cloud project is not required for testing):
