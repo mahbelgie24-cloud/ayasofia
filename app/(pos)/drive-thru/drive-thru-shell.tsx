@@ -119,13 +119,13 @@ export function DriveThruShell({ menu }: { menu: POSCategory[] }) {
           </div>
           <button
             onClick={() => router.push("/pos")}
-            className="ease-spring flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/95 transition-colors hover:bg-white/20"
+            className="ease-spring bg-brand-ink/35 hover:bg-brand-ink/45 flex min-h-11 items-center gap-1.5 rounded-full border border-white/30 px-2.5 text-xs font-semibold text-white transition-colors"
           >
             <span>POS</span>
           </button>
           <button
             onClick={handleSignOut}
-            className="ease-spring flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/95 transition-colors hover:bg-white/20"
+            className="ease-spring bg-brand-ink/35 hover:bg-brand-ink/45 flex min-h-11 items-center gap-1.5 rounded-full border border-white/30 px-2.5 text-xs font-semibold text-white transition-colors"
             title="تسجيل الخروج"
           >
             <LogOut className="size-3.5" />

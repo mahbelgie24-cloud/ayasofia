@@ -21,7 +21,7 @@ const variantClasses: Record<Variant, string> = {
   ink: "bg-brand-ink text-white shadow-md shadow-brand-ink/20",
   muted: "bg-brand-cream text-brand-ink border border-border-subtle",
   success: "bg-status-success/[0.12] text-status-success",
-  warning: "bg-status-warning/[0.12] text-status-warning",
+  warning: "bg-status-warning/[0.12] text-status-warning-ink",
   error: "bg-status-error/[0.12] text-status-error",
   glass: "glass text-white",
 };

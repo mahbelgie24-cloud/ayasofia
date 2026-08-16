@@ -16,6 +16,11 @@
   --color-text-secondary: #6b5c5c;
   --color-status-success: #16a34a;
   --color-status-warning: #f59e0b;
+  /* Warning color for TEXT on light surfaces (chips, table numerals,
+     badges). --color-status-warning is a mid amber that fails WCAG AA
+     contrast (~2.2:1) when used as text on cream/tinted backgrounds;
+     the ink variant keeps the amber identity at ≥5.9:1. */
+  --color-status-warning-ink: #8a4b06;
   --color-status-error: #9f1239;
 
   /* Signature gradients */
@@ -632,4 +637,20 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* ── Reduced motion (WCAG 2.3.3) ──
+   The pearl/shimmer/aurora keyframes and spring transitions are decorative;
+   users who opt out of motion get every animation collapsed to an instant
+   final state. Skeletons render as static surfaces, toasts appear without
+   sliding, and hover lifts become plain color changes. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

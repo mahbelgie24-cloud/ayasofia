@@ -225,7 +225,7 @@ export function DMStatusClient({
               {initial.total} ₪
             </span>
           </div>
-          <p className="text-text-secondary/80 mt-3 text-center text-xs">
+          <p className="text-text-secondary mt-3 text-center text-xs">
             المدة المتوقعة للتحضير 10–15 دقيقة
           </p>
         </Card>

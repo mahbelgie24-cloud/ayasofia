@@ -376,7 +376,7 @@ function ReportsContent({
                             isOpen
                               ? "text-text-secondary"
                               : hasDiscrepancy
-                                ? "text-status-warning"
+                                ? "text-status-warning-ink"
                                 : "text-status-success"
                           }`}
                         >

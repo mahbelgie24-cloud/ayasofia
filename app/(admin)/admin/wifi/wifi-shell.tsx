@@ -83,6 +83,7 @@ export function WifiAdminShell() {
                 <Input
                   value={values[key] ?? def}
                   onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                  aria-label={EDITABLE.find((f) => f.key === key)?.label ?? key}
                 />
                 <button
                   onClick={() => handleSave(key, values[key] ?? def)}

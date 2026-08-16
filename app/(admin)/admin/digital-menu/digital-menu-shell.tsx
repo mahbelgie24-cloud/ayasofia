@@ -85,6 +85,7 @@ function TablesTab() {
           value={newCode}
           onChange={(e) => setNewCode(e.target.value)}
           placeholder="اسم الطاولة (مثال: T3)"
+          aria-label="اسم الطاولة الجديدة"
           className="border-border-subtle rounded-lg border bg-white px-3 py-2 text-sm"
         />
         <button
@@ -138,7 +139,7 @@ function TablesTab() {
                             .catch(() => {});
                           toast.warning("تم نسخ الرابط");
                         }}
-                        className="text-brand-red text-xs"
+                        className="text-brand-red inline-flex min-h-8 items-center rounded px-1 text-xs font-semibold hover:underline"
                       >
                         نسخ
                       </button>
@@ -159,7 +160,7 @@ function TablesTab() {
                           toast[msg(r, "تم") === "تم" ? "warning" : "error"](msg(r, "تم"));
                           load();
                         }}
-                        className="text-xs font-medium"
+                        className="inline-flex min-h-8 items-center rounded px-1 text-xs font-medium hover:underline"
                       >
                         {t.active ? "تعطيل" : "تفعيل"}
                       </button>
@@ -169,7 +170,7 @@ function TablesTab() {
                           toast.warning(msg(r, "تم توليد QR جديد"));
                           load();
                         }}
-                        className="text-text-secondary text-xs"
+                        className="text-text-secondary inline-flex min-h-8 items-center rounded px-1 text-xs hover:underline"
                       >
                         QR جديد
                       </button>
@@ -421,7 +422,7 @@ function UpsellTab() {
                           toast.warning(msg(res, "تم"));
                           load();
                         }}
-                        className="text-xs font-medium"
+                        className="inline-flex min-h-8 items-center rounded px-1 text-xs font-medium hover:underline"
                       >
                         {r.isActive ? "تعطيل" : "تفعيل"}
                       </button>
@@ -431,7 +432,7 @@ function UpsellTab() {
                           toast.warning(msg(res, "تم الحذف"));
                           load();
                         }}
-                        className="text-status-error text-xs"
+                        className="text-status-error inline-flex min-h-8 items-center rounded px-1 text-xs font-medium hover:underline"
                       >
                         حذف
                       </button>

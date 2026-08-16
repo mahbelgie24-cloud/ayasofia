@@ -69,8 +69,11 @@ export function Tabs({
               size === "sm" ? "body-sm" : "body",
               variant === "pills"
                 ? cn(
-                    "rounded-full",
-                    size === "sm" ? "px-3 py-1.5" : "px-4 py-2",
+                    // min-h-11 keeps every category pill at a 44px touch
+                    // target (WCAG 2.5.5 / HIG) — these bars are the primary
+                    // navigation on touch surfaces (digital menu, POS tablet).
+                    "min-h-11 rounded-full",
+                    size === "sm" ? "px-3.5" : "px-4",
                     active
                       ? "bg-brand-red shadow-brand-red/20 text-white shadow-sm"
                       : "bg-muted text-brand-ink hover:bg-muted/80",

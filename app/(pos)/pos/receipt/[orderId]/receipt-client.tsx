@@ -63,13 +63,13 @@ export function ReceiptClient({ data }: Props) {
       <div className="no-print fixed right-0 bottom-0 left-0 z-50 flex gap-2 bg-white p-3 shadow-lg sm:static sm:shadow-none">
         <button
           onClick={() => window.print()}
-          className="bg-brand-red flex-1 rounded-full px-4 py-2.5 text-sm font-bold text-white"
+          className="bg-brand-red flex min-h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-bold text-white"
         >
           طباعة
         </button>
         <button
           onClick={handleWhatsApp}
-          className="border-brand-red text-brand-red flex-1 rounded-full border px-4 py-2.5 text-sm font-bold"
+          className="border-brand-red text-brand-red flex min-h-11 flex-1 items-center justify-center rounded-full border px-4 text-sm font-bold"
         >
           {data.customerPhone ? "واتساب" : shared ? "تم النسخ" : "مشاركة"}
         </button>

@@ -99,7 +99,7 @@ function InventoryTable({ ingredients }: { ingredients: Ingredient[] }) {
                   <td className="text-brand-ink px-4 py-3 font-medium">
                     {ing.name}
                     {isLow && (
-                      <span className="bg-status-warning/20 text-status-warning ms-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                      <span className="bg-status-warning/20 text-status-warning-ink ms-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
                         <AlertTriangle className="size-2.5" />
                         منخفض
                       </span>
@@ -108,7 +108,7 @@ function InventoryTable({ ingredients }: { ingredients: Ingredient[] }) {
                   <td className="text-text-secondary px-4 py-3 text-xs">{ing.unit}</td>
                   <td
                     className={`numeric px-4 py-3 font-medium ${
-                      isLow ? "text-status-warning" : "text-brand-ink"
+                      isLow ? "text-status-warning-ink" : "text-brand-ink"
                     }`}
                   >
                     {ing.currentStock}
@@ -241,7 +241,7 @@ function PurchaseForm({
         {msg && (
           <p
             role="alert"
-            className={`text-sm ${success ? "text-status-success" : "text-status-warning"}`}
+            className={`text-sm ${success ? "text-status-success" : "text-status-warning-ink"}`}
           >
             {msg}
           </p>
@@ -314,7 +314,7 @@ function WasteForm({ ingredients }: { ingredients: Ingredient[] }) {
         {msg && (
           <p
             role="alert"
-            className={`text-sm ${success ? "text-status-success" : "text-status-warning"}`}
+            className={`text-sm ${success ? "text-status-success" : "text-status-warning-ink"}`}
           >
             {msg}
           </p>

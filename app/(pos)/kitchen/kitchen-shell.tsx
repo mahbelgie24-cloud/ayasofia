@@ -46,7 +46,7 @@ const STATUS_META: Record<
     next: "preparing",
     nextLabel: "بدء التحضير",
     bar: "border-status-warning",
-    chip: "bg-status-warning/15 text-status-warning",
+    chip: "bg-status-warning/15 text-status-warning-ink",
     icon: <Clock className="size-3.5" />,
   },
   preparing: {
@@ -54,7 +54,7 @@ const STATUS_META: Record<
     next: "ready",
     nextLabel: "جاهز",
     bar: "border-status-warning",
-    chip: "bg-status-warning/20 text-status-warning",
+    chip: "bg-status-warning/20 text-status-warning-ink",
     icon: <ChefHat className="size-3.5" />,
   },
   ready: {
@@ -151,7 +151,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
             <Logo size="sm" surface="glass" alt="المطبخ" />
             <div>
               <h1 className="heading-1 text-xl text-white">المطبخ</h1>
-              <p className="caption font-medium text-white/85">
+              <p className="caption font-medium text-white">
                 {pending.length === 0
                   ? "لا طلبات قيد الانتظار"
                   : `${pending.length} طلب قيد الانتظار`}
@@ -249,7 +249,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
                             </p>
                           )}
                           {item.notes && (
-                            <p className="text-status-warning text-xs italic">“{item.notes}”</p>
+                            <p className="text-status-warning-ink text-xs italic">“{item.notes}”</p>
                           )}
                         </div>
                       ))}
@@ -262,7 +262,7 @@ export function KitchenShell({ initialOrders }: { initialOrders: ActiveKitchenOr
                       {meta.next ? (
                         <button
                           onClick={() => handleAdvance(order.id, order.status)}
-                          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-soft ease-spring flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5"
+                          className="bg-brand-red hover:bg-brand-red-dark shadow-brand-soft ease-spring flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5"
                         >
                           <span>{meta.nextLabel}</span>
                           <ArrowRight className="size-3.5 rtl:rotate-180" />

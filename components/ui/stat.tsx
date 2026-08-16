@@ -13,7 +13,7 @@ type Tone = "default" | "warning" | "success" | "brand";
 
 const toneClasses: Record<Tone, string> = {
   default: "text-brand-ink",
-  warning: "text-status-warning",
+  warning: "text-status-warning-ink",
   success: "text-status-success",
   brand: "text-brand-red",
 };
@@ -98,7 +98,7 @@ export function Stat({
               "flex size-6 items-center justify-center rounded-lg",
               tone === "default" ? "bg-brand-red-soft text-brand-red" : "bg-white/60",
               tone === "brand" && "bg-brand-red-soft text-brand-red",
-              tone === "warning" && "bg-status-warning/10 text-status-warning",
+              tone === "warning" && "bg-status-warning/10 text-status-warning-ink",
               tone === "success" && "bg-status-success/10 text-status-success",
             )}
           >
@@ -113,7 +113,7 @@ export function Stat({
       >
         {value}
       </span>
-      {hint && <span className="caption text-text-secondary/80 mt-1">{hint}</span>}
+      {hint && <span className="caption text-text-secondary mt-1">{hint}</span>}
     </div>
   );
 }

@@ -153,7 +153,7 @@ export function POSShell({ menu }: POSShellProps) {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => router.push("/drive-thru")}
-            className="border-border-subtle text-text-secondary hover:border-brand-red hover:text-brand-red ease-spring flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-1.5 text-xs font-semibold transition-colors"
+            className="border-border-subtle text-text-secondary hover:border-brand-red hover:text-brand-red ease-spring flex min-h-11 items-center gap-1.5 rounded-full border bg-white px-3.5 text-xs font-semibold transition-colors"
             title="Drive-Thru"
           >
             <Car className="size-3.5" />
@@ -165,14 +165,14 @@ export function POSShell({ menu }: POSShellProps) {
               setClosingCash("");
               setShiftModal(true);
             }}
-            className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 ease-spring flex items-center gap-1.5 rounded-full border bg-white px-3.5 py-1.5 text-xs font-semibold transition-colors"
+            className="border-status-warning/30 text-status-warning hover:bg-status-warning/10 ease-spring flex min-h-11 items-center gap-1.5 rounded-full border bg-white px-3.5 text-xs font-semibold transition-colors"
           >
             <ClipboardList className="size-3.5" />
             <span>إنهاء الوردية</span>
           </button>
           <button
             onClick={handleSignOut}
-            className="border-border-subtle text-text-secondary hover:border-status-error hover:text-status-error ease-spring flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1.5 text-xs font-semibold transition-colors"
+            className="border-border-subtle text-text-secondary hover:border-status-error hover:text-status-error ease-spring flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border bg-white px-2.5 text-xs font-semibold transition-colors"
             title="تسجيل الخروج"
           >
             <LogOut className="size-3.5" />
@@ -466,7 +466,7 @@ export function POSShell({ menu }: POSShellProps) {
               <p
                 className={`numeric heading-1 mt-1 ${
                   Math.abs(parseFloat(shiftResult.discrepancy)) > 0.01
-                    ? "text-status-warning"
+                    ? "text-status-warning-ink"
                     : "text-status-success"
                 }`}
               >

@@ -144,7 +144,7 @@ export function WifiConnect({ suggestion }: { suggestion: Suggestion }) {
               href="https://instagram.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-text-secondary hover:text-brand-red ease-spring inline-flex items-center gap-2 text-sm font-medium transition-colors"
+              className="text-text-secondary hover:text-brand-red ease-spring inline-flex min-h-11 items-center gap-2 py-2 text-sm font-medium transition-colors"
             >
               <AtSign className="size-4" />
               <span>تابعنا على إنستغرام</span>

@@ -157,7 +157,7 @@ export function PinPad({ redirectTo }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-6">
-      <div aria-label={`${filled} digits entered`} className="flex gap-4">
+      <div role="group" aria-label={`${filled} digits entered`} className="flex gap-4">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}

@@ -77,7 +77,7 @@ export function SettingsShell() {
           className={`rounded-xl border px-4 py-2.5 text-sm ${
             success
               ? "border-status-success/30 bg-status-success/[0.08] text-status-success"
-              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning-ink"
           }`}
         >
           {msg}
@@ -98,6 +98,7 @@ export function SettingsShell() {
                     value={values[key] ?? ""}
                     onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
                     dir={dir}
+                    aria-label={label}
                     className="ps-10"
                   />
                 </div>

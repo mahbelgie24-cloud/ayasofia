@@ -58,7 +58,7 @@ export function StaffShell() {
           className={`rounded-xl border px-4 py-2.5 text-sm ${
             success
               ? "border-status-success/30 bg-status-success/[0.08] text-status-success"
-              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning-ink"
           }`}
         >
           {msg}
@@ -210,7 +210,7 @@ function RoleBadge({ role }: { role: string }) {
   };
   const colors: Record<string, string> = {
     owner: "bg-brand-red/10 text-brand-red",
-    manager: "bg-status-warning/10 text-status-warning",
+    manager: "bg-status-warning/10 text-status-warning-ink",
     cashier: "bg-status-success/10 text-status-success",
     barista: "bg-muted text-text-secondary",
   };

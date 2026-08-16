@@ -88,7 +88,7 @@ export function MenuShell() {
           className={`rounded-xl border px-4 py-2.5 text-sm ${
             success
               ? "border-status-success/30 bg-status-success/[0.08] text-status-success"
-              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning"
+              : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning-ink"
           }`}
         >
           {msg}
@@ -188,7 +188,7 @@ export function MenuShell() {
                             </span>
                           )}
                           {prod.recipes.length === 0 && (
-                            <span className="text-status-warning inline-flex items-center gap-1 text-[10px] font-semibold">
+                            <span className="text-status-warning-ink inline-flex items-center gap-1 text-[10px] font-semibold">
                               <AlertTriangle className="size-3" />
                               لا وصفة
                             </span>
@@ -233,7 +233,8 @@ export function MenuShell() {
                         </button>
                         <button
                           onClick={() => setEditProduct(prod.id)}
-                          className="text-text-secondary hover:bg-brand-cream/60 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors"
+                          aria-label={`تعديل ${prod.nameAr}`}
+                          className="text-text-secondary hover:bg-brand-cream/60 flex min-h-9 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors"
                         >
                           <Edit3 className="size-3.5" />
                         </button>
