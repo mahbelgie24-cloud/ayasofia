@@ -41,11 +41,11 @@ export default async function LoginPage({
         <PearlField variant="scatter" tone="muted" count={10} />
       </div>
 
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-5">
         <div className="w-full max-w-sm">
           {/* Brand block */}
-          <div className="animate-fade-in-up mb-8 flex flex-col items-center text-center">
-            <Logo size="2xl" surface="halo" breathing className="mb-6" />
+          <div className="animate-fade-in-up mb-6 flex flex-col items-center text-center">
+            <Logo size="xl" surface="halo" breathing className="mb-4" />
             <div className="text-brand-red mb-2 inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.18em] uppercase">
               <Sparkles className="size-3" />
               من تايوان إلى قلقيلية
@@ -71,7 +71,7 @@ export default async function LoginPage({
 
           {/* PIN card */}
           <div
-            className="surface-elev noise animate-scale-in relative overflow-hidden p-6 sm:p-8"
+            className="surface-elev noise animate-scale-in relative overflow-hidden px-6 py-5 sm:px-8 sm:py-6"
             style={{ animationDelay: "120ms" }}
           >
             <span
@@ -82,7 +82,7 @@ export default async function LoginPage({
               <p className="label text-text-secondary mb-4 text-center tracking-wider uppercase">
                 تسجيل دخول الموظفين
               </p>
-              <p className="text-text-secondary caption mb-5 text-center">
+              <p className="text-text-secondary caption mb-4 text-center">
                 أدخل رمز PIN المكوّن من 4 أرقام
               </p>
               <PinPad redirectTo="/pos" />
@@ -91,7 +91,7 @@ export default async function LoginPage({
         </div>
       </main>
 
-      <footer className="relative z-10 shrink-0 pt-2 pb-7 text-center">
+      <footer className="relative z-10 shrink-0 pt-1 pb-4 text-center">
         <div className="text-text-secondary/70 caption flex items-center justify-center gap-1.5">
           <PearlField variant="row" tone="muted" size="sm" />
         </div>

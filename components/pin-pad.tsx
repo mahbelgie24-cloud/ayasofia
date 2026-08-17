@@ -114,7 +114,7 @@ export function PinPad({ redirectTo }: Props) {
 
   if (flow === "opening-cash") {
     return (
-      <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-6">
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-5">
         <p className="text-brand-ink text-center text-sm font-medium">الرصيد الافتتاحي للوردية</p>
         <p className="text-text-secondary text-center text-xs">
           أدخل المبلغ النقدي الموجود في الدرج عند بداية الوردية (اختياري)
@@ -186,7 +186,7 @@ export function PinPad({ redirectTo }: Props) {
                 onClick={handleBackspace}
                 disabled={filled === 0 || loading}
                 aria-label="حذف الرقم الأخير"
-                className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 ease-spring flex h-14 items-center justify-center rounded-2xl border text-xl transition-colors disabled:opacity-30"
+                className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 ease-spring flex h-12 items-center justify-center rounded-2xl border text-xl transition-colors disabled:opacity-30"
               >
                 ⌫
               </button>
@@ -201,7 +201,7 @@ export function PinPad({ redirectTo }: Props) {
               onClick={() => handleDigit(digit)}
               disabled={filled === 4 || loading}
               aria-label={`رقم ${digit}`}
-              className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 active:bg-brand-red/10 ease-spring flex h-14 items-center justify-center rounded-2xl border text-2xl font-medium transition-colors disabled:opacity-30"
+              className="border-brand-ink/10 text-brand-ink hover:bg-brand-ink/5 active:bg-brand-red/10 ease-spring flex h-12 items-center justify-center rounded-2xl border text-2xl font-medium transition-colors disabled:opacity-30"
             >
               {digit}
             </button>
