@@ -1,0 +1,636 @@
+{
+  "axe": [
+    {
+      "name": "customer-landing",
+      "url": "/",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "customer-menu",
+      "url": "/m/qalqilya",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "customer-status",
+      "url": "/order/status/9d5910ce-0a75-4e55-97ac-c1a0c38c2993?accessToken=3cef283c-33e9-4ce4-8450-b0f53ff9ff79",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "customer-wifi",
+      "url": "/wifi",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "customer-wifi-connect",
+      "url": "/wifi/connect",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "staff-login",
+      "url": "/login",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "staff-pos",
+      "url": "/pos",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "staff-kitchen",
+      "url": "/kitchen",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "staff-drive-thru",
+      "url": "/drive-thru",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "staff-receipt",
+      "url": "/pos/receipt/9d5910ce-0a75-4e55-97ac-c1a0c38c2993",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-dashboard",
+      "url": "/admin",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-menu",
+      "url": "/admin/menu",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-inventory",
+      "url": "/admin/inventory",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-reports",
+      "url": "/admin/reports",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-staff",
+      "url": "/admin/staff",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-settings",
+      "url": "/admin/settings",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-wifi",
+      "url": "/admin/wifi",
+      "violations": [],
+      "violationCount": 0
+    },
+    {
+      "name": "admin-digital-menu",
+      "url": "/admin/digital-menu",
+      "violations": [],
+      "violationCount": 0
+    }
+  ],
+  "dom": [
+    {
+      "name": "customer-landing",
+      "url": "http://localhost:3000/",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "customer-menu",
+      "url": "http://localhost:3000/m/qalqilya",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "customer-status",
+      "url": "http://localhost:3000/order/status/9d5910ce-0a75-4e55-97ac-c1a0c38c2993?accessToken=3cef283c-33e9-4ce4-8450-b0f53ff9ff79",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "customer-wifi",
+      "url": "http://localhost:3000/wifi",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "customer-wifi-connect",
+      "url": "http://localhost:3000/wifi/connect",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "staff-login",
+      "url": "http://localhost:3000/login",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "staff-pos",
+      "url": "http://localhost:3000/pos",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "staff-kitchen",
+      "url": "http://localhost:3000/kitchen",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "staff-drive-thru",
+      "url": "http://localhost:3000/drive-thru",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "button",
+          "label": "",
+          "w": 36,
+          "h": 44
+        }
+      ]
+    },
+    {
+      "name": "staff-receipt",
+      "url": "http://localhost:3000/pos/receipt/9d5910ce-0a75-4e55-97ac-c1a0c38c2993",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "admin-dashboard",
+      "url": "http://localhost:3000/admin",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "admin-menu",
+      "url": "http://localhost:3000/admin/menu",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "button",
+          "label": "فئة جديدة",
+          "w": 122,
+          "h": 40
+        },
+        {
+          "tag": "button",
+          "label": "تعديل",
+          "w": 66,
+          "h": 28
+        },
+        {
+          "tag": "button",
+          "label": "حذف",
+          "w": 63,
+          "h": 28
+        },
+        {
+          "tag": "button",
+          "label": "إيقاف البيع",
+          "w": 44,
+          "h": 24
+        },
+        {
+          "tag": "button",
+          "label": "تفاصيل",
+          "w": 70,
+          "h": 24
+        },
+        {
+          "tag": "button",
+          "label": "تعديل براون شوغر بابل تي",
+          "w": 34,
+          "h": 36
+        },
+        {
+          "tag": "button",
+          "label": "إيقاف البيع",
+          "w": 44,
+          "h": 24
+        },
+        {
+          "tag": "button",
+          "label": "تفاصيل",
+          "w": 70,
+          "h": 24
+        },
+        {
+          "tag": "button",
+          "label": "تعديل ميلك تي بالسكر البني",
+          "w": 34,
+          "h": 36
+        },
+        {
+          "tag": "button",
+          "label": "إيقاف البيع",
+          "w": 44,
+          "h": 24
+        },
+        {
+          "tag": "button",
+          "label": "تفاصيل",
+          "w": 70,
+          "h": 24
+        }
+      ]
+    },
+    {
+      "name": "admin-inventory",
+      "url": "http://localhost:3000/admin/inventory",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "name": "admin-reports",
+      "url": "http://localhost:3000/admin/reports",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "button",
+          "label": "تصدير المبيعات كملف CSV",
+          "w": 126,
+          "h": 40
+        },
+        {
+          "tag": "input",
+          "label": "",
+          "w": 158,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "",
+          "w": 158,
+          "h": 42
+        }
+      ]
+    },
+    {
+      "name": "admin-staff",
+      "url": "http://localhost:3000/admin/staff",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "button",
+          "label": "موظف جديد",
+          "w": 134,
+          "h": 40
+        },
+        {
+          "tag": "button",
+          "label": "تعديل",
+          "w": 66,
+          "h": 24
+        },
+        {
+          "tag": "button",
+          "label": "تعطيل",
+          "w": 69,
+          "h": 24
+        }
+      ]
+    },
+    {
+      "name": "admin-settings",
+      "url": "http://localhost:3000/admin/settings",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "input",
+          "label": "اسم المحل",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "العنوان",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "رقم الهاتف",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "نص تذييل الإيصال",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "نسبة الضريبة",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        }
+      ]
+    },
+    {
+      "name": "admin-wifi",
+      "url": "http://localhost:3000/admin/wifi",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "input",
+          "label": "عنوان الشاشة",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "النص التوضيحي",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        },
+        {
+          "tag": "input",
+          "label": "نص الخصوصية",
+          "w": 542,
+          "h": 42
+        },
+        {
+          "tag": "button",
+          "label": "حفظ",
+          "w": 82,
+          "h": 42
+        }
+      ]
+    },
+    {
+      "name": "admin-digital-menu",
+      "url": "http://localhost:3000/admin/digital-menu",
+      "overflowPx": 0,
+      "culprits": [],
+      "smallTargets": [
+        {
+          "tag": "a",
+          "label": "تجاوز إلى المحتوى الرئيسي",
+          "w": 1,
+          "h": 1
+        },
+        {
+          "tag": "input",
+          "label": "اسم الطاولة الجديدة",
+          "w": 198,
+          "h": 38
+        },
+        {
+          "tag": "button",
+          "label": "إضافة طاولة",
+          "w": 102,
+          "h": 38
+        },
+        {
+          "tag": "button",
+          "label": "نسخ",
+          "w": 34,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "تعطيل",
+          "w": 39,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "QR جديد",
+          "w": 51,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "نسخ",
+          "w": 34,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "تعطيل",
+          "w": 39,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "QR جديد",
+          "w": 51,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "نسخ",
+          "w": 34,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "تعطيل",
+          "w": 39,
+          "h": 32
+        },
+        {
+          "tag": "button",
+          "label": "QR جديد",
+          "w": 51,
+          "h": 32
+        }
+      ]
+    }
+  ]
+}

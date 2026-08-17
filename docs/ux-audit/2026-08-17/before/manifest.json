@@ -1,0 +1,61 @@
+{
+  "captured": [
+    {
+      "name": "menu-table-entry",
+      "url": "http://localhost:3000/m/qalqilya/table/c15a9a7e-8c9b-49ef-a310-90ce1cc2c714"
+    },
+    {
+      "name": "menu-cart-populated",
+      "url": "http://localhost:3000/m/qalqilya/table/c15a9a7e-8c9b-49ef-a310-90ce1cc2c714"
+    },
+    {
+      "name": "menu-offline",
+      "url": "http://localhost:3000/m/qalqilya"
+    },
+    {
+      "name": "menu-offline-product-tap",
+      "url": "http://localhost:3000/m/qalqilya"
+    },
+    {
+      "name": "pos-shift-open-form",
+      "url": "http://localhost:3000/login"
+    },
+    {
+      "name": "pos-item-in-cart",
+      "url": "http://localhost:3000/pos"
+    },
+    {
+      "name": "pos-offline",
+      "url": "http://localhost:3000/pos"
+    },
+    {
+      "name": "kitchen-tickets",
+      "url": "http://localhost:3000/kitchen"
+    },
+    {
+      "name": "kitchen-preparing",
+      "url": "http://localhost:3000/kitchen"
+    },
+    {
+      "name": "kitchen-ready",
+      "url": "http://localhost:3000/kitchen"
+    },
+    {
+      "name": "drive-thru-item-added",
+      "url": "http://localhost:3000/drive-thru"
+    },
+    {
+      "name": "admin-menu-edit-sheet",
+      "url": "http://localhost:3000/admin/menu"
+    },
+    {
+      "name": "admin-staff-add-form",
+      "url": "http://localhost:3000/admin/staff"
+    },
+    {
+      "name": "admin-reports-populated",
+      "url": "http://localhost:3000/admin/reports"
+    }
+  ],
+  "failures": []
+}
